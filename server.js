@@ -36,9 +36,11 @@ function saveDB(db) {
   fs.writeFileSync(DB_FILE, JSON.stringify(db));
 }
 
-// Uygulamanın arayüzünü (public/index.html) doğrudan bu sunucudan servis eder.
+// Uygulamanın arayüzünü (index.html) doğrudan bu sunucudan servis eder.
 // Böylece kimsenin dosya indirip açmasına gerek kalmaz — sadece link paylaşılır.
-app.use(express.static(path.join(__dirname, "public")));
+// Not: index.html'in server.js ile AYNI klasörde olması yeterli, ayrı bir
+// alt klasöre gerek yok.
+app.use(express.static(__dirname));
 
 app.get("/health", (req, res) => res.json({ ok: true }));
 
