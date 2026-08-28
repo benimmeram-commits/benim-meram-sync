@@ -11,7 +11,31 @@
 </style>
 </head>
 <body>
-<div id="root"></div>
+<div id="root">
+  <div style="font-family: sans-serif; text-align:center; padding: 60px 20px; color:#5A574C;">Yükleniyor...</div>
+</div>
+<div id="error-box" style="display:none; position:fixed; inset:0; background:#fff; padding:16px; font-family:monospace; font-size:12px; color:#B3432B; overflow:auto; z-index:9999; white-space:pre-wrap;"></div>
+
+<!-- Sayfada JS hatası olursa, mobilde konsolu göremediğimiz için ekrana yazdırır. -->
+<script>
+  function showError(msg) {
+    var box = document.getElementById("error-box");
+    box.style.display = "block";
+    box.textContent = "HATA (bu metni Claude'a gönderin):\n\n" + msg;
+  }
+  window.addEventListener("error", function (e) {
+    showError((e.message || "Bilinmeyen hata") + "\n" + (e.filename || "") + ":" + (e.lineno || ""));
+  });
+  window.addEventListener("unhandledrejection", function (e) {
+    showError("Promise hatası: " + (e.reason && e.reason.message ? e.reason.message : JSON.stringify(e.reason)));
+  });
+  setTimeout(function () {
+    var root = document.getElementById("root");
+    if (root && root.textContent.indexOf("Yükleniyor") !== -1) {
+      showError("Uygulama 8 saniye içinde yüklenemedi. İnternet bağlantısını ve aşağıdaki script'lerin engellenmediğini kontrol edin (reklam engelleyici / VPN kapatmayı deneyin).");
+    }
+  }, 8000);
+</script>
 
 <!-- Bu blok, uygulamanın Claude'a özel window.storage API'sini taklit eder.
      API_BASE_URL boşsa (henüz sunucu kurulmadıysa) veriler sadece bu tarayıcıda
