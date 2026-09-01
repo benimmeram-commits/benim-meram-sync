@@ -17363,6 +17363,16 @@ function NavIconUser({ size = 20, color }) {
         React.createElement("circle", { cx: "12", cy: "8", r: "3.6" }),
         React.createElement("path", { d: "M4.5 20c1.4-4 4.2-6 7.5-6s6.1 2 7.5 6" }));
 }
+function IconThumbUp({ size = 24, color, filled }) {
+    return React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: filled ? color : "none", stroke: color, strokeWidth: "1.6", strokeLinecap: "round", strokeLinejoin: "round" },
+        React.createElement("path", { d: "M7 11v9H4a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h3Zm0 0 4-7a2 2 0 0 1 3.6 1.2L14 9h4.5a2 2 0 0 1 1.9 2.7l-2 6A2 2 0 0 1 16.5 20H10a3 3 0 0 1-3-3v-6Z" }));
+}
+function IconSpeaker({ size = 18, color, muted }) {
+    return (React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: color, strokeWidth: "1.7", strokeLinecap: "round", strokeLinejoin: "round" },
+        React.createElement("path", { d: "M4 9v6h4l5 4V5L8 9H4Z" }),
+        !muted && React.createElement("path", { d: "M16.3 8.5a5 5 0 0 1 0 7" }),
+        muted && React.createElement("path", { d: "M17 9l4 6M21 9l-4 6" })));
+}
 const COLORS = {
     pine: "#1E4030", pineDeep: "#14301F", paper: "#F4F2EC", ink: "#1C1C18",
     ochre: "#B7862C", ochreSoft: "#EFE2C6", line: "#DCD8CC", white: "#FFFFFF",
@@ -17446,53 +17456,94 @@ const DEFAULT_PRICING = { subscriptionPrice: 1000, perListingPrice: 75, commissi
 const DEFAULT_ANNOUNCEMENT = { text: "", active: false, updatedAt: 0 };
 const ADMIN_ROLE_LABELS = { super: "Süper Admin", mod: "Moderatör", destek: "Destek" };
 // ---------- YARDIMCI ASİSTAN (basit kural tabanlı — GERÇEK YAPAY ZEKA DEĞİLDİR) ----------
-const ASSISTANT_RULES = [
-    { keywords: ["ilan ver", "nasıl ilan", "satış ilanı", "hayvan sat"], answer: "İlan vermek için alt menüdeki \"İlan Ver\" butonuna basın, \"Satılık İlanı\"nı seçin ve formu doldurun. Not: satıcı hesabınızın belgesi onaylanmadan ilan veremezsiniz." },
-    { keywords: ["teklif", "pazarlık"], answer: "Bir ilanın detayına girip \"Teklif Yap\" butonuna basarak fiyat teklifi gönderebilirsiniz. Satıcı teklifinizi kabul edebilir, reddedebilir veya karşı teklif verebilir." },
-    { keywords: ["kayıt", "hesap aç", "üye ol"], answer: "Sağ alttaki herhangi bir işleme dokunduğunuzda kayıt ekranı açılır. Satış da yapacaksanız \"Telefon ile Kayıt Ol\"u, sadece almak istiyorsanız \"Sadece Alıcıyım\"ı seçin." },
-    { keywords: ["belge", "onay", "doğrula"], answer: "Satıcı hesabı açarken yüklediğiniz belge fotoğrafı, yönetim panelinden Moderatör/Süper Admin tarafından incelenip onaylanır. Onaylanana kadar \"Onay Bekliyor\" durumunda kalırsınız ve ilan veremezsiniz." },
-    { keywords: ["abone", "üyelik ücret", "fiyat ne kadar"], answer: "Profil ekranından aylık aboneliğe geçip sınırsız ilan hakkı ve öncelikli görünürlük kazanabilirsiniz." },
-    { keywords: ["mesaj", "sohbet", "iletişime geç"], answer: "Bir ilan sahibiyle \"Mesajlaş\" butonuyla özel sohbet başlatabilirsiniz. Ayrıca alt menüdeki Sohbet sekmesinden bölgenizdeki herkese açık sohbetlere de katılabilirsiniz." },
-    { keywords: ["bölge sohbet", "grup sohbet"], answer: "Sohbet sekmesi > \"Bölge Sohbetleri\" altında Türkiye'nin 7 coğrafi bölgesi için herkese açık sohbet odaları var. Bu odalardaki mesajlar her gün otomatik olarak sıfırlanır." },
-    { keywords: ["favori", "beğen"], answer: "İlan kartındaki veya detay sayfasındaki kalp ikonuna dokunarak favorileyebilirsiniz. Favorileriniz Profil ekranından listelenir." },
-    { keywords: ["şikayet", "taciz", "rapor et"], answer: "Bir sohbet ekranında sağ üstteki bayrak ikonuyla o kullanıcıyı şikayet edebilirsiniz. Şikayetiniz Destek ekibine iletilir." },
-    { keywords: ["destek", "yardım", "iletişim"], answer: "Uygulama içi bir sorun için sohbet üzerinden ilgili kişiyi şikayet edebilir, ya da bu asistana sorunuzu buradan iletebilirsiniz." },
+// ---------- HİBRİT ASİSTAN: basit sorular ücretsiz (yerel), gerçek işlemler ücretli (AI) ----------
+const ASSISTANT_FAQ_RULES = [
+    { keywords: ["nasıl ilan", "ilan nasıl", "satış ilanı nedir"], answer: "İlan vermek için alt menüdeki \"İlan Ver\" butonuna basıp formu doldurabilir, ya da bana \"şu şu özelliklerde ilan ver\" diyerek benim vermemi isteyebilirsiniz. Not: satıcı hesabınızın belgesi onaylanmadan ilan veremezsiniz." },
+    { keywords: ["teklif", "pazarlık"], answer: "Bir ilanın detayına girip \"Teklif Yap\" butonuna basarak fiyat teklifi gönderebilirsiniz. Satıcı kabul edebilir, reddedebilir veya karşı teklif verebilir." },
+    { keywords: ["kayıt", "hesap aç", "üye ol"], answer: "Herhangi bir işleme dokunduğunuzda kayıt ekranı açılır. Satış da yapacaksanız \"Telefon ile Kayıt Ol\"u, sadece almak istiyorsanız \"Sadece Alıcıyım\"ı seçin." },
+    { keywords: ["belge", "onay", "doğrula"], answer: "Kayıt sırasında yüklediğiniz belge fotoğrafı, yönetim panelinden Moderatör/Süper Admin tarafından incelenip onaylanır. Onaylanana kadar ilan veremezsiniz." },
+    { keywords: ["abone", "üyelik ücret"], answer: "Profil ekranından aylık aboneliğe geçip sınırsız ilan hakkı ve öncelikli görünürlük kazanabilirsiniz." },
+    { keywords: ["mesaj", "sohbet", "iletişime geç"], answer: "Bir ilan sahibiyle \"Mesajlaş\" butonuyla özel sohbet başlatabilirsiniz. Alt menüdeki Sohbet sekmesinden bölgenizdeki herkese açık sohbetlere de katılabilirsiniz." },
+    { keywords: ["bölge sohbet", "grup sohbet"], answer: "Sohbet > \"Bölge Sohbetleri\" altında 7 coğrafi bölge için herkese açık odalar var. Buradaki mesajlar her gün otomatik sıfırlanır, özel mesajlarınız etkilenmez." },
+    { keywords: ["favori"], answer: "İlan kartındaki veya detay sayfasındaki kalp ikonuna dokunarak favorileyebilirsiniz. Favorileriniz Profil ekranından listelenir." },
+    { keywords: ["şikayet", "taciz", "rapor et"], answer: "Bir sohbet ekranında sağ üstteki bayrak ikonuyla o kullanıcıyı şikayet edebilirsiniz." },
+    { keywords: ["küpe"], answer: "İlan verirken hayvan küpe numarasını girmeniz zorunludur. Sistem, aynı küpe numarasının platformda başka bir ilanda kullanılıp kullanılmadığını otomatik kontrol eder." },
 ];
-function getAssistantAnswer(q) {
-    const lower = q.toLowerCase();
-    const rule = ASSISTANT_RULES.find(r => r.keywords.some(k => lower.includes(k)));
-    return rule ? rule.answer : "Bu konuda hazır bir cevabım yok. Şunları deneyebilirsiniz: \"ilan nasıl verilir\", \"teklif nasıl yapılır\", \"belge onayı\", \"abonelik\", \"mesajlaşma\", \"bölge sohbeti\", \"favoriler\", \"şikayet\".";
+// Bu anahtar kelimelerden biri geçiyorsa, mesaj GERÇEK bir işlem isteğidir — sadece
+// bu durumda ücretli yapay zekaya gidilir. Diğer her şey ücretsiz yerel sistemle yanıtlanır.
+const ASSISTANT_ACTION_KEYWORDS = [
+    "ilan ver", "ilan oluştur", "ilan aç", "ilan yayınla", "ilan gir",
+    "benim için ilan", "benim yerime ilan", "satışa çıkar", "ilan yap",
+    "talep oluştur", "talep aç", "alım talebi", "benim yerime talep", "hayvan arıyorum ilanı",
+    "ara bul", "ilanlara bak", "ilan var mı", "kaç tl", "fiyatları göster",
+];
+function isAssistantActionIntent(text) {
+    const lower = text.toLowerCase();
+    return ASSISTANT_ACTION_KEYWORDS.some(k => lower.includes(k));
 }
-function AssistantWidget() {
+function getLocalAssistantAnswer(text) {
+    const lower = text.toLowerCase();
+    const rule = ASSISTANT_FAQ_RULES.find(r => r.keywords.some(k => lower.includes(k)));
+    return rule ? rule.answer : "Bunu şu an sadece basit sorularda yanıtlayabiliyorum. \"İlan ver\", \"talep oluştur\" veya \"ilan ara\" gibi gerçek bir işlem isterseniz yapay zeka devreye girer. Aksi halde şunları deneyin: \"ilan nasıl verilir\", \"teklif\", \"belge onayı\", \"abonelik\", \"mesajlaşma\", \"bölge sohbeti\", \"favori\", \"şikayet\", \"küpe\".";
+}
+async function askAssistant(messages, user) {
+    const r = await fetch("/assistant/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages, user }),
+    });
+    const data = await r.json();
+    if (!r.ok)
+        throw new Error(data.error || "Asistan yanıt vermedi.");
+    return data;
+}
+function AssistantWidget({ me, refreshAll }) {
     const [open, setOpen] = useState(false);
     const [input, setInput] = useState("");
-    const [thread, setThread] = useState([{ from: "bot", text: "Merhaba! Ben basit, kural tabanlı bir yardımcıyım (gerçek yapay zeka değilim). Uygulamayı kullanmakla ilgili sorularınızı yanıtlayabilirim." }]);
+    const [thread, setThread] = useState([{ from: "bot", text: "Merhaba! Basit sorularınızı ücretsiz yanıtlarım. \"İlan ver\", \"talep oluştur\" veya \"ilan ara\" gibi gerçek bir işlem isterseniz, o zaman yapay zekaya bağlanırım." }]);
     const [typing, setTyping] = useState(false);
-    const ask = () => {
-        if (!input.trim())
+    const ask = async () => {
+        if (!input.trim() || typing)
             return;
         const q = input.trim();
-        setThread(prev => [...prev, { from: "user", text: q }]);
+        const nextThread = [...thread, { from: "user", text: q }];
+        setThread(nextThread);
         setInput("");
+        if (!isAssistantActionIntent(q)) {
+            setThread(prev => [...prev, { from: "bot", text: getLocalAssistantAnswer(q), source: "local" }]);
+            return;
+        }
         setTyping(true);
-        setTimeout(() => {
-            setThread(prev => [...prev, { from: "bot", text: getAssistantAnswer(q) }]);
-            setTyping(false);
-        }, 500);
+        try {
+            const apiMessages = nextThread.map(m => ({ role: m.from === "user" ? "user" : "assistant", content: m.text }));
+            const userCtx = me ? { name: me.name, profileType: me.profileType, isApprovedSeller: me.profileType === "alici" || me.documentStatus === "onaylandi" } : null;
+            const data = await askAssistant(apiMessages, userCtx);
+            setThread(prev => [...prev, { from: "bot", text: data.reply, source: "ai" }]);
+            if (data.actionsPerformed && data.actionsPerformed.length > 0)
+                await refreshAll();
+        }
+        catch (e) {
+            setThread(prev => [...prev, { from: "bot", text: "Şu an yapay zeka asistanına ulaşılamıyor: " + e.message, source: "ai" }]);
+        }
+        setTyping(false);
     };
     return (React.createElement(React.Fragment, null,
         React.createElement("button", { onClick: () => setOpen(v => !v), style: { position: "absolute", right: 12, bottom: 78, width: 44, height: 44, borderRadius: "50%", background: COLORS.ochre, border: "none", boxShadow: "0 6px 14px rgba(0,0,0,0.25)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 15 } }, open ? React.createElement(X, { size: 18, color: "#3A2C0E" }) : React.createElement(MessageCircle, { size: 18, color: "#3A2C0E" })),
         open && (React.createElement("div", { style: { position: "absolute", right: 10, bottom: 128, width: 280, height: 340, background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 14, boxShadow: "0 10px 30px rgba(0,0,0,0.25)", display: "flex", flexDirection: "column", zIndex: 15, overflow: "hidden" } },
             React.createElement("div", { style: { background: COLORS.pineDeep, padding: "9px 12px" } },
-                React.createElement("div", { style: { color: COLORS.white, fontFamily: "Fraunces", fontWeight: 600, fontSize: 12.5 } }, "Yard\u0131mc\u0131 Asistan"),
-                React.createElement("div", { style: { color: "#D8E6DC", fontFamily: "Inter", fontSize: 9 } }, "Kural tabanl\u0131 \u2014 yapay zeka de\u011Fil")),
+                React.createElement("div", { style: { color: COLORS.white, fontFamily: "Fraunces", fontWeight: 600, fontSize: 12.5 } }, "Yapay Zeka Asistan\u0131"),
+                React.createElement("div", { style: { color: "#D8E6DC", fontFamily: "Inter", fontSize: 9 } },
+                    me ? me.name : "Misafir",
+                    " olarak ba\u011Fl\u0131")),
             React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: 10, display: "flex", flexDirection: "column", gap: 8 } },
-                thread.map((m, i) => (React.createElement("div", { key: i, style: { alignSelf: m.from === "user" ? "flex-end" : "flex-start", maxWidth: "85%", background: m.from === "user" ? COLORS.ochreSoft : COLORS.paper, borderRadius: 10, padding: "6px 9px", fontFamily: "Inter", fontSize: 11.5, lineHeight: 1.4 } }, m.text))),
+                thread.map((m, i) => (React.createElement("div", { key: i, style: { alignSelf: m.from === "user" ? "flex-end" : "flex-start", maxWidth: "85%" } },
+                    m.source && (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 8.5, fontWeight: 700, color: m.source === "ai" ? COLORS.ochre : "#8A8776", marginBottom: 2, marginLeft: 2 } }, m.source === "ai" ? "⚡ YAPAY ZEKA" : "🆓 ÜCRETSİZ")),
+                    React.createElement("div", { style: { background: m.from === "user" ? COLORS.ochreSoft : COLORS.paper, borderRadius: 10, padding: "6px 9px", fontFamily: "Inter", fontSize: 11.5, lineHeight: 1.4, whiteSpace: "pre-wrap" } }, m.text)))),
                 typing && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776" } }, "yaz\u0131yor...")),
             React.createElement("div", { style: { display: "flex", gap: 6, padding: 8, borderTop: `1px solid ${COLORS.line}` } },
                 React.createElement("input", { value: input, onChange: (e) => setInput(e.target.value), onKeyDown: (e) => { if (e.key === "Enter")
-                        ask(); }, placeholder: "Sorunuzu yaz\u0131n...", style: { flex: 1, fontFamily: "Inter", fontSize: 11.5, padding: "7px 9px", borderRadius: 8, border: `1px solid ${COLORS.line}`, outline: "none" } }),
-                React.createElement("button", { onClick: ask, style: { background: COLORS.pineDeep, border: "none", borderRadius: 8, padding: "0 10px", color: COLORS.white, fontFamily: "Inter", fontSize: 11, cursor: "pointer" } }, "Sor"))))));
+                        ask(); }, placeholder: "\u00D6rn. 90 bin TL'ye Simental d\u00FCve ilan\u0131 ver", style: { flex: 1, fontFamily: "Inter", fontSize: 11.5, padding: "7px 9px", borderRadius: 8, border: `1px solid ${COLORS.line}`, outline: "none" } }),
+                React.createElement("button", { onClick: ask, disabled: typing, style: { background: COLORS.pineDeep, border: "none", borderRadius: 8, padding: "0 10px", color: COLORS.white, fontFamily: "Inter", fontSize: 11, cursor: "pointer", opacity: typing ? 0.6 : 1 } }, "Sor"))))));
 }
 const SAMPLE_LISTINGS = [
     { mainCategory: "buyukbas", subCategory: "Düve", breed: "Simental", age: "18 Ay", gender: "Dişi", price: 92000, weight: 380, purpose: "Damızlık", vaccinated: "Aşılı", isPregnant: "Gebe", dailyMilkLiters: null, description: "Anaç sürüden, ilk gebeliğini taşıyor. Aşıları ve kulak küpesi tam.", sellerName: "Mehmet Yıldız", profileType: "ciftlik" },
@@ -18136,7 +18187,7 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
                 React.createElement(Icon, { size: s === "create" ? 25 : 19, color: active ? COLORS.pineDeep : "#B7B4A6" }),
                 React.createElement("span", { style: { fontFamily: "Inter", fontSize: 9, color: active ? COLORS.pineDeep : "#B7B4A6", fontWeight: 600 } }, l)));
         }))),
-        screen !== "chat" && screen !== "regionChat" && screen !== "reels" && React.createElement(AssistantWidget, null)));
+        screen !== "chat" && screen !== "regionChat" && screen !== "reels" && React.createElement(AssistantWidget, { me: me, refreshAll: refreshAll })));
 }
 // ---------- REELS (kaydırmalı keşif) ----------
 function ReelItem({ item, isFav, toggleFavorite, likeCount, isLiked, onToggleLike, onShare, requireAuth, onOpen }) {
@@ -18146,14 +18197,15 @@ function ReelItem({ item, isFav, toggleFavorite, likeCount, isLiked, onToggleLik
         media ? (media.type === "image" ? (React.createElement("img", { src: media.dataUrl, style: { position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" } })) : (React.createElement("div", { style: { position: "absolute", inset: 0 } },
             React.createElement(VideoPlayer, { src: media.dataUrl, autoPlay: true, loop: true, muted: muted })))) : (React.createElement("div", { style: { position: "absolute", inset: 0, background: "linear-gradient(160deg, #1E4030, #3A5A46)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 90 } }, EMOJI[item.subCategory] || "🐾")),
         React.createElement("div", { style: { position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.75), transparent 45%)" } }),
-        media && media.type === "video" && (React.createElement("button", { onClick: (e) => { e.stopPropagation(); setMuted(v => !v); }, style: { position: "absolute", right: 14, bottom: 310, width: 36, height: 36, borderRadius: "50%", background: "rgba(0,0,0,0.4)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontFamily: "Inter", fontSize: 15 } }, muted ? "🔇" : "🔊")),
-        React.createElement("button", { onClick: (e) => { e.stopPropagation(); toggleFavorite(item.id); }, style: { position: "absolute", right: 14, bottom: 250, width: 42, height: 42, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.6))" } },
-            React.createElement(Heart, { size: 26, fill: isFav ? COLORS.red : "none", color: isFav ? COLORS.red : COLORS.white, strokeWidth: 2 })),
-        React.createElement("button", { onClick: (e) => { e.stopPropagation(); onToggleLike(item.id); }, style: { position: "absolute", right: 14, bottom: 190, width: 42, display: "flex", flexDirection: "column", alignItems: "center", gap: 2, background: "transparent", border: "none", cursor: "pointer", filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.6))" } },
-            React.createElement("span", { style: { fontSize: 24, lineHeight: 1 } }, isLiked ? "👍🏻" : "👍"),
-            React.createElement("span", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 10.5, color: COLORS.white } }, likeCount)),
-        React.createElement("button", { onClick: (e) => { e.stopPropagation(); onShare(item); }, style: { position: "absolute", right: 14, bottom: 130, width: 42, height: 42, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.6))" } },
-            React.createElement(Send, { size: 23, color: COLORS.white })),
+        media && media.type === "video" && (React.createElement("button", { onClick: (e) => { e.stopPropagation(); setMuted(v => !v); }, style: { position: "absolute", right: 16, bottom: 310, width: 36, height: 36, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", opacity: 0.85 } },
+            React.createElement(IconSpeaker, { size: 20, color: "#C9C6BA", muted: muted }))),
+        React.createElement("button", { onClick: (e) => { e.stopPropagation(); toggleFavorite(item.id); }, style: { position: "absolute", right: 14, bottom: 250, width: 42, height: 42, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", opacity: 0.9 } },
+            React.createElement(Heart, { size: 26, fill: isFav ? COLORS.red : "none", color: isFav ? COLORS.red : "#C9C6BA", strokeWidth: 1.8 })),
+        React.createElement("button", { onClick: (e) => { e.stopPropagation(); onToggleLike(item.id); }, style: { position: "absolute", right: 14, bottom: 190, width: 42, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, background: "transparent", border: "none", cursor: "pointer", opacity: 0.9 } },
+            React.createElement(IconThumbUp, { size: 24, color: isLiked ? COLORS.ochre : "#C9C6BA", filled: isLiked }),
+            React.createElement("span", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 10.5, color: "#C9C6BA" } }, likeCount)),
+        React.createElement("button", { onClick: (e) => { e.stopPropagation(); onShare(item); }, style: { position: "absolute", right: 14, bottom: 130, width: 42, height: 42, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", opacity: 0.9 } },
+            React.createElement(Send, { size: 23, color: "#C9C6BA" })),
         React.createElement("div", { style: { position: "relative", padding: "0 16px 22px", width: "100%", zIndex: 2 } },
             React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 19, color: COLORS.white } },
                 item.breed,
