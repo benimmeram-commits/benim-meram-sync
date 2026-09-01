@@ -4,13 +4,18 @@
 // Amaç: birden fazla kişi aynı HTML dosyasını farklı cihazlarda açtığında
 // hepsi aynı ilanları, teklifleri, mesajları ve değerlendirmeleri görsün.
 //
-// "shared" veri  -> herkesin gördüğü ortak veri (ilanlar, teklifler, mesajlar...)
-// "personal" veri -> her cihaza özel veri (hesap bilgisi, favoriler...),
-//                    cihazlar "owner" kimliğiyle birbirinden ayrılır.
+// KALICILIK: Render'ın ücretsiz planında yerel disk kalıcı DEĞİLDİR — sunucu
+// uykuya geçip tekrar uyandığında dosya sıfırlanabilir. Bunu önlemek için bu
+// sürüm, tanımlıysa Upstash Redis'i (ücretsiz, kalıcı) kullanır; tanımlı
+// değilse eskisi gibi yerel dosyaya yazar (test/geliştirme için yeterli).
 //
-// Basitlik için tek bir JSON dosyasına yazar. Küçük/orta ölçekli bir
-// prototip için yeterlidir; ciddi trafik beklerseniz gerçek bir veritabanına
-// (ör. teslim edilen PostgreSQL şeması) geçmeniz önerilir.
+// Upstash kullanmak için (önerilir, veriler asla silinmez):
+//   1) upstash.com adresinde ücretsiz hesap açın
+//   2) "Create Database" ile bir Redis veritabanı oluşturun
+//   3) "REST API" bölümünden UPSTASH_REDIS_REST_URL ve
+//      UPSTASH_REDIS_REST_TOKEN değerlerini kopyalayın
+//   4) Render panelinde bu servisin "Environment" sekmesine bu iki
+//      değişkeni aynı isimlerle ekleyin, sonra "Manual Deploy" yapın
 // -----------------------------------------------------------------------
 
 const express = require("express");
@@ -22,84 +27,122 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: "5mb" }));
 
+const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
+const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+const USE_UPSTASH = !!(UPSTASH_URL && UPSTASH_TOKEN);
+
+// ---------------------------------------------------------------------
+// Depolama katmanı: iki uyumlu backend — Upstash Redis (kalıcı) veya
+// yerel dosya (data.json, kalıcı olmayabilir). rawGet/rawSet, çağıran
+// koda göre hangisinin kullanıldığını fark ettirmez.
+// ---------------------------------------------------------------------
+
 const DB_FILE = path.join(__dirname, "data.json");
 
-function loadDB() {
-  try {
-    return JSON.parse(fs.readFileSync(DB_FILE, "utf8"));
-  } catch {
-    return { shared: {}, personal: {} };
-  }
+function loadLocalDB() {
+  try { return JSON.parse(fs.readFileSync(DB_FILE, "utf8")); } catch { return { shared: {}, personal: {} }; }
+}
+function saveLocalDB(db) {
+  fs.writeFileSync(DB_FILE, JSON.stringify(db));
 }
 
-function saveDB(db) {
-  fs.writeFileSync(DB_FILE, JSON.stringify(db));
+async function rawGet(flatKey) {
+  if (USE_UPSTASH) {
+    const r = await fetch(`${UPSTASH_URL}/get/${encodeURIComponent(flatKey)}`, {
+      headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
+    });
+    const data = await r.json();
+    return data.result == null ? undefined : data.result;
+  }
+  const db = loadLocalDB();
+  const [scope, ...rest] = flatKey.split(":");
+  if (scope === "shared") return db.shared[rest.join(":")];
+  const [owner, ...keyParts] = rest;
+  return (db.personal[owner] || {})[keyParts.join(":")];
+}
+
+async function rawSet(flatKey, value) {
+  if (USE_UPSTASH) {
+    await fetch(`${UPSTASH_URL}/set/${encodeURIComponent(flatKey)}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
+      body: value,
+    });
+    return;
+  }
+  const db = loadLocalDB();
+  const [scope, ...rest] = flatKey.split(":");
+  if (scope === "shared") {
+    db.shared[rest.join(":")] = value;
+  } else {
+    const [owner, ...keyParts] = rest;
+    if (!db.personal[owner]) db.personal[owner] = {};
+    db.personal[owner][keyParts.join(":")] = value;
+  }
+  saveLocalDB(db);
+}
+
+function flatten(key, shared, owner) {
+  return shared ? `shared:${key}` : `personal:${owner}:${key}`;
 }
 
 // ---------------------------------------------------------------------
 // GÜNLÜK SIFIRLAMA: sadece BÖLGE (grup) sohbetlerindeki mesajları temizler.
 // Özel (birebir alıcı-satıcı) mesajlar bu işlemden ETKİLENMEZ, kalıcı kalır.
-// Sunucu sürekli çalıştığı için (Render'da uyku moduna geçmediği sürece)
-// her 30 dakikada bir "gün değişti mi" diye kontrol eder.
 // ---------------------------------------------------------------------
-function resetRegionChatsIfNewDay() {
-  const db = loadDB();
+async function resetRegionChatsIfNewDay() {
   const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-  if (db.shared.lastRegionResetDate === today) return;
+  const lastReset = await rawGet("shared:lastRegionResetDate");
+  if (lastReset === today) return;
 
-  // Not: değerler istemciden JSON string olarak gelip öyle saklanıyor,
-  // bu yüzden önce parse edip sonra tekrar string olarak kaydediyoruz.
-  const raw = db.shared.messages;
+  const raw = await rawGet("shared:messages");
   if (typeof raw === "string") {
     let messages;
     try { messages = JSON.parse(raw); } catch { messages = null; }
     if (Array.isArray(messages)) {
       const kept = messages.filter((m) => !(m && typeof m.conversationId === "string" && m.conversationId.startsWith("bolge-sohbet:")));
       if (kept.length !== messages.length) {
-        db.shared.messages = JSON.stringify(kept);
+        await rawSet("shared:messages", JSON.stringify(kept));
         console.log(`[günlük sıfırlama] ${messages.length - kept.length} bölge sohbeti mesajı temizlendi.`);
       }
     }
   }
-  db.shared.lastRegionResetDate = today;
-  saveDB(db);
+  await rawSet("shared:lastRegionResetDate", today);
 }
-resetRegionChatsIfNewDay();
-setInterval(resetRegionChatsIfNewDay, 30 * 60 * 1000);
+resetRegionChatsIfNewDay().catch((e) => console.error("Günlük sıfırlama hatası:", e));
+setInterval(() => resetRegionChatsIfNewDay().catch((e) => console.error("Günlük sıfırlama hatası:", e)), 30 * 60 * 1000);
 
 // Uygulamanın arayüzünü (index.html) doğrudan bu sunucudan servis eder.
-// Böylece kimsenin dosya indirip açmasına gerek kalmaz — sadece link paylaşılır.
-// Not: index.html'in server.js ile AYNI klasörde olması yeterli, ayrı bir
-// alt klasöre gerek yok.
 app.use(express.static(__dirname));
 
-app.get("/health", (req, res) => res.json({ ok: true }));
+app.get("/health", (req, res) => res.json({ ok: true, storage: USE_UPSTASH ? "upstash" : "local-file" }));
 
 // { key, shared, owner } -> { value }  (value null ise kayıt yok demektir)
-app.post("/kv/get", (req, res) => {
-  const { key, shared, owner } = req.body || {};
-  if (!key) return res.status(400).json({ error: "key gerekli" });
-  const db = loadDB();
-  const store = shared ? db.shared : db.personal[owner] || {};
-  const value = store[key];
-  res.json({ value: value === undefined ? null : value });
+app.post("/kv/get", async (req, res) => {
+  try {
+    const { key, shared, owner } = req.body || {};
+    if (!key) return res.status(400).json({ error: "key gerekli" });
+    const value = await rawGet(flatten(key, shared, owner));
+    res.json({ value: value === undefined ? null : value });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "sunucu hatası" });
+  }
 });
 
 // { key, shared, owner, value } -> { ok: true }
-app.post("/kv/set", (req, res) => {
-  const { key, shared, owner, value } = req.body || {};
-  if (!key) return res.status(400).json({ error: "key gerekli" });
-  if (!shared && !owner) return res.status(400).json({ error: "personal veri için owner gerekli" });
-  const db = loadDB();
-  if (shared) {
-    db.shared[key] = value;
-  } else {
-    if (!db.personal[owner]) db.personal[owner] = {};
-    db.personal[owner][key] = value;
+app.post("/kv/set", async (req, res) => {
+  try {
+    const { key, shared, owner, value } = req.body || {};
+    if (!key) return res.status(400).json({ error: "key gerekli" });
+    if (!shared && !owner) return res.status(400).json({ error: "personal veri için owner gerekli" });
+    await rawSet(flatten(key, shared, owner), value);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "sunucu hatası" });
   }
-  saveDB(db);
-  res.json({ ok: true });
 });
 
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`Benim Meram senkronizasyon sunucusu çalışıyor: http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`Benim Meram senkronizasyon sunucusu çalışıyor (${USE_UPSTASH ? "Upstash Redis" : "yerel dosya"}): http://localhost:${PORT}`));
