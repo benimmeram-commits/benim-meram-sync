@@ -17365,6 +17365,7 @@ async function logAdminLogin(entry) {
     await saveShared("adminLoginLogs", all);
 }
 const DEFAULT_PRICING = { subscriptionPrice: 1000, perListingPrice: 75, commissionRate: 0 };
+const DEFAULT_ANNOUNCEMENT = { text: "", active: false, updatedAt: 0 };
 const ADMIN_ROLE_LABELS = { super: "Süper Admin", mod: "Moderatör", destek: "Destek" };
 const SAMPLE_LISTINGS = [
     { mainCategory: "buyukbas", subCategory: "Düve", breed: "Simental", age: "18 Ay", gender: "Dişi", price: 92000, weight: 380, purpose: "Damızlık", vaccinated: "Aşılı", isPregnant: "Gebe", dailyMilkLiters: null, description: "Anaç sürüden, ilk gebeliğini taşıyor. Aşıları ve kulak küpesi tam.", sellerName: "Mehmet Yıldız", profileType: "ciftlik" },
@@ -17698,6 +17699,7 @@ function BenimMeram() {
     const [reports, setReports] = useState([]);
     const [customBreeds, setCustomBreeds] = useState({});
     const [customSubcategories, setCustomSubcategories] = useState({ buyukbas: [], kucukbas: [] });
+    const [announcement, setAnnouncement] = useState(DEFAULT_ANNOUNCEMENT);
     const [adminSession, setAdminSession] = useState(null);
     const [screen, setScreen] = useState("home");
     const [tab, setTab] = useState("buyukbas");
@@ -17716,12 +17718,13 @@ function BenimMeram() {
     });
     const effectiveView = isAdminGateOpen ? view : "app";
     const refreshAll = useCallback(async () => {
-        const [l, r, o, m, rv, msg, pr, aa, al, au, rp, cb, csc] = await Promise.all([
+        const [l, r, o, m, rv, msg, pr, aa, al, au, rp, cb, csc, ann] = await Promise.all([
             loadShared("listings", []), loadShared("requests", []), loadShared("offers", []),
             loadShared("members", []), loadShared("reviews", []), loadShared("messages", []),
             loadShared("pricing", DEFAULT_PRICING), loadShared("adminAccounts", []),
             loadShared("adminLoginLogs", []), loadShared("auditLog", []), loadShared("reports", []),
             loadShared("customBreeds", {}), loadShared("customSubcategories", { buyukbas: [], kucukbas: [] }),
+            loadShared("announcement", DEFAULT_ANNOUNCEMENT),
         ]);
         setListings(l);
         setRequests(r);
@@ -17736,6 +17739,7 @@ function BenimMeram() {
         setReports(rp);
         setCustomBreeds(cb);
         setCustomSubcategories(csc);
+        setAnnouncement(ann);
     }, []);
     const toggleFavorite = useCallback(async (listingId) => {
         setFavorites(prev => {
@@ -17768,10 +17772,13 @@ function BenimMeram() {
             React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 15, color: COLORS.pineDeep } }, "BEN\u0130M MERAM")),
         React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776", marginBottom: 6, textAlign: "center", maxWidth: 440 } }, "Ger\u00E7ek verilerle \u00E7al\u0131\u015Fan pazar yeri. Bu uygulamay\u0131 kullanan herkes ayn\u0131 ilanlar\u0131 ve talepleri g\u00F6r\u00FCr."),
         React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: COLORS.ochre, marginBottom: 18 } }, "\u26A0 SMS ve \u00F6deme ad\u0131mlar\u0131 sim\u00FClasyondur \u2014 ger\u00E7ek sa\u011Flay\u0131c\u0131 ba\u011Flanmad\u0131."),
+        announcement.active && announcement.text && (React.createElement("div", { style: { width: "100%", maxWidth: 380, background: COLORS.ochreSoft, border: `1px solid ${COLORS.ochre}`, borderRadius: 12, padding: "10px 14px", marginBottom: 18, display: "flex", alignItems: "flex-start", gap: 8 } },
+            React.createElement(Bell, { size: 14, color: "#7A5A1E", style: { marginTop: 2, flexShrink: 0 } }),
+            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#7A5A1E" } }, announcement.text))),
         isAdminGateOpen && (React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 24, background: COLORS.white, padding: 4, borderRadius: 12, border: `1px solid ${COLORS.line}` } },
             React.createElement("button", { onClick: () => setView("app"), style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5, padding: "8px 16px", borderRadius: 8, border: "none", cursor: "pointer", background: view === "app" ? COLORS.pineDeep : "transparent", color: view === "app" ? COLORS.white : "#5A574C" } }, "Uygulama"),
             React.createElement("button", { onClick: () => setView("admin"), style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5, padding: "8px 16px", borderRadius: 8, border: "none", cursor: "pointer", background: view === "admin" ? COLORS.pineDeep : "transparent", color: view === "admin" ? COLORS.white : "#5A574C" } }, "Y\u00F6netim Paneli"))),
-        effectiveView === "admin" ? (adminSession ? (React.createElement(AdminPanel, { session: adminSession, onLogout: async () => { await logAdminLogin({ tcNo: adminSession.tcNo, name: adminSession.name, role: adminSession.role, success: true, reason: "çıkış yapıldı" }); await savePersonal("adminSession", null); setAdminSession(null); await refreshAll(); }, listings: listings, requests: requests, offers: offers, members: members, messages: messages, pricing: pricing, adminAccounts: adminAccounts, adminLoginLogs: adminLoginLogs, auditLog: auditLog, reports: reports, customBreeds: customBreeds, customSubcategories: customSubcategories, refreshAll: refreshAll })) : (React.createElement(AdminAuth, { adminAccounts: adminAccounts, refreshAll: refreshAll, onLogin: async (session) => { await savePersonal("adminSession", session); setAdminSession(session); } }))) : (React.createElement("div", { style: { width: 360, height: 700, background: COLORS.paper, borderRadius: 34, border: `10px solid ${COLORS.ink}`, overflow: "hidden", position: "relative", boxShadow: "0 30px 60px rgba(0,0,0,0.35)", display: "flex", flexDirection: "column" } },
+        effectiveView === "admin" ? (adminSession ? (React.createElement(AdminPanel, { session: adminSession, onLogout: async () => { await logAdminLogin({ tcNo: adminSession.tcNo, name: adminSession.name, role: adminSession.role, success: true, reason: "çıkış yapıldı" }); await savePersonal("adminSession", null); setAdminSession(null); await refreshAll(); }, listings: listings, requests: requests, offers: offers, members: members, messages: messages, reviews: reviews, announcement: announcement, pricing: pricing, adminAccounts: adminAccounts, adminLoginLogs: adminLoginLogs, auditLog: auditLog, reports: reports, customBreeds: customBreeds, customSubcategories: customSubcategories, refreshAll: refreshAll })) : (React.createElement(AdminAuth, { adminAccounts: adminAccounts, refreshAll: refreshAll, onLogin: async (session) => { await savePersonal("adminSession", session); setAdminSession(session); } }))) : (React.createElement("div", { style: { width: 360, height: 700, background: COLORS.paper, borderRadius: 34, border: `10px solid ${COLORS.ink}`, overflow: "hidden", position: "relative", boxShadow: "0 30px 60px rgba(0,0,0,0.35)", display: "flex", flexDirection: "column" } },
             React.createElement("style", null, `@keyframes pulseDot {0%{transform:scale(1);opacity:.7}70%{transform:scale(2.6);opacity:0}100%{opacity:0}}`),
             !me ? (React.createElement(Onboarding, { onDone: (m) => setMe(m) })) : (React.createElement(AppShell, { me: me, setMe: setMe, listings: listings, requests: requests, offers: offers, reviews: reviews, messages: messages, members: members, pricing: pricing, customBreeds: customBreeds, customSubcategories: customSubcategories, favorites: favorites, toggleFavorite: toggleFavorite, refreshAll: refreshAll, screen: screen, setScreen: setScreen, tab: tab, setTab: setTab, subTab: subTab, setSubTab: setSubTab, breedTab: breedTab, setBreedTab: setBreedTab, drawer: drawer, setDrawer: setDrawer, selected: selected, setSelected: setSelected }))))));
 }
@@ -18546,6 +18553,33 @@ function FiyatlandirmaPanel({ pricing, session, refreshAll }) {
             React.createElement(FormField, { label: "Komisyon Oran\u0131 (%)", value: commission, onChange: setCommission, type: "number" })),
         React.createElement("button", { onClick: save, disabled: saving, style: btnPrimary }, saving ? "Kaydediliyor..." : saved ? "✓ Kaydedildi" : "Fiyatları Güncelle")));
 }
+function AdminPasswordReset({ acc, session, refreshAll }) {
+    const [open, setOpen] = useState(false);
+    const [newPassword, setNewPassword] = useState("");
+    const [busy, setBusy] = useState(false);
+    const reset = async () => {
+        if (newPassword.length < 4)
+            return;
+        setBusy(true);
+        const all = await loadShared("adminAccounts", []);
+        const idx = all.findIndex(a => a.id === acc.id);
+        if (idx > -1) {
+            all[idx].passwordPlain = newPassword;
+            await saveShared("adminAccounts", all);
+        }
+        await logAudit(session.name, session.role, "Yönetici şifresi sıfırlandı", `${acc.name} (${ADMIN_ROLE_LABELS[acc.role]})`);
+        await refreshAll();
+        setBusy(false);
+        setOpen(false);
+        setNewPassword("");
+    };
+    if (!open)
+        return React.createElement("button", { onClick: () => setOpen(true), style: { ...btnGhost, borderColor: COLORS.line, color: COLORS.pineDeep } }, "\u015Eifreyi S\u0131f\u0131rla");
+    return (React.createElement("div", { style: { display: "flex", gap: 6 } },
+        React.createElement("input", { value: newPassword, onChange: (e) => setNewPassword(e.target.value), placeholder: "Yeni \u015Fifre", type: "password", style: { ...inputStyle, width: 120 } }),
+        React.createElement("button", { disabled: busy, onClick: reset, style: btnPrimary }, "Uygula"),
+        React.createElement("button", { onClick: () => setOpen(false), style: { ...btnGhost, borderColor: COLORS.line, color: "#8A8776" } }, "\u2715")));
+}
 function YoneticiPanel({ adminAccounts, session, refreshAll }) {
     const [role, setRole] = useState("mod");
     const [tcNo, setTcNo] = useState("");
@@ -18586,33 +18620,43 @@ function YoneticiPanel({ adminAccounts, session, refreshAll }) {
         setAnswer("");
     };
     const toggleActive = async (acc) => {
+        if (acc.tcNo === session.tcNo)
+            return; // kendi erişimini kapatamaz
         const all = await loadShared("adminAccounts", []);
         const idx = all.findIndex(a => a.id === acc.id);
         if (idx > -1) {
             all[idx].active = !all[idx].active;
             await saveShared("adminAccounts", all);
         }
-        await logAudit(session.name, session.role, `Yönetici erişimi ${acc.active ? "kapatıldı" : "açıldı"}`, acc.name);
+        await logAudit(session.name, session.role, `Yönetici erişimi ${acc.active ? "kapatıldı" : "açıldı"}`, `${acc.name} (${ADMIN_ROLE_LABELS[acc.role]})`);
         await refreshAll();
     };
     return (React.createElement("div", null,
-        adminAccounts.map(acc => (React.createElement("div", { key: acc.id, style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, background: COLORS.paper, border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: 10, marginBottom: 8 } },
-            React.createElement("div", null,
-                React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5 } },
-                    acc.name,
-                    " ",
-                    React.createElement("span", { style: { color: "#8A8776", fontWeight: 400 } },
-                        "\u00B7 ",
-                        ADMIN_ROLE_LABELS[acc.role])),
-                React.createElement("div", { style: { fontFamily: "IBM Plex Mono", fontSize: 10.5, color: "#8A8776" } },
-                    "*******",
-                    acc.tcNo.slice(-4),
-                    " \u00B7 ",
-                    acc.phone)),
-            acc.role !== "super" && (React.createElement("button", { onClick: () => toggleActive(acc), style: { ...btnGhost, borderColor: acc.active ? COLORS.red : COLORS.pine, color: acc.active ? COLORS.red : COLORS.pineDeep, flexShrink: 0 } }, acc.active ? "Erişimi Kapat" : "Erişimi Aç")),
-            acc.role === "super" && React.createElement(Badge, { tone: "pine" }, "Aktif")))),
-        !showForm ? (React.createElement("button", { onClick: () => setShowForm(true), style: { ...btnGhost, borderColor: COLORS.pine, color: COLORS.pineDeep, width: "100%", justifyContent: "center" } }, "+ Yeni Moderat\u00F6r / Destek Hesab\u0131")) : (React.createElement("div", { style: { background: COLORS.paper, borderRadius: 10, padding: 12, marginTop: 6 } },
-            React.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 8 } }, [["mod", "Moderatör"], ["destek", "Destek"]].map(([k, l]) => (React.createElement("button", { key: k, onClick: () => setRole(k), style: { flex: 1, padding: "7px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "Inter", fontWeight: 600, fontSize: 11.5, background: role === k ? COLORS.pineDeep : COLORS.white, color: role === k ? COLORS.white : "#5A574C" } }, l)))),
+        adminAccounts.map(acc => {
+            const isSelf = acc.tcNo === session.tcNo;
+            return (React.createElement("div", { key: acc.id, style: { background: COLORS.paper, border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: 10, marginBottom: 8 } },
+                React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 } },
+                    React.createElement("div", null,
+                        React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5 } },
+                            acc.name,
+                            " ",
+                            React.createElement("span", { style: { color: "#8A8776", fontWeight: 400 } },
+                                "\u00B7 ",
+                                ADMIN_ROLE_LABELS[acc.role]),
+                            isSelf && React.createElement("span", { style: { color: COLORS.ochre } }, " \u00B7 siz")),
+                        React.createElement("div", { style: { fontFamily: "IBM Plex Mono", fontSize: 10.5, color: "#8A8776" } },
+                            "*******",
+                            acc.tcNo.slice(-4),
+                            " \u00B7 ",
+                            acc.phone,
+                            !acc.active ? " · DEVRE DIŞI" : "")),
+                    React.createElement("div", { style: { display: "flex", gap: 6, flexShrink: 0 } },
+                        !isSelf && React.createElement(AdminPasswordReset, { acc: acc, session: session, refreshAll: refreshAll }),
+                        isSelf ? (React.createElement(Badge, { tone: "pine" }, "Aktif (Siz)")) : (React.createElement("button", { onClick: () => toggleActive(acc), style: { ...btnGhost, borderColor: acc.active ? COLORS.red : COLORS.pine, color: acc.active ? COLORS.red : COLORS.pineDeep } }, acc.active ? "Erişimi Kapat" : "Erişimi Aç"))))));
+        }),
+        !showForm ? (React.createElement("button", { onClick: () => setShowForm(true), style: { ...btnGhost, borderColor: COLORS.pine, color: COLORS.pineDeep, width: "100%", justifyContent: "center" } }, "+ Yeni Y\u00F6netici Hesab\u0131")) : (React.createElement("div", { style: { background: COLORS.paper, borderRadius: 10, padding: 12, marginTop: 6 } },
+            React.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 8 } }, [["super", "Süper Admin"], ["mod", "Moderatör"], ["destek", "Destek"]].map(([k, l]) => (React.createElement("button", { key: k, onClick: () => setRole(k), style: { flex: 1, padding: "7px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "Inter", fontWeight: 600, fontSize: 11.5, background: role === k ? COLORS.pineDeep : COLORS.white, color: role === k ? COLORS.white : "#5A574C" } }, l)))),
+            role === "super" && (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10, color: COLORS.red, marginBottom: 8 } }, "\u26A0 Bu ki\u015Fiye TAM yetki (finans, fiyatland\u0131rma, t\u00FCm kullan\u0131c\u0131 ve i\u00E7erik m\u00FCdahalesi dahil) vereceksiniz.")),
             React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } },
                 React.createElement(FormField, { label: "TC Kimlik No", value: tcNo, onChange: setTcNo, placeholder: "11 haneli" }),
                 React.createElement(FormField, { label: "Ad Soyad", value: name, onChange: setName, placeholder: "Ad\u0131 Soyad\u0131" }),
@@ -18625,7 +18669,37 @@ function YoneticiPanel({ adminAccounts, session, refreshAll }) {
                 React.createElement("button", { onClick: create, disabled: busy, style: btnPrimary }, busy ? "Oluşturuluyor..." : "Hesabı Oluştur"),
                 React.createElement("button", { onClick: () => setShowForm(false), style: { ...btnGhost, borderColor: COLORS.line, color: "#8A8776" } }, "Vazge\u00E7"))))));
 }
+function ListingEditRow({ listing, session, refreshAll }) {
+    const [price, setPrice] = useState(listing.price);
+    const [age, setAge] = useState(listing.age);
+    const [weight, setWeight] = useState(listing.weight || "");
+    const [description, setDescription] = useState(listing.description || "");
+    const [saving, setSaving] = useState(false);
+    const save = async () => {
+        setSaving(true);
+        const all = await loadShared("listings", []);
+        const idx = all.findIndex(l => l.id === listing.id);
+        if (idx > -1) {
+            all[idx] = { ...all[idx], price: Number(price), age, weight: weight ? Number(weight) : null, description: description.trim() };
+            await saveShared("listings", all);
+        }
+        await logAudit(session.name, session.role, "İlan bilgileri düzenlendi", `${listing.breed} ${listing.subCategory} (${listing.sellerName})`);
+        await refreshAll();
+        setSaving(false);
+    };
+    return (React.createElement("div", { style: { width: "100%", background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: 10, marginTop: 6 } },
+        React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } },
+            React.createElement(FormField, { label: "Fiyat (TL)", value: price, onChange: setPrice, type: "number" }),
+            React.createElement(FormField, { label: "Ya\u015F", value: age, onChange: setAge }),
+            React.createElement(FormField, { label: "A\u011F\u0131rl\u0131k (kg)", value: weight, onChange: setWeight, type: "number" }),
+            React.createElement("div", null,
+                React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "A\u00E7\u0131klama"),
+                React.createElement("textarea", { value: description, onChange: (e) => setDescription(e.target.value), rows: 2, style: { ...inputStyle, marginTop: 4, resize: "vertical" } }))),
+        React.createElement("button", { onClick: save, disabled: saving, style: { ...btnPrimary, marginTop: 8 } }, saving ? "Kaydediliyor..." : "Kaydet")));
+}
 function IlanModerasyonPanel({ listings, session, refreshAll }) {
+    const isSuper = session.role === "super";
+    const [editingId, setEditingId] = useState(null);
     const act = async (id, patch, action) => {
         const all = await loadShared("listings", []);
         const idx = all.findIndex(l => l.id === id);
@@ -18644,23 +18718,26 @@ function IlanModerasyonPanel({ listings, session, refreshAll }) {
     };
     if (listings.length === 0)
         return React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Hi\u00E7 ilan yok.");
-    return (React.createElement("div", null, listings.map(l => (React.createElement("div", { key: l.id, style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, background: COLORS.paper, border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: 10, marginBottom: 8 } },
-        React.createElement("div", null,
-            React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5 } },
-                l.breed,
-                " ",
-                l.subCategory,
-                " ",
-                React.createElement("span", { style: { color: "#8A8776", fontWeight: 400 } },
-                    "\u00B7 ",
-                    l.sellerName)),
-            React.createElement("div", { style: { fontFamily: "IBM Plex Mono", fontSize: 10.5, color: "#8A8776" } },
-                TL(l.price),
-                " \u00B7 ",
-                l.status === "kaldirildi" ? "Dondurulmuş" : "Yayında")),
-        React.createElement("div", { style: { display: "flex", gap: 6, flexShrink: 0 } },
-            l.status === "kaldirildi" ? (React.createElement("button", { onClick: () => act(l.id, "yayinda", "İlan yeniden yayına alındı"), style: { ...btnGhost, borderColor: COLORS.pine, color: COLORS.pineDeep } }, "Aktif Et")) : (React.createElement("button", { onClick: () => act(l.id, "kaldirildi", "İlan donduruldu"), style: { ...btnGhost, borderColor: COLORS.ochre, color: "#7A5A1E" } }, "Dondur")),
-            React.createElement("button", { onClick: () => act(l.id, "sil", "İlan kalıcı olarak silindi"), style: { ...btnGhost, borderColor: COLORS.red, color: COLORS.red } }, "Sil")))))));
+    return (React.createElement("div", null, listings.map(l => (React.createElement("div", { key: l.id, style: { background: COLORS.paper, border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: 10, marginBottom: 8 } },
+        React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 } },
+            React.createElement("div", null,
+                React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5 } },
+                    l.breed,
+                    " ",
+                    l.subCategory,
+                    " ",
+                    React.createElement("span", { style: { color: "#8A8776", fontWeight: 400 } },
+                        "\u00B7 ",
+                        l.sellerName)),
+                React.createElement("div", { style: { fontFamily: "IBM Plex Mono", fontSize: 10.5, color: "#8A8776" } },
+                    TL(l.price),
+                    " \u00B7 ",
+                    l.status === "kaldirildi" ? "Dondurulmuş" : "Yayında")),
+            React.createElement("div", { style: { display: "flex", gap: 6, flexShrink: 0 } },
+                isSuper && React.createElement("button", { onClick: () => setEditingId(editingId === l.id ? null : l.id), style: { ...btnGhost, borderColor: COLORS.line, color: COLORS.pineDeep } }, "D\u00FCzenle"),
+                l.status === "kaldirildi" ? (React.createElement("button", { onClick: () => act(l.id, "yayinda", "İlan yeniden yayına alındı"), style: { ...btnGhost, borderColor: COLORS.pine, color: COLORS.pineDeep } }, "Aktif Et")) : (React.createElement("button", { onClick: () => act(l.id, "kaldirildi", "İlan donduruldu"), style: { ...btnGhost, borderColor: COLORS.ochre, color: "#7A5A1E" } }, "Dondur")),
+                React.createElement("button", { onClick: () => act(l.id, "sil", "İlan kalıcı olarak silindi"), style: { ...btnGhost, borderColor: COLORS.red, color: COLORS.red } }, "Sil"))),
+        editingId === l.id && React.createElement(ListingEditRow, { listing: l, session: session, refreshAll: refreshAll }))))));
 }
 function UserEditRow({ member, session, refreshAll }) {
     const [editing, setEditing] = useState(false);
@@ -18668,6 +18745,7 @@ function UserEditRow({ member, session, refreshAll }) {
     const [phone, setPhone] = useState(member.phone || "");
     const [profileType, setProfileType] = useState(member.profileType);
     const [documentStatus, setDocumentStatus] = useState(member.documentStatus || "");
+    const [subscribed, setSubscribed] = useState(!!member.subscribed);
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [busy, setBusy] = useState(false);
     const save = async () => {
@@ -18675,7 +18753,7 @@ function UserEditRow({ member, session, refreshAll }) {
         const all = await loadShared("members", []);
         const idx = all.findIndex(x => x.name === member.name && x.joinedAt === member.joinedAt);
         if (idx > -1) {
-            all[idx] = { ...all[idx], name: name.trim(), phone: phone.trim(), profileType, documentStatus: documentStatus || undefined };
+            all[idx] = { ...all[idx], name: name.trim(), phone: phone.trim(), profileType, documentStatus: documentStatus || undefined, subscribed };
             await saveShared("members", all);
         }
         await logAudit(session.name, session.role, "Kullanıcı bilgileri düzenlendi", `${member.name} → ${name.trim()}`);
@@ -18717,7 +18795,10 @@ function UserEditRow({ member, session, refreshAll }) {
                 React.createElement("select", { value: documentStatus, onChange: (e) => setDocumentStatus(e.target.value), style: { ...inputStyle, marginTop: 4 } },
                     React.createElement("option", { value: "beklemede" }, "Onay Bekliyor"),
                     React.createElement("option", { value: "onaylandi" }, "Onayland\u0131"),
-                    React.createElement("option", { value: "reddedildi" }, "Reddedildi"))))),
+                    React.createElement("option", { value: "reddedildi" }, "Reddedildi")))),
+            React.createElement("label", { style: { fontFamily: "Inter", fontSize: 12, color: COLORS.ink, display: "flex", alignItems: "center", gap: 6, cursor: "pointer" } },
+                React.createElement("input", { type: "checkbox", checked: subscribed, onChange: (e) => setSubscribed(e.target.checked) }),
+                "Aktif abonelik ver")),
         React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 10 } },
             React.createElement("button", { disabled: busy, onClick: save, style: btnPrimary }, busy ? "Kaydediliyor..." : "Kaydet"),
             React.createElement("button", { onClick: () => setEditing(false), style: { ...btnGhost, borderColor: COLORS.line, color: "#8A8776" } }, "Vazge\u00E7"))));
@@ -18866,6 +18947,138 @@ function KategoriPanel({ customBreeds, customSubcategories, session, refreshAll 
                 " ",
                 React.createElement("button", { onClick: () => removeBreed(k, b), style: { background: "none", border: "none", color: COLORS.red, cursor: "pointer", fontSize: 10.5 } }, "\u2715"))))))))));
 }
+function MesajlarPanel({ messages, session, refreshAll }) {
+    const [expanded, setExpanded] = useState(null);
+    const groups = {};
+    messages.forEach(m => { (groups[m.conversationId] = groups[m.conversationId] || []).push(m); });
+    const conversations = Object.entries(groups).map(([cid, msgs]) => ({
+        cid, msgs: msgs.slice().sort((a, b) => a.createdAt - b.createdAt),
+        last: msgs.reduce((a, b) => (a.createdAt > b.createdAt ? a : b)),
+        isRegion: cid.startsWith("bolge-sohbet:"),
+    })).sort((a, b) => b.last.createdAt - a.last.createdAt);
+    const deleteConversation = async (cid) => {
+        const all = await loadShared("messages", []);
+        await saveShared("messages", all.filter(m => m.conversationId !== cid));
+        await logAudit(session.name, session.role, "Sohbet tamamen silindi", cid);
+        await refreshAll();
+    };
+    const deleteMessage = async (msgId, cid) => {
+        const all = await loadShared("messages", []);
+        await saveShared("messages", all.filter(m => m.id !== msgId));
+        await logAudit(session.name, session.role, "Tek bir mesaj silindi", cid);
+        await refreshAll();
+    };
+    if (conversations.length === 0)
+        return React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Hen\u00FCz mesaj yok.");
+    return (React.createElement("div", null, conversations.map(c => {
+        const label = c.isRegion ? `Bölge: ${c.cid.replace("bolge-sohbet:", "")}` : (() => { const p = convParts(c.cid); return `${p.buyerName} ↔ ${p.sellerName}`; })();
+        return (React.createElement("div", { key: c.cid, style: { background: COLORS.paper, border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: 10, marginBottom: 8 } },
+            React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 } },
+                React.createElement("button", { onClick: () => setExpanded(expanded === c.cid ? null : c.cid), style: { background: "none", border: "none", cursor: "pointer", textAlign: "left", flex: 1 } },
+                    React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5 } }, label),
+                    React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776" } },
+                        c.msgs.length,
+                        " mesaj \u00B7 son: ",
+                        new Date(c.last.createdAt).toLocaleString("tr-TR"))),
+                React.createElement("button", { onClick: () => deleteConversation(c.cid), style: { ...btnGhost, borderColor: COLORS.red, color: COLORS.red, flexShrink: 0 } }, "Sohbeti Sil")),
+            expanded === c.cid && (React.createElement("div", { style: { marginTop: 8, borderTop: `1px solid ${COLORS.line}`, paddingTop: 8, display: "flex", flexDirection: "column", gap: 4, maxHeight: 200, overflowY: "auto" } }, c.msgs.map(m => (React.createElement("div", { key: m.id, style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, fontFamily: "Inter", fontSize: 11 } },
+                React.createElement("span", null,
+                    React.createElement("b", null,
+                        m.sender,
+                        ":"),
+                    " ",
+                    m.text),
+                React.createElement("button", { onClick: () => deleteMessage(m.id, c.cid), style: { background: "none", border: "none", color: COLORS.red, cursor: "pointer", fontSize: 10, flexShrink: 0 } }, "\u2715"))))))));
+    })));
+}
+function DegerlendirmelerPanel({ reviews, session, refreshAll }) {
+    const remove = async (id) => {
+        const all = await loadShared("reviews", []);
+        await saveShared("reviews", all.filter(r => r.id !== id));
+        await logAudit(session.name, session.role, "Değerlendirme silindi", id);
+        await refreshAll();
+    };
+    if (reviews.length === 0)
+        return React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Hen\u00FCz de\u011Ferlendirme yok.");
+    return (React.createElement("div", null, reviews.slice().reverse().map(r => (React.createElement("div", { key: r.id, style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, background: COLORS.paper, border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: 10, marginBottom: 8 } },
+        React.createElement("div", null,
+            React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5 } },
+                r.buyerName,
+                " \u2192 ",
+                r.sellerName,
+                " ",
+                React.createElement(StarRow, { value: r.stars, size: 11 })),
+            r.comment && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776" } }, r.comment)),
+        React.createElement("button", { onClick: () => remove(r.id), style: { ...btnGhost, borderColor: COLORS.red, color: COLORS.red, flexShrink: 0 } }, "Sil"))))));
+}
+function TaleplerPanel({ requests, session, refreshAll }) {
+    const remove = async (id) => {
+        const all = await loadShared("requests", []);
+        await saveShared("requests", all.filter(r => r.id !== id));
+        await logAudit(session.name, session.role, "Alım talebi silindi", id);
+        await refreshAll();
+    };
+    if (requests.length === 0)
+        return React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Hen\u00FCz talep yok.");
+    return (React.createElement("div", null, requests.slice().reverse().map(r => (React.createElement("div", { key: r.id, style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, background: COLORS.paper, border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: 10, marginBottom: 8 } },
+        React.createElement("div", null,
+            React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5 } },
+                r.buyerName,
+                " \u2014 ",
+                TL(r.budget),
+                " ile ",
+                r.category,
+                " ar\u0131yor"),
+            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776" } },
+                r.breed ? `Tercih: ${r.breed}` : "Irk fark etmez",
+                " \u00B7 ",
+                r.status)),
+        React.createElement("button", { onClick: () => remove(r.id), style: { ...btnGhost, borderColor: COLORS.red, color: COLORS.red, flexShrink: 0 } }, "Sil"))))));
+}
+function TekliflerPanel({ offers, session, refreshAll }) {
+    const remove = async (id) => {
+        const all = await loadShared("offers", []);
+        await saveShared("offers", all.filter(o => o.id !== id));
+        await logAudit(session.name, session.role, "Teklif silindi", id);
+        await refreshAll();
+    };
+    if (offers.length === 0)
+        return React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Hen\u00FCz teklif yok.");
+    return (React.createElement("div", null, offers.slice().reverse().map(o => (React.createElement("div", { key: o.id, style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, background: COLORS.paper, border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: 10, marginBottom: 8 } },
+        React.createElement("div", null,
+            React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5 } },
+                o.buyerName,
+                " \u2192 ",
+                o.sellerName,
+                " \u00B7 ",
+                TL(o.amount)),
+            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776" } },
+                o.status,
+                o.counterAmount ? ` · Karşı teklif: ${TL(o.counterAmount)}` : "")),
+        React.createElement("button", { onClick: () => remove(o.id), style: { ...btnGhost, borderColor: COLORS.red, color: COLORS.red, flexShrink: 0 } }, "Sil"))))));
+}
+function DuyuruPanel({ announcement, session, refreshAll }) {
+    const [text, setText] = useState(announcement.text || "");
+    const [saving, setSaving] = useState(false);
+    const publish = async (active) => {
+        setSaving(true);
+        const next = { text: text.trim(), active, updatedAt: Date.now() };
+        await saveShared("announcement", next);
+        await logAudit(session.name, session.role, active ? "Sistem duyurusu yayınlandı" : "Sistem duyurusu kaldırıldı", text.trim());
+        await refreshAll();
+        setSaving(false);
+    };
+    return (React.createElement("div", null,
+        React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776", marginBottom: 8 } }, "Bu duyuru, uygulamay\u0131 a\u00E7an HERKESE (giri\u015F yapmam\u0131\u015F kullan\u0131c\u0131lar dahil) en \u00FCstte g\u00F6sterilir."),
+        React.createElement("textarea", { value: text, onChange: (e) => setText(e.target.value), rows: 3, placeholder: "\u00D6rn. Sistem bak\u0131m\u0131 nedeniyle 22:00-23:00 aras\u0131 ilan verilemeyecektir.", style: { ...inputStyle, resize: "vertical", fontFamily: "Inter" } }),
+        React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 8 } },
+            React.createElement("button", { onClick: () => publish(true), disabled: saving || !text.trim(), style: btnPrimary }, saving ? "..." : "Yayınla"),
+            React.createElement("button", { onClick: () => publish(false), disabled: saving, style: { ...btnGhost, borderColor: COLORS.red, color: COLORS.red } }, "Duyuruyu Kald\u0131r")),
+        announcement.active && announcement.text && (React.createElement("div", { style: { marginTop: 12, fontFamily: "Inter", fontSize: 11, color: "#8A8776" } },
+            "\u015Eu an yay\u0131nda: \"",
+            announcement.text,
+            "\""))));
+}
 function GirisLoguPanel({ adminLoginLogs }) {
     const sorted = adminLoginLogs.slice().sort((a, b) => b.timestamp - a.timestamp).slice(0, 50);
     return (React.createElement("div", null,
@@ -18883,6 +19096,68 @@ function GirisLoguPanel({ adminLoginLogs }) {
                 " \u00B7 ",
                 new Date(l.timestamp).toLocaleString("tr-TR")))))));
 }
+const RAW_DATA_KEYS = [
+    "listings", "requests", "offers", "members", "reviews", "messages",
+    "pricing", "adminAccounts", "adminLoginLogs", "auditLog", "reports",
+    "customBreeds", "customSubcategories", "announcement",
+];
+function RawDataKeyEditor({ dataKey, session, refreshAll }) {
+    const [open, setOpen] = useState(false);
+    const [text, setText] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [err, setErr] = useState("");
+    const [saving, setSaving] = useState(false);
+    const load = async () => {
+        setLoading(true);
+        const value = await loadShared(dataKey, null);
+        setText(JSON.stringify(value, null, 2));
+        setLoading(false);
+        setOpen(true);
+    };
+    const save = async () => {
+        setErr("");
+        let parsed;
+        try {
+            parsed = JSON.parse(text);
+        }
+        catch (e) {
+            setErr("Geçersiz JSON: " + e.message);
+            return;
+        }
+        setSaving(true);
+        await saveShared(dataKey, parsed);
+        await logAudit(session.name, session.role, "Ham veri doğrudan düzenlendi", dataKey);
+        await refreshAll();
+        setSaving(false);
+    };
+    return (React.createElement("div", { style: { background: COLORS.paper, border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: 10, marginBottom: 8 } },
+        React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" } },
+            React.createElement("span", { style: { fontFamily: "IBM Plex Mono", fontWeight: 600, fontSize: 12.5 } }, dataKey),
+            React.createElement("button", { onClick: () => (open ? setOpen(false) : load()), style: { ...btnGhost, borderColor: COLORS.line, color: COLORS.pineDeep } }, loading ? "Yükleniyor..." : open ? "Kapat" : "Görüntüle / Düzenle")),
+        open && (React.createElement("div", { style: { marginTop: 8 } },
+            React.createElement("textarea", { value: text, onChange: (e) => setText(e.target.value), rows: 10, style: { ...inputStyle, fontFamily: "IBM Plex Mono", fontSize: 11, resize: "vertical", whiteSpace: "pre" } }),
+            err && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11, marginTop: 4 } }, err),
+            React.createElement("button", { onClick: save, disabled: saving, style: { ...btnPrimary, marginTop: 6 } }, saving ? "Kaydediliyor..." : "Bu Veriyi Kaydet (dikkatli olun)")))));
+}
+function HamVeriPanel({ session, refreshAll }) {
+    const exportAll = async () => {
+        const all = {};
+        for (const k of RAW_DATA_KEYS)
+            all[k] = await loadShared(k, null);
+        const blob = new Blob([JSON.stringify(all, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `benim-meram-veri-${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        await logAudit(session.name, session.role, "Tüm veri dışa aktarıldı (JSON indirildi)", "");
+    };
+    return (React.createElement("div", null,
+        React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: COLORS.red, marginBottom: 10 } }, "\u26A0 Bu b\u00F6l\u00FCm uygulaman\u0131n kulland\u0131\u011F\u0131 T\u00DCM veriye ham (JSON) eri\u015Fim sa\u011Flar. Yanl\u0131\u015F bir d\u00FCzenleme uygulamay\u0131 bozabilir \u2014 sadece ne yapt\u0131\u011F\u0131n\u0131z\u0131 biliyorsan\u0131z kullan\u0131n."),
+        React.createElement("button", { onClick: exportAll, style: { ...btnPrimary, marginBottom: 14 } }, "T\u00FCm Veriyi \u0130ndir (JSON)"),
+        RAW_DATA_KEYS.map(k => React.createElement(RawDataKeyEditor, { key: k, dataKey: k, session: session, refreshAll: refreshAll }))));
+}
 function DenetimPanel({ auditLog }) {
     const sorted = auditLog.slice().sort((a, b) => b.timestamp - a.timestamp).slice(0, 100);
     return (React.createElement("div", null,
@@ -18899,7 +19174,7 @@ function DenetimPanel({ auditLog }) {
 }
 // ---------- ADMİN PANELİ ----------
 const ADMIN_SECTIONS_BY_ROLE = {
-    super: ["finans", "fiyat", "yonetici", "ilan", "kullanici", "belge", "sikayet", "kategori", "girislog", "denetim"],
+    super: ["finans", "fiyat", "yonetici", "ilan", "kullanici", "belge", "sikayet", "kategori", "mesajlar", "degerlendirmeler", "talepler", "teklifler", "duyuru", "hamveri", "girislog", "denetim"],
     mod: ["ilan", "kullanici", "belge", "sikayet", "kategori"],
     destek: ["sikayet"],
 };
@@ -18912,10 +19187,16 @@ const ADMIN_SECTION_META = {
     belge: { title: "Belge Onayları", icon: ShieldCheck },
     sikayet: { title: "Şikayetler / Destek", icon: LifeBuoy },
     kategori: { title: "Kategori & Irk Yönetimi", icon: BarChart3 },
+    mesajlar: { title: "Tüm Mesajlar", icon: MessageCircle },
+    degerlendirmeler: { title: "Değerlendirmeler", icon: Star },
+    talepler: { title: "Alım Talepleri", icon: TrendingUp },
+    teklifler: { title: "Teklifler", icon: Repeat },
+    duyuru: { title: "Sistem Duyurusu", icon: Bell },
+    hamveri: { title: "Ham Veri (Gelişmiş)", icon: Settings },
     girislog: { title: "Giriş Logları", icon: Lock },
     denetim: { title: "Denetim Kayıtları (Audit Log)", icon: TrendingUp },
 };
-function AdminPanel({ session, onLogout, listings, requests, offers, members, messages, pricing, adminAccounts, adminLoginLogs, auditLog, reports, customBreeds, customSubcategories, refreshAll }) {
+function AdminPanel({ session, onLogout, listings, requests, offers, members, messages, reviews, announcement, pricing, adminAccounts, adminLoginLogs, auditLog, reports, customBreeds, customSubcategories, refreshAll }) {
     const availableSections = ADMIN_SECTIONS_BY_ROLE[session.role] || [];
     const [activeSection, setActiveSection] = useState(availableSections[0]);
     const subscribedCount = members.filter(m => m.subscribed).length;
@@ -18949,6 +19230,12 @@ function AdminPanel({ session, onLogout, listings, requests, offers, members, me
                 : pendingDocs.map(m => React.createElement(PendingDocRow, { key: m.name + m.joinedAt, member: m, session: session, refreshAll: refreshAll }))),
             activeSection === "sikayet" && React.createElement(SikayetPanel, { reports: reports, session: session, refreshAll: refreshAll }),
             activeSection === "kategori" && React.createElement(KategoriPanel, { customBreeds: customBreeds, customSubcategories: customSubcategories, session: session, refreshAll: refreshAll }),
+            activeSection === "mesajlar" && React.createElement(MesajlarPanel, { messages: messages, session: session, refreshAll: refreshAll }),
+            activeSection === "degerlendirmeler" && React.createElement(DegerlendirmelerPanel, { reviews: reviews, session: session, refreshAll: refreshAll }),
+            activeSection === "talepler" && React.createElement(TaleplerPanel, { requests: requests, session: session, refreshAll: refreshAll }),
+            activeSection === "teklifler" && React.createElement(TekliflerPanel, { offers: offers, session: session, refreshAll: refreshAll }),
+            activeSection === "duyuru" && React.createElement(DuyuruPanel, { announcement: announcement, session: session, refreshAll: refreshAll }),
+            activeSection === "hamveri" && React.createElement(HamVeriPanel, { session: session, refreshAll: refreshAll }),
             activeSection === "girislog" && React.createElement(GirisLoguPanel, { adminLoginLogs: adminLoginLogs }),
             activeSection === "denetim" && React.createElement(DenetimPanel, { auditLog: auditLog }))));
 }
