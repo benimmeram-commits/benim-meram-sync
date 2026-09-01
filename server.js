@@ -36,6 +36,37 @@ function saveDB(db) {
   fs.writeFileSync(DB_FILE, JSON.stringify(db));
 }
 
+// ---------------------------------------------------------------------
+// GÜNLÜK SIFIRLAMA: sadece BÖLGE (grup) sohbetlerindeki mesajları temizler.
+// Özel (birebir alıcı-satıcı) mesajlar bu işlemden ETKİLENMEZ, kalıcı kalır.
+// Sunucu sürekli çalıştığı için (Render'da uyku moduna geçmediği sürece)
+// her 30 dakikada bir "gün değişti mi" diye kontrol eder.
+// ---------------------------------------------------------------------
+function resetRegionChatsIfNewDay() {
+  const db = loadDB();
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  if (db.shared.lastRegionResetDate === today) return;
+
+  // Not: değerler istemciden JSON string olarak gelip öyle saklanıyor,
+  // bu yüzden önce parse edip sonra tekrar string olarak kaydediyoruz.
+  const raw = db.shared.messages;
+  if (typeof raw === "string") {
+    let messages;
+    try { messages = JSON.parse(raw); } catch { messages = null; }
+    if (Array.isArray(messages)) {
+      const kept = messages.filter((m) => !(m && typeof m.conversationId === "string" && m.conversationId.startsWith("bolge-sohbet:")));
+      if (kept.length !== messages.length) {
+        db.shared.messages = JSON.stringify(kept);
+        console.log(`[günlük sıfırlama] ${messages.length - kept.length} bölge sohbeti mesajı temizlendi.`);
+      }
+    }
+  }
+  db.shared.lastRegionResetDate = today;
+  saveDB(db);
+}
+resetRegionChatsIfNewDay();
+setInterval(resetRegionChatsIfNewDay, 30 * 60 * 1000);
+
 // Uygulamanın arayüzünü (index.html) doğrudan bu sunucudan servis eder.
 // Böylece kimsenin dosya indirip açmasına gerek kalmaz — sadece link paylaşılır.
 // Not: index.html'in server.js ile AYNI klasörde olması yeterli, ayrı bir
