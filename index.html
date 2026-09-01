@@ -17580,6 +17580,9 @@ function Onboarding({ onDone, onCancel }) {
     const [name, setName] = useState("");
     const [profileType, setProfileType] = useState("bireysel");
     const [docRef, setDocRef] = useState("");
+    const [docPhoto, setDocPhoto] = useState(null);
+    const [docPhotoBusy, setDocPhotoBusy] = useState(false);
+    const [docPhotoError, setDocPhotoError] = useState("");
     const [email, setEmail] = useState("");
     const [emailPhone, setEmailPhone] = useState("");
     const [password, setPassword] = useState("");
@@ -17610,14 +17613,38 @@ function Onboarding({ onDone, onCancel }) {
             return { ok: false, error: "Üye listesi kaydedilemedi: " + saveMembersResult.error };
         return { ok: true };
     };
+    const handleDocPhoto = async (e) => {
+        const file = (e.target.files || [])[0];
+        if (!file)
+            return;
+        setDocPhotoError("");
+        if (!file.type.startsWith("image/")) {
+            setDocPhotoError("Lütfen bir fotoğraf dosyası seçin.");
+            return;
+        }
+        setDocPhotoBusy(true);
+        try {
+            const dataUrl = await resizeImageFile(file, 1000);
+            setDocPhoto(dataUrl);
+        }
+        catch {
+            setDocPhotoError("Fotoğraf işlenemedi, tekrar deneyin.");
+        }
+        setDocPhotoBusy(false);
+        e.target.value = "";
+    };
     const finish = async () => {
         if (!docRef.trim()) {
             setErr("Belge/vergi numarası girin.");
             return;
         }
+        if (!docPhoto) {
+            setErr("Belge fotoğrafı yükleyin.");
+            return;
+        }
         setSaving(true);
         const me = { name: name.trim(), phone, email: null, authMethod: "phone", profileType, subscribed: false, joinedAt: Date.now(), documentStatus: "beklemede" };
-        const result = await registerMember(me, { documentStatus: "beklemede", documentRef: docRef.trim() });
+        const result = await registerMember(me, { documentStatus: "beklemede", documentRef: docRef.trim(), documentPhoto: docPhoto });
         setSaving(false);
         if (!result.ok) {
             setErr(result.error);
@@ -17691,8 +17718,13 @@ function Onboarding({ onDone, onCancel }) {
         step === "belge" && (React.createElement(React.Fragment, null,
             React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776", marginBottom: 10 } }, "Sat\u0131\u015F yapabilmeniz i\u00E7in kimlik/i\u015Fletme belgenizin y\u00F6netici taraf\u0131ndan onaylanmas\u0131 gerekir."),
             React.createElement(FormField, { label: "Belge / Vergi Numaras\u0131", value: docRef, onChange: setDocRef, placeholder: "TC Kimlik No veya Vergi No" }),
-            React.createElement("div", { style: { border: `1.5px dashed ${COLORS.line}`, borderRadius: 12, padding: 16, textAlign: "center", fontFamily: "Inter", fontSize: 11, color: "#8A8776", marginTop: 10 } }, "Belge foto\u011Fraf\u0131 y\u00FCkleme (bu prototipte pasif)"),
-            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10, color: COLORS.ochre, marginTop: 8 } }, "Belgeniz onaylanana kadar hesab\u0131n\u0131z \"Onay Bekliyor\" durumunda olur ve ilan veremezsiniz. Onay y\u00F6netim panelinden Moderat\u00F6r veya S\u00FCper Admin taraf\u0131ndan verilir."),
+            React.createElement("div", { style: { marginTop: 10 } },
+                React.createElement("input", { id: "doc-photo-input", type: "file", accept: "image/*", onChange: handleDocPhoto, style: { display: "none" }, disabled: docPhotoBusy }),
+                docPhoto ? (React.createElement("div", { style: { position: "relative", display: "inline-block" } },
+                    React.createElement("img", { src: docPhoto, style: { width: "100%", maxHeight: 160, objectFit: "cover", borderRadius: 12, border: `1px solid ${COLORS.line}` } }),
+                    React.createElement("button", { onClick: () => setDocPhoto(null), style: { position: "absolute", top: 6, right: 6, background: "rgba(0,0,0,0.65)", color: "#fff", border: "none", borderRadius: "50%", width: 22, height: 22, fontSize: 12, cursor: "pointer" } }, "\u2715"))) : (React.createElement("label", { htmlFor: "doc-photo-input", style: { display: "block", border: `1.5px dashed ${COLORS.line}`, borderRadius: 12, padding: 16, textAlign: "center", fontFamily: "Inter", fontSize: 11, color: "#8A8776", cursor: "pointer" } }, docPhotoBusy ? "İşleniyor..." : "+ Belge fotoğrafı yükle (kimlik/vergi levhası)")),
+                docPhotoError && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11, marginTop: 4 } }, docPhotoError)),
+            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10, color: COLORS.ochre, marginTop: 8 } }, "Belgeniz onaylanana kadar hesab\u0131n\u0131z \"Onay Bekliyor\" durumunda olur ve ilan veremezsiniz. Y\u00FCkledi\u011Finiz foto\u011Fraf, Moderat\u00F6r veya S\u00FCper Admin taraf\u0131ndan y\u00F6netim panelinden manuel olarak incelenip onaylan\u0131r/reddedilir. (Not: ger\u00E7ek bir devlet/NV\u0130 kimlik do\u011Frulamas\u0131 otomatik olarak yap\u0131lmaz \u2014 bu t\u00FCr bir entegrasyon resmi kurumsal bir protokol gerektirir ve bu ortamda m\u00FCmk\u00FCn de\u011Fildir.)"),
             err && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11.5, marginTop: 6 } }, err),
             React.createElement("button", { onClick: finish, disabled: saving, style: { ...btnPrimary, marginTop: 14 } }, saving ? "Kaydediliyor..." : "Belgeyi Gönder ve Hesabı Oluştur"),
             React.createElement("button", { onClick: () => { setErr(""); setStep("profile"); }, style: { background: "none", border: "none", color: "#8A8776", fontFamily: "Inter", fontSize: 11.5, marginTop: 10, cursor: "pointer" } }, "\u2190 Geri"))),
@@ -18637,16 +18669,19 @@ function PendingDocRow({ member, refreshAll, session }) {
         await refreshAll();
         setBusy(false);
     };
-    return (React.createElement("div", { style: { background: COLORS.paper, border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: 10, marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 } },
-        React.createElement("div", null,
-            React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5 } }, member.name),
-            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776" } },
-                PROFILE_TYPE_LABELS[member.profileType] || member.profileType,
-                " \u00B7 Belge No: ",
-                member.documentRef || "belirtilmemiş",
-                " \u00B7 ",
-                member.phone || "telefon yok")),
-        React.createElement("div", { style: { display: "flex", gap: 6, flexShrink: 0 } },
+    return (React.createElement("div", { style: { background: COLORS.paper, border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: 10, marginBottom: 8 } },
+        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } },
+            member.documentPhoto && (React.createElement("img", { src: member.documentPhoto, onClick: () => window.open(member.documentPhoto, "_blank"), style: { width: 52, height: 52, objectFit: "cover", borderRadius: 8, border: `1px solid ${COLORS.line}`, cursor: "pointer", flexShrink: 0 } })),
+            React.createElement("div", { style: { flex: 1 } },
+                React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5 } }, member.name),
+                React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776" } },
+                    PROFILE_TYPE_LABELS[member.profileType] || member.profileType,
+                    " \u00B7 Belge No: ",
+                    member.documentRef || "belirtilmemiş",
+                    " \u00B7 ",
+                    member.phone || "telefon yok",
+                    !member.documentPhoto && React.createElement("span", { style: { color: COLORS.ochre } }, " \u00B7 foto\u011Fraf yok")))),
+        React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 8 } },
             React.createElement("button", { disabled: busy, onClick: () => decide("onaylandi"), style: { ...btnGhost, borderColor: COLORS.pine, color: COLORS.pineDeep } },
                 React.createElement(Check, { size: 12, style: { marginRight: 3 } }),
                 "Onayla"),
