@@ -17697,6 +17697,7 @@ function BenimMeram() {
     const [auditLog, setAuditLog] = useState([]);
     const [reports, setReports] = useState([]);
     const [customBreeds, setCustomBreeds] = useState({});
+    const [customSubcategories, setCustomSubcategories] = useState({ buyukbas: [], kucukbas: [] });
     const [adminSession, setAdminSession] = useState(null);
     const [screen, setScreen] = useState("home");
     const [tab, setTab] = useState("buyukbas");
@@ -17705,13 +17706,22 @@ function BenimMeram() {
     const [drawer, setDrawer] = useState(false);
     const [selected, setSelected] = useState(null);
     const [view, setView] = useState("app"); // app | admin
+    const [isAdminGateOpen] = useState(() => {
+        try {
+            return new URLSearchParams(window.location.search).get("admin") === "1";
+        }
+        catch {
+            return false;
+        }
+    });
+    const effectiveView = isAdminGateOpen ? view : "app";
     const refreshAll = useCallback(async () => {
-        const [l, r, o, m, rv, msg, pr, aa, al, au, rp, cb] = await Promise.all([
+        const [l, r, o, m, rv, msg, pr, aa, al, au, rp, cb, csc] = await Promise.all([
             loadShared("listings", []), loadShared("requests", []), loadShared("offers", []),
             loadShared("members", []), loadShared("reviews", []), loadShared("messages", []),
             loadShared("pricing", DEFAULT_PRICING), loadShared("adminAccounts", []),
             loadShared("adminLoginLogs", []), loadShared("auditLog", []), loadShared("reports", []),
-            loadShared("customBreeds", {}),
+            loadShared("customBreeds", {}), loadShared("customSubcategories", { buyukbas: [], kucukbas: [] }),
         ]);
         setListings(l);
         setRequests(r);
@@ -17725,6 +17735,7 @@ function BenimMeram() {
         setAuditLog(au);
         setReports(rp);
         setCustomBreeds(cb);
+        setCustomSubcategories(csc);
     }, []);
     const toggleFavorite = useCallback(async (listingId) => {
         setFavorites(prev => {
@@ -17757,15 +17768,15 @@ function BenimMeram() {
             React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 15, color: COLORS.pineDeep } }, "BEN\u0130M MERAM")),
         React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776", marginBottom: 6, textAlign: "center", maxWidth: 440 } }, "Ger\u00E7ek verilerle \u00E7al\u0131\u015Fan pazar yeri. Bu uygulamay\u0131 kullanan herkes ayn\u0131 ilanlar\u0131 ve talepleri g\u00F6r\u00FCr."),
         React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: COLORS.ochre, marginBottom: 18 } }, "\u26A0 SMS ve \u00F6deme ad\u0131mlar\u0131 sim\u00FClasyondur \u2014 ger\u00E7ek sa\u011Flay\u0131c\u0131 ba\u011Flanmad\u0131."),
-        React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 24, background: COLORS.white, padding: 4, borderRadius: 12, border: `1px solid ${COLORS.line}` } },
+        isAdminGateOpen && (React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 24, background: COLORS.white, padding: 4, borderRadius: 12, border: `1px solid ${COLORS.line}` } },
             React.createElement("button", { onClick: () => setView("app"), style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5, padding: "8px 16px", borderRadius: 8, border: "none", cursor: "pointer", background: view === "app" ? COLORS.pineDeep : "transparent", color: view === "app" ? COLORS.white : "#5A574C" } }, "Uygulama"),
-            React.createElement("button", { onClick: () => setView("admin"), style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5, padding: "8px 16px", borderRadius: 8, border: "none", cursor: "pointer", background: view === "admin" ? COLORS.pineDeep : "transparent", color: view === "admin" ? COLORS.white : "#5A574C" } }, "Y\u00F6netim Paneli")),
-        view === "admin" ? (adminSession ? (React.createElement(AdminPanel, { session: adminSession, onLogout: async () => { await logAdminLogin({ tcNo: adminSession.tcNo, name: adminSession.name, role: adminSession.role, success: true, reason: "çıkış yapıldı" }); await savePersonal("adminSession", null); setAdminSession(null); await refreshAll(); }, listings: listings, requests: requests, offers: offers, members: members, messages: messages, pricing: pricing, adminAccounts: adminAccounts, adminLoginLogs: adminLoginLogs, auditLog: auditLog, reports: reports, customBreeds: customBreeds, refreshAll: refreshAll })) : (React.createElement(AdminAuth, { adminAccounts: adminAccounts, refreshAll: refreshAll, onLogin: async (session) => { await savePersonal("adminSession", session); setAdminSession(session); } }))) : (React.createElement("div", { style: { width: 360, height: 700, background: COLORS.paper, borderRadius: 34, border: `10px solid ${COLORS.ink}`, overflow: "hidden", position: "relative", boxShadow: "0 30px 60px rgba(0,0,0,0.35)", display: "flex", flexDirection: "column" } },
+            React.createElement("button", { onClick: () => setView("admin"), style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5, padding: "8px 16px", borderRadius: 8, border: "none", cursor: "pointer", background: view === "admin" ? COLORS.pineDeep : "transparent", color: view === "admin" ? COLORS.white : "#5A574C" } }, "Y\u00F6netim Paneli"))),
+        effectiveView === "admin" ? (adminSession ? (React.createElement(AdminPanel, { session: adminSession, onLogout: async () => { await logAdminLogin({ tcNo: adminSession.tcNo, name: adminSession.name, role: adminSession.role, success: true, reason: "çıkış yapıldı" }); await savePersonal("adminSession", null); setAdminSession(null); await refreshAll(); }, listings: listings, requests: requests, offers: offers, members: members, messages: messages, pricing: pricing, adminAccounts: adminAccounts, adminLoginLogs: adminLoginLogs, auditLog: auditLog, reports: reports, customBreeds: customBreeds, customSubcategories: customSubcategories, refreshAll: refreshAll })) : (React.createElement(AdminAuth, { adminAccounts: adminAccounts, refreshAll: refreshAll, onLogin: async (session) => { await savePersonal("adminSession", session); setAdminSession(session); } }))) : (React.createElement("div", { style: { width: 360, height: 700, background: COLORS.paper, borderRadius: 34, border: `10px solid ${COLORS.ink}`, overflow: "hidden", position: "relative", boxShadow: "0 30px 60px rgba(0,0,0,0.35)", display: "flex", flexDirection: "column" } },
             React.createElement("style", null, `@keyframes pulseDot {0%{transform:scale(1);opacity:.7}70%{transform:scale(2.6);opacity:0}100%{opacity:0}}`),
-            !me ? (React.createElement(Onboarding, { onDone: (m) => setMe(m) })) : (React.createElement(AppShell, { me: me, setMe: setMe, listings: listings, requests: requests, offers: offers, reviews: reviews, messages: messages, members: members, pricing: pricing, customBreeds: customBreeds, favorites: favorites, toggleFavorite: toggleFavorite, refreshAll: refreshAll, screen: screen, setScreen: setScreen, tab: tab, setTab: setTab, subTab: subTab, setSubTab: setSubTab, breedTab: breedTab, setBreedTab: setBreedTab, drawer: drawer, setDrawer: setDrawer, selected: selected, setSelected: setSelected }))))));
+            !me ? (React.createElement(Onboarding, { onDone: (m) => setMe(m) })) : (React.createElement(AppShell, { me: me, setMe: setMe, listings: listings, requests: requests, offers: offers, reviews: reviews, messages: messages, members: members, pricing: pricing, customBreeds: customBreeds, customSubcategories: customSubcategories, favorites: favorites, toggleFavorite: toggleFavorite, refreshAll: refreshAll, screen: screen, setScreen: setScreen, tab: tab, setTab: setTab, subTab: subTab, setSubTab: setSubTab, breedTab: breedTab, setBreedTab: setBreedTab, drawer: drawer, setDrawer: setDrawer, selected: selected, setSelected: setSelected }))))));
 }
 // ---------- APP SHELL (giriş yapılmış kullanıcı) ----------
-function AppShell({ me, setMe, listings, requests, offers, reviews, messages, members, pricing, customBreeds, favorites, toggleFavorite, refreshAll, screen, setScreen, tab, setTab, subTab, setSubTab, breedTab, setBreedTab, drawer, setDrawer, selected, setSelected }) {
+function AppShell({ me, setMe, listings, requests, offers, reviews, messages, members, pricing, customBreeds, customSubcategories, favorites, toggleFavorite, refreshAll, screen, setScreen, tab, setTab, subTab, setSubTab, breedTab, setBreedTab, drawer, setDrawer, selected, setSelected }) {
     const [expandedSub, setExpandedSub] = useState(null);
     const [seedState, setSeedState] = useState({ loading: false, error: null, fallback: false });
     const [chatTarget, setChatTarget] = useState(null); // { conversationId, otherName, listingLabel }
@@ -17821,7 +17832,7 @@ function AppShell({ me, setMe, listings, requests, offers, reviews, messages, me
                         seedState.error)),
                     seedState.fallback && (React.createElement("div", { style: { color: COLORS.ochre, fontSize: 10.5, marginTop: 6, maxWidth: 260, marginLeft: "auto", marginRight: "auto" } }, "Not: kal\u0131c\u0131 depolama \u015Fu an bu ortamda \u00E7al\u0131\u015Fm\u0131yor, veriler bu oturum i\u00E7in ge\u00E7ici olarak tutuluyor (sayfa tamamen yenilenirse silinir)."))))) : (React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 } }, filtered.map(item => React.createElement(ListingCard, { key: item.id, item: item, reviews: reviews, favorites: favorites, toggleFavorite: toggleFavorite, onOpen: open }))))))),
         screen === "detail" && selected && (React.createElement(DetailScreen, { item: listings.find(l => l.id === selected.id) || selected, me: me, offers: offers, reviews: reviews, favorites: favorites, toggleFavorite: toggleFavorite, onOpenChat: openChat, refreshAll: refreshAll, onBack: () => setScreen("home") })),
-        screen === "create" && React.createElement(CreateScreen, { me: me, members: members, refreshAll: refreshAll, onDone: () => setScreen("home") }),
+        screen === "create" && React.createElement(CreateScreen, { me: me, members: members, customSubcategories: customSubcategories, refreshAll: refreshAll, onDone: () => setScreen("home") }),
         screen === "requests" && (React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "16px 18px 100px" } },
             React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 19, marginBottom: 12 } }, "Al\u0131m Talepleri"),
             requests.length === 0 && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12.5, color: "#8A8776" } }, "Hen\u00FCz talep yok."),
@@ -17857,7 +17868,7 @@ function AppShell({ me, setMe, listings, requests, offers, reviews, messages, me
                             background: tab === mainKey && subTab === "tumu" ? COLORS.pineDeep : COLORS.paper,
                             color: tab === mainKey && subTab === "tumu" ? COLORS.white : COLORS.pineDeep,
                         } }, mainLabel),
-                    React.createElement("div", { style: { display: "flex", flexDirection: "column" } }, ALT_KATEGORI[mainKey].map(sub => {
+                    React.createElement("div", { style: { display: "flex", flexDirection: "column" } }, [...ALT_KATEGORI[mainKey], ...((customSubcategories && customSubcategories[mainKey]) || [])].map(sub => {
                         const isOpen = expandedSub === sub;
                         const isActiveSub = tab === mainKey && subTab === sub && breedTab === "tumu";
                         return (React.createElement("div", { key: sub },
@@ -17870,7 +17881,7 @@ function AppShell({ me, setMe, listings, requests, offers, reviews, messages, me
                                     } }, sub),
                                 React.createElement("button", { onClick: () => setExpandedSub(isOpen ? null : sub), style: { background: "none", border: "none", cursor: "pointer", padding: "6px 8px", color: "#B7B4A6" } },
                                     React.createElement(ChevronRight, { size: 14, style: { transform: isOpen ? "rotate(90deg)" : "none", transition: "transform 0.15s" } }))),
-                            isOpen && (React.createElement("div", { style: { display: "flex", flexDirection: "column", marginBottom: 4 } }, [...IRKLAR[sub], ...((customBreeds && customBreeds[sub]) || [])].map(breed => (React.createElement("button", { key: breed, onClick: () => { setTab(mainKey); setSubTab(sub); setBreedTab(breed); setScreen("home"); setDrawer(false); }, style: {
+                            isOpen && (React.createElement("div", { style: { display: "flex", flexDirection: "column", marginBottom: 4 } }, [...(IRKLAR[sub] || []), ...((customBreeds && customBreeds[sub]) || [])].map(breed => (React.createElement("button", { key: breed, onClick: () => { setTab(mainKey); setSubTab(sub); setBreedTab(breed); setScreen("home"); setDrawer(false); }, style: {
                                     textAlign: "left", padding: "6px 6px 6px 34px", border: "none", cursor: "pointer",
                                     fontFamily: "Inter", fontWeight: 500, fontSize: 11.5, borderRadius: 6,
                                     background: tab === mainKey && subTab === sub && breedTab === breed ? COLORS.pine : "transparent",
@@ -18057,7 +18068,7 @@ function IncomingOfferRow({ offer, refreshAll }) {
         ["kabul", "red", "karsi_teklif"].includes(offer.status) && !counterMode && (React.createElement(Badge, { tone: offer.status === "kabul" ? "pine" : offer.status === "red" ? "gray" : "ochre" }, offer.status === "kabul" ? "Kabul edildi" : offer.status === "red" ? "Reddedildi" : `Karşı teklif: ${TL(offer.counterAmount)}`))));
 }
 // ---------- CREATE ----------
-function CreateScreen({ me, members, refreshAll, onDone }) {
+function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) {
     useEffect(() => { refreshAll(); }, []);
     const isBuyerOnly = me.profileType === "alici";
     const myMember = members.find(m => m.name === me.name && m.joinedAt === me.joinedAt);
@@ -18130,7 +18141,7 @@ function CreateScreen({ me, members, refreshAll, onDone }) {
             React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 4 } }, ["buyukbas", "kucukbas"].map(k => (React.createElement("button", { key: k, onClick: () => { setMainCategory(k); setSubCategory(ALT_KATEGORI[k][0]); }, style: { flex: 1, padding: "8px", borderRadius: 8, border: `1px solid ${COLORS.line}`, cursor: "pointer", fontFamily: "Inter", fontWeight: 600, fontSize: 11.5, background: mainCategory === k ? COLORS.pineDeep : COLORS.white, color: mainCategory === k ? COLORS.white : "#5A574C" } }, k === "buyukbas" ? "Büyükbaş" : "Küçükbaş"))))),
         React.createElement("div", { style: { marginBottom: 10 } },
             React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "Alt Kategori"),
-            React.createElement("select", { value: subCategory, onChange: (e) => setSubCategory(e.target.value), style: { ...inputStyle, marginTop: 4 } }, ALT_KATEGORI[mainCategory].map(c => React.createElement("option", { key: c, value: c }, c)))),
+            React.createElement("select", { value: subCategory, onChange: (e) => setSubCategory(e.target.value), style: { ...inputStyle, marginTop: 4 } }, [...ALT_KATEGORI[mainCategory], ...((customSubcategories && customSubcategories[mainCategory]) || [])].map(c => React.createElement("option", { key: c, value: c }, c)))),
         createType === "ilan" ? (React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } },
             React.createElement(FormField, { label: "Irk", value: breed, onChange: setBreed, placeholder: "\u00D6rn. Simental" }),
             React.createElement(FormField, { label: "Ya\u015F", value: age, onChange: setAge, placeholder: "\u00D6rn. 18 Ay" }),
@@ -18651,7 +18662,68 @@ function IlanModerasyonPanel({ listings, session, refreshAll }) {
             l.status === "kaldirildi" ? (React.createElement("button", { onClick: () => act(l.id, "yayinda", "İlan yeniden yayına alındı"), style: { ...btnGhost, borderColor: COLORS.pine, color: COLORS.pineDeep } }, "Aktif Et")) : (React.createElement("button", { onClick: () => act(l.id, "kaldirildi", "İlan donduruldu"), style: { ...btnGhost, borderColor: COLORS.ochre, color: "#7A5A1E" } }, "Dondur")),
             React.createElement("button", { onClick: () => act(l.id, "sil", "İlan kalıcı olarak silindi"), style: { ...btnGhost, borderColor: COLORS.red, color: COLORS.red } }, "Sil")))))));
 }
+function UserEditRow({ member, session, refreshAll }) {
+    const [editing, setEditing] = useState(false);
+    const [name, setName] = useState(member.name);
+    const [phone, setPhone] = useState(member.phone || "");
+    const [profileType, setProfileType] = useState(member.profileType);
+    const [documentStatus, setDocumentStatus] = useState(member.documentStatus || "");
+    const [confirmDelete, setConfirmDelete] = useState(false);
+    const [busy, setBusy] = useState(false);
+    const save = async () => {
+        setBusy(true);
+        const all = await loadShared("members", []);
+        const idx = all.findIndex(x => x.name === member.name && x.joinedAt === member.joinedAt);
+        if (idx > -1) {
+            all[idx] = { ...all[idx], name: name.trim(), phone: phone.trim(), profileType, documentStatus: documentStatus || undefined };
+            await saveShared("members", all);
+        }
+        await logAudit(session.name, session.role, "Kullanıcı bilgileri düzenlendi", `${member.name} → ${name.trim()}`);
+        await refreshAll();
+        setBusy(false);
+        setEditing(false);
+    };
+    const remove = async () => {
+        setBusy(true);
+        const all = await loadShared("members", []);
+        const next = all.filter(x => !(x.name === member.name && x.joinedAt === member.joinedAt));
+        await saveShared("members", next);
+        // İlanlarını da kaldır
+        const listingsAll = await loadShared("listings", []);
+        const remainingListings = listingsAll.filter(l => l.sellerName !== member.name);
+        if (remainingListings.length !== listingsAll.length)
+            await saveShared("listings", remainingListings);
+        await logAudit(session.name, session.role, "Kullanıcı hesabı ve ilanları kalıcı olarak silindi", member.name);
+        await refreshAll();
+        setBusy(false);
+    };
+    if (!editing) {
+        return (React.createElement("div", { style: { display: "flex", gap: 6, flexShrink: 0 } },
+            React.createElement("button", { onClick: () => setEditing(true), style: { ...btnGhost, borderColor: COLORS.line, color: COLORS.pineDeep } }, "D\u00FCzenle"),
+            confirmDelete ? (React.createElement("button", { disabled: busy, onClick: remove, style: { ...btnGhost, borderColor: COLORS.red, color: COLORS.white, background: COLORS.red } }, "Emin misiniz? Sil")) : (React.createElement("button", { onClick: () => setConfirmDelete(true), style: { ...btnGhost, borderColor: COLORS.red, color: COLORS.red } }, "Sil"))));
+    }
+    return (React.createElement("div", { style: { width: "100%", background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: 10, marginTop: 6 } },
+        React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } },
+            React.createElement(FormField, { label: "Ad Soyad", value: name, onChange: setName, placeholder: "Ad Soyad" }),
+            React.createElement(FormField, { label: "Telefon", value: phone, onChange: setPhone, placeholder: "Telefon" }),
+            React.createElement("div", null,
+                React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "Profil Tipi"),
+                React.createElement("select", { value: profileType, onChange: (e) => setProfileType(e.target.value), style: { ...inputStyle, marginTop: 4 } },
+                    React.createElement("option", { value: "bireysel" }, "Bireysel Yeti\u015Ftirici"),
+                    React.createElement("option", { value: "ciftlik" }, "\u00C7iftlik / Ticari"),
+                    React.createElement("option", { value: "alici" }, "Sadece Al\u0131c\u0131"))),
+            profileType !== "alici" && (React.createElement("div", null,
+                React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "Belge Durumu"),
+                React.createElement("select", { value: documentStatus, onChange: (e) => setDocumentStatus(e.target.value), style: { ...inputStyle, marginTop: 4 } },
+                    React.createElement("option", { value: "beklemede" }, "Onay Bekliyor"),
+                    React.createElement("option", { value: "onaylandi" }, "Onayland\u0131"),
+                    React.createElement("option", { value: "reddedildi" }, "Reddedildi"))))),
+        React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 10 } },
+            React.createElement("button", { disabled: busy, onClick: save, style: btnPrimary }, busy ? "Kaydediliyor..." : "Kaydet"),
+            React.createElement("button", { onClick: () => setEditing(false), style: { ...btnGhost, borderColor: COLORS.line, color: "#8A8776" } }, "Vazge\u00E7"))));
+}
 function KullaniciYonetimiPanel({ members, session, refreshAll }) {
+    const isSuper = session.role === "super";
     const toggle = async (m) => {
         const all = await loadShared("members", []);
         const idx = all.findIndex(x => x.name === m.name && x.joinedAt === m.joinedAt);
@@ -18662,15 +18734,20 @@ function KullaniciYonetimiPanel({ members, session, refreshAll }) {
         await logAudit(session.name, session.role, `Kullanıcı ${m.suspended ? "engeli kaldırıldı" : "engellendi"}`, m.name);
         await refreshAll();
     };
-    return (React.createElement("div", null, members.map(m => (React.createElement("div", { key: m.name + m.joinedAt, style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, background: COLORS.paper, border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: 10, marginBottom: 8 } },
-        React.createElement("div", null,
-            React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5 } }, m.name),
-            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776" } },
-                PROFILE_TYPE_LABELS[m.profileType] || m.profileType,
-                " \u00B7 ",
-                m.phone || "telefon yok",
-                m.suspended ? " · ASKIYA ALINDI" : "")),
-        React.createElement("button", { onClick: () => toggle(m), style: { ...btnGhost, borderColor: m.suspended ? COLORS.pine : COLORS.red, color: m.suspended ? COLORS.pineDeep : COLORS.red, flexShrink: 0 } }, m.suspended ? "Engeli Kaldır" : "Askıya Al"))))));
+    return (React.createElement("div", null,
+        isSuper && (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: COLORS.ochre, marginBottom: 10 } }, "\u26A0 S\u00FCper Admin olarak kullan\u0131c\u0131 bilgilerini d\u00FCzenleyebilir veya hesab\u0131 kal\u0131c\u0131 olarak silebilirsiniz. Bu, kullan\u0131c\u0131n\u0131n kendi cihaz\u0131ndaki oturumunu (ki\u015Fisel verisini) etkilemez \u2014 sadece uygulama genelindeki ortak kayd\u0131n\u0131 de\u011Fi\u015Ftirir/kald\u0131r\u0131r.")),
+        members.map(m => (React.createElement("div", { key: m.name + m.joinedAt, style: { background: COLORS.paper, border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: 10, marginBottom: 8 } },
+            React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 } },
+                React.createElement("div", null,
+                    React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5 } }, m.name),
+                    React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776" } },
+                        PROFILE_TYPE_LABELS[m.profileType] || m.profileType,
+                        " \u00B7 ",
+                        m.phone || "telefon yok",
+                        m.suspended ? " · ASKIYA ALINDI" : "")),
+                React.createElement("div", { style: { display: "flex", gap: 6, flexShrink: 0 } },
+                    React.createElement("button", { onClick: () => toggle(m), style: { ...btnGhost, borderColor: m.suspended ? COLORS.pine : COLORS.red, color: m.suspended ? COLORS.pineDeep : COLORS.red } }, m.suspended ? "Engeli Kaldır" : "Askıya Al"),
+                    isSuper && React.createElement(UserEditRow, { member: m, session: session, refreshAll: refreshAll }))))))));
 }
 function SikayetPanel({ reports, session, refreshAll }) {
     const resolve = async (r) => {
@@ -18706,11 +18783,16 @@ function SikayetPanel({ reports, session, refreshAll }) {
                 ": ",
                 r.reason)))))));
 }
-function KategoriPanel({ customBreeds, session, refreshAll }) {
-    const [sub, setSub] = useState(ALT_KATEGORI.buyukbas[0]);
+function KategoriPanel({ customBreeds, customSubcategories, session, refreshAll }) {
+    const isSuper = session.role === "super";
+    const cs = customSubcategories || { buyukbas: [], kucukbas: [] };
+    const allSub = [...ALT_KATEGORI.buyukbas, ...(cs.buyukbas || []), ...ALT_KATEGORI.kucukbas, ...(cs.kucukbas || [])];
+    const [sub, setSub] = useState(allSub[0]);
     const [breed, setBreed] = useState("");
     const [saving, setSaving] = useState(false);
-    const allSub = [...ALT_KATEGORI.buyukbas, ...ALT_KATEGORI.kucukbas];
+    const [newSubMain, setNewSubMain] = useState("buyukbas");
+    const [newSubName, setNewSubName] = useState("");
+    const [savingSub, setSavingSub] = useState(false);
     const add = async () => {
         if (!breed.trim())
             return;
@@ -18723,7 +18805,53 @@ function KategoriPanel({ customBreeds, session, refreshAll }) {
         setSaving(false);
         setBreed("");
     };
+    const removeBreed = async (subKey, breedName) => {
+        const all = await loadShared("customBreeds", {});
+        all[subKey] = (all[subKey] || []).filter(b => b !== breedName);
+        await saveShared("customBreeds", all);
+        await logAudit(session.name, session.role, "Irk kaldırıldı", `${subKey}: ${breedName}`);
+        await refreshAll();
+    };
+    const addSubcategory = async () => {
+        if (!newSubName.trim())
+            return;
+        setSavingSub(true);
+        const all = await loadShared("customSubcategories", { buyukbas: [], kucukbas: [] });
+        all[newSubMain] = [...(all[newSubMain] || []), newSubName.trim()];
+        await saveShared("customSubcategories", all);
+        await logAudit(session.name, session.role, "Yeni alt kategori eklendi", `${newSubMain === "buyukbas" ? "Büyükbaş" : "Küçükbaş"}: ${newSubName.trim()}`);
+        await refreshAll();
+        setSavingSub(false);
+        setNewSubName("");
+    };
+    const removeSubcategory = async (mainKey, subName) => {
+        const all = await loadShared("customSubcategories", { buyukbas: [], kucukbas: [] });
+        all[mainKey] = (all[mainKey] || []).filter(s => s !== subName);
+        await saveShared("customSubcategories", all);
+        await logAudit(session.name, session.role, "Alt kategori kaldırıldı", `${mainKey}: ${subName}`);
+        await refreshAll();
+    };
     return (React.createElement("div", null,
+        isSuper && (React.createElement("div", { style: { background: COLORS.paper, borderRadius: 10, padding: 12, marginBottom: 14 } },
+            React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5, marginBottom: 8 } }, "Yeni Alt Kategori Ekle (S\u00FCper Admin)"),
+            React.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 8 } },
+                React.createElement("select", { value: newSubMain, onChange: (e) => setNewSubMain(e.target.value), style: { ...inputStyle, flex: 1 } },
+                    React.createElement("option", { value: "buyukbas" }, "B\u00FCy\u00FCkba\u015F"),
+                    React.createElement("option", { value: "kucukbas" }, "K\u00FC\u00E7\u00FCkba\u015F")),
+                React.createElement("input", { value: newSubName, onChange: (e) => setNewSubName(e.target.value), placeholder: "\u00D6rn. Manda Yavrusu", style: { ...inputStyle, flex: 1 } }),
+                React.createElement("button", { onClick: addSubcategory, disabled: savingSub, style: btnPrimary }, "Ekle")),
+            (cs.buyukbas.length > 0 || cs.kucukbas.length > 0) && (React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 4 } },
+                cs.buyukbas.map(s => (React.createElement("div", { key: s, style: { display: "flex", alignItems: "center", justifyContent: "space-between", fontFamily: "Inter", fontSize: 11.5 } },
+                    React.createElement("span", null,
+                        "B\u00FCy\u00FCkba\u015F: ",
+                        s),
+                    React.createElement("button", { onClick: () => removeSubcategory("buyukbas", s), style: { background: "none", border: "none", color: COLORS.red, cursor: "pointer", fontSize: 11 } }, "Kald\u0131r")))),
+                cs.kucukbas.map(s => (React.createElement("div", { key: s, style: { display: "flex", alignItems: "center", justifyContent: "space-between", fontFamily: "Inter", fontSize: 11.5 } },
+                    React.createElement("span", null,
+                        "K\u00FC\u00E7\u00FCkba\u015F: ",
+                        s),
+                    React.createElement("button", { onClick: () => removeSubcategory("kucukbas", s), style: { background: "none", border: "none", color: COLORS.red, cursor: "pointer", fontSize: 11 } }, "Kald\u0131r")))))))),
+        React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5, marginBottom: 8 } }, "Irk Ekle / Kald\u0131r"),
         React.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 10 } },
             React.createElement("select", { value: sub, onChange: (e) => setSub(e.target.value), style: { ...inputStyle, flex: 1 } }, allSub.map(s => React.createElement("option", { key: s, value: s }, s))),
             React.createElement("input", { value: breed, onChange: (e) => setBreed(e.target.value), placeholder: "Yeni \u0131rk ad\u0131", style: { ...inputStyle, flex: 1 } }),
@@ -18733,7 +18861,10 @@ function KategoriPanel({ customBreeds, session, refreshAll }) {
                 k,
                 ":"),
             " ",
-            list.join(", ")))))));
+            list.map(b => (React.createElement("span", { key: b, style: { marginRight: 8 } },
+                b,
+                " ",
+                React.createElement("button", { onClick: () => removeBreed(k, b), style: { background: "none", border: "none", color: COLORS.red, cursor: "pointer", fontSize: 10.5 } }, "\u2715"))))))))));
 }
 function GirisLoguPanel({ adminLoginLogs }) {
     const sorted = adminLoginLogs.slice().sort((a, b) => b.timestamp - a.timestamp).slice(0, 50);
@@ -18784,7 +18915,7 @@ const ADMIN_SECTION_META = {
     girislog: { title: "Giriş Logları", icon: Lock },
     denetim: { title: "Denetim Kayıtları (Audit Log)", icon: TrendingUp },
 };
-function AdminPanel({ session, onLogout, listings, requests, offers, members, messages, pricing, adminAccounts, adminLoginLogs, auditLog, reports, customBreeds, refreshAll }) {
+function AdminPanel({ session, onLogout, listings, requests, offers, members, messages, pricing, adminAccounts, adminLoginLogs, auditLog, reports, customBreeds, customSubcategories, refreshAll }) {
     const availableSections = ADMIN_SECTIONS_BY_ROLE[session.role] || [];
     const [activeSection, setActiveSection] = useState(availableSections[0]);
     const subscribedCount = members.filter(m => m.subscribed).length;
@@ -18817,7 +18948,7 @@ function AdminPanel({ session, onLogout, listings, requests, offers, members, me
             activeSection === "belge" && (pendingDocs.length === 0 ? React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Bekleyen belge yok.")
                 : pendingDocs.map(m => React.createElement(PendingDocRow, { key: m.name + m.joinedAt, member: m, session: session, refreshAll: refreshAll }))),
             activeSection === "sikayet" && React.createElement(SikayetPanel, { reports: reports, session: session, refreshAll: refreshAll }),
-            activeSection === "kategori" && React.createElement(KategoriPanel, { customBreeds: customBreeds, session: session, refreshAll: refreshAll }),
+            activeSection === "kategori" && React.createElement(KategoriPanel, { customBreeds: customBreeds, customSubcategories: customSubcategories, session: session, refreshAll: refreshAll }),
             activeSection === "girislog" && React.createElement(GirisLoguPanel, { adminLoginLogs: adminLoginLogs }),
             activeSection === "denetim" && React.createElement(DenetimPanel, { auditLog: auditLog }))));
 }
