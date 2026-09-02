@@ -17638,11 +17638,10 @@ const IRKLAR = {
     "Oğlak": ["Kilis", "Saanen", "Kıl Keçisi"],
 };
 function Logo({ size = 34 }) {
-    return (React.createElement("svg", { width: size, height: size, viewBox: "0 0 48 48", style: { flexShrink: 0 } },
-        React.createElement("circle", { cx: "24", cy: "24", r: "24", fill: COLORS.pineDeep }),
-        React.createElement("path", { d: "M12 34 L12 14 L24 26 L36 14 L36 34", stroke: "#FFFFFF", strokeWidth: "3.2", fill: "none", strokeLinecap: "round", strokeLinejoin: "round" }),
-        React.createElement("path", { d: "M10 15 Q13 9 18 10", stroke: COLORS.ochre, strokeWidth: "2.2", fill: "none", strokeLinecap: "round" }),
-        React.createElement("path", { d: "M38 15 Q35 9 30 10", stroke: COLORS.ochre, strokeWidth: "2.2", fill: "none", strokeLinecap: "round" })));
+    const fontSize = Math.max(10, Math.round(size * 0.34));
+    const padX = Math.round(size * 0.3);
+    return (React.createElement("div", { style: { display: "inline-flex", alignItems: "center", height: size, padding: `0 ${padX}px`, borderRadius: size, background: COLORS.white, boxShadow: "0 1px 3px rgba(0,0,0,0.15)", flexShrink: 0 } },
+        React.createElement("span", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize, color: COLORS.pineDeep, letterSpacing: -0.2, whiteSpace: "nowrap" } }, "BenimMeram")));
 }
 const btnPrimary = { fontFamily: "Inter", fontWeight: 600, fontSize: 13.5, color: COLORS.white, background: COLORS.pineDeep, border: "none", borderRadius: 10, padding: "11px 16px", cursor: "pointer" };
 const btnGhost = { fontFamily: "Inter", fontWeight: 600, fontSize: 12, background: "transparent", border: "1.5px solid", borderRadius: 8, padding: "7px 11px", cursor: "pointer", display: "flex", alignItems: "center" };
@@ -17895,9 +17894,8 @@ function Onboarding({ onDone, onCancel }) {
     return (React.createElement("div", { style: { flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 26px", position: "relative" } },
         onCancel && (React.createElement("button", { onClick: onCancel, style: { position: "absolute", top: 14, right: 0, background: "none", border: "none", cursor: "pointer" } },
             React.createElement(X, { size: 18, color: "#8A8776" }))),
-        React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 22, color: COLORS.pineDeep, marginBottom: 4, display: "flex", alignItems: "center", gap: 9 } },
-            React.createElement(Logo, { size: 30 }),
-            "Benim Meram"),
+        React.createElement("div", { style: { marginBottom: 4 } },
+            React.createElement(Logo, { size: 30 })),
         step === "choice" && (React.createElement(React.Fragment, null,
             React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776", marginBottom: 22 } }, "Devam etmek i\u00E7in bir kay\u0131t y\u00F6ntemi se\u00E7in."),
             React.createElement("button", { onClick: () => { setErr(""); setStep("phone"); }, style: { ...btnPrimary, marginBottom: 10, textAlign: "left" } },
@@ -18094,8 +18092,7 @@ function BenimMeram() {
     return (React.createElement("div", { style: { minHeight: "100vh", background: `linear-gradient(180deg, ${COLORS.paper}, #ECE9DF)`, display: "flex", flexDirection: "column", alignItems: "center", padding: "30px 16px 60px", fontFamily: "Inter" } },
         React.createElement("style", null, fontImport),
         React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 4 } },
-            React.createElement(Logo, { size: 26 }),
-            React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 15, color: COLORS.pineDeep } }, "BEN\u0130M MERAM")),
+            React.createElement(Logo, { size: 30 })),
         React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776", marginBottom: 6, textAlign: "center", maxWidth: 440 } }, "Ger\u00E7ek verilerle \u00E7al\u0131\u015Fan pazar yeri. Bu uygulamay\u0131 kullanan herkes ayn\u0131 ilanlar\u0131 ve talepleri g\u00F6r\u00FCr."),
         React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: COLORS.ochre, marginBottom: 18 } }, "\u26A0 SMS ve \u00F6deme ad\u0131mlar\u0131 sim\u00FClasyondur \u2014 ger\u00E7ek sa\u011Flay\u0131c\u0131 ba\u011Flanmad\u0131."),
         announcement.active && announcement.text && (React.createElement("div", { style: { width: "100%", maxWidth: 380, background: COLORS.ochreSoft, border: `1px solid ${COLORS.ochre}`, borderRadius: 12, padding: "10px 14px", marginBottom: 18, display: "flex", alignItems: "flex-start", gap: 8 } },
