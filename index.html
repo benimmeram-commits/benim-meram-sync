@@ -17377,6 +17377,20 @@ function IconBookmark({ size = 24, color, filled, style }) {
     return React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: filled ? color : "none", stroke: color, strokeWidth: "1.8", strokeLinecap: "round", strokeLinejoin: "round", style: style },
         React.createElement("path", { d: "M6 4h12a1 1 0 0 1 1 1v15l-7-4.5L5 20V5a1 1 0 0 1 1-1Z" }));
 }
+function IconMenu({ size = 20, color }) {
+    return React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: color, strokeWidth: "2", strokeLinecap: "round" },
+        React.createElement("path", { d: "M4 7h16M4 12h16M4 17h16" }));
+}
+function IconSearch({ size = 20, color }) {
+    return React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: color, strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" },
+        React.createElement("circle", { cx: "11", cy: "11", r: "7" }),
+        React.createElement("path", { d: "M21 21l-4.3-4.3" }));
+}
+function IconInbox({ size = 20, color }) {
+    return React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: color, strokeWidth: "1.8", strokeLinecap: "round", strokeLinejoin: "round" },
+        React.createElement("path", { d: "M4 12h4l2 3h4l2-3h4" }),
+        React.createElement("path", { d: "M5.5 5h13l1.5 7v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-6l1.5-7Z" }));
+}
 const COLORS = {
     pine: "#1E4030", pineDeep: "#14301F", paper: "#F4F2EC", ink: "#1C1C18",
     ochre: "#B7862C", ochreSoft: "#EFE2C6", line: "#DCD8CC", white: "#FFFFFF",
@@ -17570,8 +17584,8 @@ function AssistantWidget({ me, refreshAll }) {
         setTyping(false);
     };
     return (React.createElement(React.Fragment, null,
-        React.createElement("button", { onClick: () => setOpen(v => !v), style: { position: "absolute", right: 12, bottom: 78, width: 44, height: 44, borderRadius: "50%", background: COLORS.ochre, border: "none", boxShadow: "0 6px 14px rgba(0,0,0,0.25)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 15 } }, open ? React.createElement(X, { size: 18, color: "#3A2C0E" }) : React.createElement(MessageCircle, { size: 18, color: "#3A2C0E" })),
-        open && (React.createElement("div", { style: { position: "absolute", right: 10, bottom: 128, width: 280, height: 340, background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 14, boxShadow: "0 10px 30px rgba(0,0,0,0.25)", display: "flex", flexDirection: "column", zIndex: 15, overflow: "hidden" } },
+        React.createElement("button", { onClick: () => setOpen(v => !v), style: { background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" } }, open ? React.createElement(X, { size: 20, color: COLORS.white }) : React.createElement(NavIconChat, { size: 20, color: COLORS.white })),
+        open && (React.createElement("div", { style: { position: "absolute", right: 10, top: 60, width: 280, height: 340, background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 14, boxShadow: "0 10px 30px rgba(0,0,0,0.25)", display: "flex", flexDirection: "column", zIndex: 15, overflow: "hidden" } },
             React.createElement("div", { style: { background: COLORS.pineDeep, padding: "9px 12px" } },
                 React.createElement("div", { style: { color: COLORS.white, fontFamily: "Fraunces", fontWeight: 600, fontSize: 12.5 } }, "Yard\u0131mc\u0131 Asistan"),
                 React.createElement("div", { style: { color: "#D8E6DC", fontFamily: "Inter", fontSize: 9 } },
@@ -17638,7 +17652,7 @@ const IRKLAR = {
     "Oğlak": ["Kilis", "Saanen", "Kıl Keçisi"],
 };
 function Logo({ size = 34, color }) {
-    const fontSize = Math.max(10, Math.round(size * 0.62));
+    const fontSize = Math.max(10, Math.round(size * 0.68));
     return (React.createElement("span", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize, color: color || COLORS.pineDeep, letterSpacing: -0.2, whiteSpace: "nowrap", flexShrink: 0, lineHeight: 1 } }, "benimmeram"));
 }
 const btnPrimary = { fontFamily: "Inter", fontWeight: 600, fontSize: 13.5, color: COLORS.white, background: COLORS.pineDeep, border: "none", borderRadius: 10, padding: "11px 16px", cursor: "pointer" };
@@ -18136,13 +18150,14 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
     return (React.createElement(React.Fragment, null,
         screen !== "detail" && screen !== "chat" && screen !== "regionChat" && screen !== "reels" && screen !== "search" && (React.createElement("div", { style: { background: COLORS.pine, padding: "14px 14px 10px", display: "flex", alignItems: "center", gap: 10 } },
             React.createElement("button", { onClick: () => setDrawer(true), style: { background: "none", border: "none", cursor: "pointer" } },
-                React.createElement(Menu, { color: COLORS.white, size: 20 })),
-            React.createElement(Logo, { size: 22, color: COLORS.white }),
-            React.createElement("button", { onClick: () => setScreen("search"), style: { flex: 1, background: "rgba(255,255,255,0.14)", border: "none", borderRadius: 10, padding: "7px 10px", display: "flex", alignItems: "center", gap: 6, cursor: "pointer" } },
-                React.createElement(Search, { size: 14, color: "#D8E6DC" }),
-                React.createElement("span", { style: { color: "#D8E6DC", fontFamily: "Inter", fontSize: 12.5 } }, "Irk, konum ara...")),
+                React.createElement(IconMenu, { color: COLORS.white, size: 20 })),
+            React.createElement(Logo, { size: 30, color: COLORS.white }),
+            React.createElement("div", { style: { flex: 1 } }),
+            React.createElement("button", { onClick: () => setScreen("search"), style: { background: "none", border: "none", cursor: "pointer" } },
+                React.createElement(IconSearch, { size: 20, color: COLORS.white })),
+            React.createElement(AssistantWidget, { me: me, refreshAll: refreshAll }),
             React.createElement("button", { onClick: () => goToProtected("myoffers"), style: { background: "none", border: "none", cursor: "pointer", position: "relative" } },
-                React.createElement(Inbox, { color: COLORS.white, size: 20 }),
+                React.createElement(IconInbox, { color: COLORS.white, size: 20 }),
                 hasNotification && React.createElement("span", { style: { position: "absolute", top: -3, right: -3, width: 8, height: 8, borderRadius: "50%", background: COLORS.ochre } })))),
         screen === "home" && (React.createElement(React.Fragment, null,
             React.createElement("button", { onClick: () => setScreen("requests"), style: { margin: "10px 14px 4px", padding: "10px 12px", borderRadius: 14, background: COLORS.pineDeep, display: "flex", alignItems: "center", gap: 10, border: "none", cursor: "pointer", width: "calc(100% - 28px)" } },
@@ -18261,13 +18276,12 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
                                     color: tab === mainKey && subTab === sub && breedTab === breed ? COLORS.white : "#8A8776",
                                 } }, breed)))))));
                     })))))))),
-        screen !== "detail" && screen !== "chat" && screen !== "regionChat" && screen !== "reels" && screen !== "search" && (React.createElement("div", { style: { display: "flex", borderTop: `1px solid ${COLORS.line}`, background: COLORS.white, padding: "10px 0 14px" } }, [["home", NavIconHome, "Ana Sayfa"], ["create", NavIconPlus, "İlan Ver"], ["reels", NavIconFilm, "Reels"], ["chatHub", NavIconChat, "Sohbet"], ["profile", NavIconUser, "Profil"]].map(([s, Icon, l]) => {
+        screen !== "detail" && screen !== "chat" && screen !== "regionChat" && screen !== "reels" && screen !== "search" && (React.createElement("div", { style: { display: "flex", borderTop: `1px solid ${COLORS.line}`, background: COLORS.white, padding: "10px 0 14px" } }, [["home", NavIconHome, "Ana Sayfa"], ["reels", NavIconFilm, "Reels"], ["create", NavIconPlus, "İlan Ver"], ["chatHub", NavIconChat, "Sohbet"], ["profile", NavIconUser, "Profil"]].map(([s, Icon, l]) => {
             const active = s === "chatHub" ? ["chatHub", "chat", "regionChat"].includes(screen) : screen === s;
             return (React.createElement("button", { key: s, onClick: () => (s === "home" || s === "reels" ? setScreen(s) : goToProtected(s)), style: { flex: 1, background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, cursor: "pointer" } },
                 React.createElement(Icon, { size: s === "create" ? 25 : 19, color: active ? COLORS.pineDeep : "#B7B4A6" }),
                 React.createElement("span", { style: { fontFamily: "Inter", fontSize: 9, color: active ? COLORS.pineDeep : "#B7B4A6", fontWeight: 600 } }, l)));
-        }))),
-        screen !== "chat" && screen !== "regionChat" && screen !== "reels" && React.createElement(AssistantWidget, { me: me, refreshAll: refreshAll })));
+        })))));
 }
 // ---------- ARAMA ----------
 function SearchScreen({ listings, reviews, favorites, toggleFavorite, onOpen, onBack }) {
@@ -18291,7 +18305,7 @@ function SearchScreen({ listings, reviews, favorites, toggleFavorite, onOpen, on
                 React.createElement("input", { ref: inputRef, value: query, onChange: (e) => { setQuery(e.target.value); setSearched(false); }, onKeyDown: (e) => { if (e.key === "Enter")
                         runSearch(); }, placeholder: "Irk, konum ara...", style: { flex: 1, background: "none", border: "none", outline: "none", color: COLORS.white, fontFamily: "Inter", fontSize: 13, padding: "5px 0" } })),
             React.createElement("button", { onClick: runSearch, style: { background: COLORS.ochre, border: "none", borderRadius: 10, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 } },
-                React.createElement(Search, { size: 16, color: "#3A2C0E" }))),
+                React.createElement(IconSearch, { size: 16, color: "#3A2C0E" }))),
         React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "14px 14px 90px" } },
             !searched && (React.createElement("div", { style: { textAlign: "center", marginTop: 30, fontFamily: "Inter", fontSize: 12.5, color: "#8A8776" } }, "Irk, kategori, konum veya sat\u0131c\u0131 ad\u0131na g\u00F6re aray\u0131n.")),
             searched && results.length === 0 && (React.createElement("div", { style: { textAlign: "center", marginTop: 30, fontFamily: "Inter", fontSize: 12.5, color: "#8A8776" } },
