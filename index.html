@@ -17367,14 +17367,14 @@ function IconThumbUp({ size = 24, color, filled }) {
     return React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: filled ? color : "none", stroke: color, strokeWidth: "1.6", strokeLinecap: "round", strokeLinejoin: "round" },
         React.createElement("path", { d: "M7 11v9H4a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h3Zm0 0 4-7a2 2 0 0 1 3.6 1.2L14 9h4.5a2 2 0 0 1 1.9 2.7l-2 6A2 2 0 0 1 16.5 20H10a3 3 0 0 1-3-3v-6Z" }));
 }
-function IconSpeaker({ size = 18, color, muted }) {
-    return (React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: color, strokeWidth: "1.7", strokeLinecap: "round", strokeLinejoin: "round" },
+function IconSpeaker({ size = 18, color, muted, style }) {
+    return (React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: color, strokeWidth: "1.7", strokeLinecap: "round", strokeLinejoin: "round", style: style },
         React.createElement("path", { d: "M4 9v6h4l5 4V5L8 9H4Z" }),
         !muted && React.createElement("path", { d: "M16.3 8.5a5 5 0 0 1 0 7" }),
         muted && React.createElement("path", { d: "M17 9l4 6M21 9l-4 6" })));
 }
-function IconBookmark({ size = 24, color, filled }) {
-    return React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: filled ? color : "none", stroke: color, strokeWidth: "1.8", strokeLinecap: "round", strokeLinejoin: "round" },
+function IconBookmark({ size = 24, color, filled, style }) {
+    return React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: filled ? color : "none", stroke: color, strokeWidth: "1.8", strokeLinecap: "round", strokeLinejoin: "round", style: style },
         React.createElement("path", { d: "M6 4h12a1 1 0 0 1 1 1v15l-7-4.5L5 20V5a1 1 0 0 1 1-1Z" }));
 }
 const COLORS = {
@@ -17432,23 +17432,33 @@ const convParts = (conversationId) => {
     return { listingId, buyerName, sellerName };
 };
 const REGIONS = ["Marmara Bölgesi", "Ege Bölgesi", "Akdeniz Bölgesi", "İç Anadolu Bölgesi", "Karadeniz Bölgesi", "Doğu Anadolu Bölgesi", "Güneydoğu Anadolu Bölgesi"];
+const TURKISH_CITIES = [
+    "Adana", "Adıyaman", "Afyonkarahisar", "Ağrı", "Amasya", "Ankara", "Antalya", "Artvin", "Aydın", "Balıkesir",
+    "Bilecik", "Bingöl", "Bitlis", "Bolu", "Burdur", "Bursa", "Çanakkale", "Çankırı", "Çorum", "Denizli",
+    "Diyarbakır", "Edirne", "Elazığ", "Erzincan", "Erzurum", "Eskişehir", "Gaziantep", "Giresun", "Gümüşhane", "Hakkari",
+    "Hatay", "Isparta", "Mersin", "İstanbul", "İzmir", "Kars", "Kastamonu", "Kayseri", "Kırklareli", "Kırşehir",
+    "Kocaeli", "Konya", "Kütahya", "Malatya", "Manisa", "Kahramanmaraş", "Mardin", "Muğla", "Muş", "Nevşehir",
+    "Niğde", "Ordu", "Rize", "Sakarya", "Samsun", "Siirt", "Sinop", "Sivas", "Tekirdağ", "Tokat",
+    "Trabzon", "Tunceli", "Şanlıurfa", "Uşak", "Van", "Yozgat", "Zonguldak", "Aksaray", "Bayburt", "Karaman",
+    "Kırıkkale", "Batman", "Şırnak", "Bartın", "Ardahan", "Iğdır", "Yalova", "Karabük", "Kilis", "Osmaniye", "Düzce",
+];
 // ---------- REELS SIRALAMA ALGORİTMASI ----------
 // Basit, açıklanabilir bir ağırlıklı puanlama sistemi (gerçek bir makine
-// öğrenmesi modeli değildir): beğeni + favori sayısı, ilanın tazeliği ve
-// medyalı (foto/video) olması puanı yükseltir. En yüksek puanlı ilan en
-// üstte gösterilir. me.region tanımlıysa aynı bölgedeki satıcılara küçük
-// bir öncelik bonusu da verilir.
-function rankReelsItems(items, likes, favoritesAll, me) {
+// öğrenmesi modeli değildir): önce AYNI ŞEHİR, sonra AYNI BÖLGE satıcıları
+// öne çıkarır; buna beğeni + favori sayısı, tazelik ve medyalı olma puanı
+// eklenir. En yüksek puanlı ilan en üstte gösterilir.
+function rankReelsItems(items, likes, favoritesLog, me) {
     const now = Date.now();
     return items
         .map(item => {
         const likeCount = likes.filter(l => l.listingId === item.id).length;
-        const favCount = (favoritesAll || []).filter(id => id === item.id).length; // tek kullanıcının favori listesi geçirilirse 0/1 olur
+        const favCount = favoritesLog.filter(f => f.listingId === item.id).length;
         const ageHours = (now - (item.createdAt || now)) / 3600000;
         const recencyScore = Math.max(0, 96 - ageHours) / 96; // ilk 4 gün içinde tazelik bonusu, sonra söner
         const mediaScore = item.mediaUrls && item.mediaUrls.length > 0 ? 1 : 0;
-        const regionBonus = me && me.region && item.sellerRegion === me.region ? 0.5 : 0;
-        const score = likeCount * 3 + favCount * 2 + recencyScore * 4 + mediaScore * 2 + regionBonus;
+        const cityBonus = me && me.city && item.sellerCity === me.city ? 12 : 0;
+        const regionBonus = me && me.region && item.sellerRegion === me.region ? 6 : 0;
+        const score = cityBonus + regionBonus + likeCount * 3 + favCount * 2.5 + recencyScore * 4 + mediaScore * 2;
         return { item, score };
     })
         .sort((a, b) => b.score - a.score)
@@ -17630,11 +17640,9 @@ const IRKLAR = {
 function Logo({ size = 34 }) {
     return (React.createElement("svg", { width: size, height: size, viewBox: "0 0 48 48", style: { flexShrink: 0 } },
         React.createElement("circle", { cx: "24", cy: "24", r: "24", fill: COLORS.pineDeep }),
-        React.createElement("path", { d: "M14 19c0-5 4.2-9 10-9s10 4 10 9", stroke: "#FFFFFF", strokeWidth: "2.4", fill: "none", strokeLinecap: "round" }),
-        React.createElement("circle", { cx: "15", cy: "22.5", r: "2.3", fill: COLORS.ochre }),
-        React.createElement("circle", { cx: "33", cy: "22.5", r: "2.3", fill: COLORS.ochre }),
-        React.createElement("path", { d: "M17 27c1 5 4.2 8 7 8s6-3 7-8", stroke: "#FFFFFF", strokeWidth: "2.4", fill: "none", strokeLinecap: "round", strokeLinejoin: "round" }),
-        React.createElement("circle", { cx: "24", cy: "30.5", r: "1.6", fill: "#FFFFFF" })));
+        React.createElement("path", { d: "M12 34 L12 14 L24 26 L36 14 L36 34", stroke: "#FFFFFF", strokeWidth: "3.2", fill: "none", strokeLinecap: "round", strokeLinejoin: "round" }),
+        React.createElement("path", { d: "M10 15 Q13 9 18 10", stroke: COLORS.ochre, strokeWidth: "2.2", fill: "none", strokeLinecap: "round" }),
+        React.createElement("path", { d: "M38 15 Q35 9 30 10", stroke: COLORS.ochre, strokeWidth: "2.2", fill: "none", strokeLinecap: "round" })));
 }
 const btnPrimary = { fontFamily: "Inter", fontWeight: 600, fontSize: 13.5, color: COLORS.white, background: COLORS.pineDeep, border: "none", borderRadius: 10, padding: "11px 16px", cursor: "pointer" };
 const btnGhost = { fontFamily: "Inter", fontWeight: 600, fontSize: 12, background: "transparent", border: "1.5px solid", borderRadius: 8, padding: "7px 11px", cursor: "pointer", display: "flex", alignItems: "center" };
@@ -17993,6 +18001,7 @@ function BenimMeram() {
     const [customBreeds, setCustomBreeds] = useState({});
     const [customSubcategories, setCustomSubcategories] = useState({ buyukbas: [], kucukbas: [] });
     const [likes, setLikes] = useState([]);
+    const [favoritesLog, setFavoritesLog] = useState([]);
     const [announcement, setAnnouncement] = useState(DEFAULT_ANNOUNCEMENT);
     const [adminSession, setAdminSession] = useState(null);
     const [screen, setScreen] = useState("home");
@@ -18015,13 +18024,13 @@ function BenimMeram() {
     });
     const effectiveView = isAdminGateOpen ? view : "app";
     const refreshAll = useCallback(async () => {
-        const [l, r, o, m, rv, msg, pr, aa, al, au, rp, cb, csc, ann, lk] = await Promise.all([
+        const [l, r, o, m, rv, msg, pr, aa, al, au, rp, cb, csc, ann, lk, fl] = await Promise.all([
             loadShared("listings", []), loadShared("requests", []), loadShared("offers", []),
             loadShared("members", []), loadShared("reviews", []), loadShared("messages", []),
             loadShared("pricing", DEFAULT_PRICING), loadShared("adminAccounts", []),
             loadShared("adminLoginLogs", []), loadShared("auditLog", []), loadShared("reports", []),
             loadShared("customBreeds", {}), loadShared("customSubcategories", { buyukbas: [], kucukbas: [] }),
-            loadShared("announcement", DEFAULT_ANNOUNCEMENT), loadShared("likes", []),
+            loadShared("announcement", DEFAULT_ANNOUNCEMENT), loadShared("likes", []), loadShared("favoritesLog", []),
         ]);
         setListings(l);
         setRequests(r);
@@ -18038,14 +18047,33 @@ function BenimMeram() {
         setCustomSubcategories(csc);
         setAnnouncement(ann);
         setLikes(lk);
+        setFavoritesLog(fl);
     }, []);
     const toggleFavorite = useCallback(async (listingId) => {
+        let willBeFavorited = false;
         setFavorites(prev => {
-            const next = prev.includes(listingId) ? prev.filter(id => id !== listingId) : [...prev, listingId];
+            const isFav = prev.includes(listingId);
+            willBeFavorited = !isFav;
+            const next = isFav ? prev.filter(id => id !== listingId) : [...prev, listingId];
             savePersonal("favorites", next);
             return next;
         });
-    }, []);
+        // Giriş yapılmışsa, algoritmanın kullanabileceği paylaşılan bir favori
+        // kaydı da tutulur (misafir kullanıcıların favorileri sadece kendi
+        // cihazında kalır, ortak sıralamayı etkilemez).
+        if (me) {
+            const all = await loadShared("favoritesLog", []);
+            const idx = all.findIndex(f => f.listingId === listingId && f.userName === me.name);
+            if (willBeFavorited && idx === -1) {
+                all.push({ id: uid(), listingId, userName: me.name, createdAt: Date.now() });
+                await saveShared("favoritesLog", all);
+            }
+            else if (!willBeFavorited && idx > -1) {
+                all.splice(idx, 1);
+                await saveShared("favoritesLog", all);
+            }
+        }
+    }, [me]);
     useEffect(() => {
         (async () => {
             const savedMe = await loadPersonal("me", null);
@@ -18078,12 +18106,12 @@ function BenimMeram() {
             React.createElement("button", { onClick: () => setView("admin"), style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5, padding: "8px 16px", borderRadius: 8, border: "none", cursor: "pointer", background: view === "admin" ? COLORS.pineDeep : "transparent", color: view === "admin" ? COLORS.white : "#5A574C" } }, "Y\u00F6netim Paneli"))),
         effectiveView === "admin" ? (adminSession ? (React.createElement(AdminPanel, { session: adminSession, onLogout: async () => { await logAdminLogin({ tcNo: adminSession.tcNo, name: adminSession.name, role: adminSession.role, success: true, reason: "çıkış yapıldı" }); await savePersonal("adminSession", null); setAdminSession(null); await refreshAll(); }, listings: listings, requests: requests, offers: offers, members: members, messages: messages, reviews: reviews, announcement: announcement, pricing: pricing, adminAccounts: adminAccounts, adminLoginLogs: adminLoginLogs, auditLog: auditLog, reports: reports, customBreeds: customBreeds, customSubcategories: customSubcategories, refreshAll: refreshAll })) : (React.createElement(AdminAuth, { adminAccounts: adminAccounts, refreshAll: refreshAll, onLogin: async (session) => { await savePersonal("adminSession", session); setAdminSession(session); } }))) : (React.createElement("div", { style: { width: 360, height: 700, background: COLORS.paper, borderRadius: 34, border: `10px solid ${COLORS.ink}`, overflow: "hidden", position: "relative", boxShadow: "0 30px 60px rgba(0,0,0,0.35)", display: "flex", flexDirection: "column" } },
             React.createElement("style", null, `@keyframes pulseDot {0%{transform:scale(1);opacity:.7}70%{transform:scale(2.6);opacity:0}100%{opacity:0}}`),
-            React.createElement(AppShell, { me: me, setMe: setMe, requireAuth: requireAuth, listings: listings, requests: requests, offers: offers, reviews: reviews, messages: messages, members: members, pricing: pricing, customBreeds: customBreeds, customSubcategories: customSubcategories, favorites: favorites, toggleFavorite: toggleFavorite, likes: likes, refreshAll: refreshAll, screen: screen, setScreen: setScreen, tab: tab, setTab: setTab, subTab: subTab, setSubTab: setSubTab, breedTab: breedTab, setBreedTab: setBreedTab, drawer: drawer, setDrawer: setDrawer, selected: selected, setSelected: setSelected }),
+            React.createElement(AppShell, { me: me, setMe: setMe, requireAuth: requireAuth, listings: listings, requests: requests, offers: offers, reviews: reviews, messages: messages, members: members, pricing: pricing, customBreeds: customBreeds, customSubcategories: customSubcategories, favorites: favorites, toggleFavorite: toggleFavorite, likes: likes, favoritesLog: favoritesLog, refreshAll: refreshAll, screen: screen, setScreen: setScreen, tab: tab, setTab: setTab, subTab: subTab, setSubTab: setSubTab, breedTab: breedTab, setBreedTab: setBreedTab, drawer: drawer, setDrawer: setDrawer, selected: selected, setSelected: setSelected }),
             showAuth && (React.createElement("div", { style: { position: "absolute", inset: 0, background: COLORS.paper, zIndex: 30, display: "flex", flexDirection: "column" } },
                 React.createElement(Onboarding, { onDone: (m) => { setMe(m); setShowAuth(false); }, onCancel: () => setShowAuth(false) })))))));
 }
 // ---------- APP SHELL (giriş yapılmış veya misafir kullanıcı) ----------
-function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews, messages, members, pricing, customBreeds, customSubcategories, favorites, toggleFavorite, likes, refreshAll, screen, setScreen, tab, setTab, subTab, setSubTab, breedTab, setBreedTab, drawer, setDrawer, selected, setSelected }) {
+function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews, messages, members, pricing, customBreeds, customSubcategories, favorites, toggleFavorite, likes, favoritesLog, refreshAll, screen, setScreen, tab, setTab, subTab, setSubTab, breedTab, setBreedTab, drawer, setDrawer, selected, setSelected }) {
     const [expandedSub, setExpandedSub] = useState(null);
     const [seedState, setSeedState] = useState({ loading: false, error: null, fallback: false });
     const [chatTarget, setChatTarget] = useState(null); // { conversationId, otherName, listingLabel }
@@ -18196,7 +18224,7 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
                         o.sellerName),
                     React.createElement(OfferStatusView, { offer: o, refreshAll: refreshAll })));
             }))),
-        screen === "reels" && (React.createElement(ReelsScreen, { listings: listings, favorites: favorites, toggleFavorite: toggleFavorite, likes: likes, me: me, requireAuth: requireAuth, refreshAll: refreshAll, onOpen: open, onBack: () => setScreen("home") })),
+        screen === "reels" && (React.createElement(ReelsScreen, { listings: listings, favorites: favorites, toggleFavorite: toggleFavorite, likes: likes, favoritesLog: favoritesLog, me: me, requireAuth: requireAuth, refreshAll: refreshAll, onOpen: open, onBack: () => setScreen("home") })),
         screen === "favorites" && (React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "16px 18px 100px" } },
             React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 19, marginBottom: 12 } }, "Favorilerim"),
             listings.filter(l => favorites.includes(l.id)).length === 0 ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12.5, color: "#8A8776" } }, "Hen\u00FCz favori ilan\u0131n\u0131z yok \u2014 bir ilan kart\u0131ndaki kalp ikonuna dokunun.")) : (React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 } }, listings.filter(l => favorites.includes(l.id)).map(item => (React.createElement(ListingCard, { key: item.id, item: item, reviews: reviews, favorites: favorites, toggleFavorite: toggleFavorite, onOpen: open }))))))),
@@ -18253,15 +18281,15 @@ function ReelItem({ item, isFav, toggleFavorite, likeCount, isLiked, onToggleLik
         media ? (media.type === "image" ? (React.createElement("img", { src: media.dataUrl, style: { position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" } })) : (React.createElement("div", { style: { position: "absolute", inset: 0 } },
             React.createElement(VideoPlayer, { src: media.dataUrl, autoPlay: true, loop: true, muted: muted })))) : (React.createElement("div", { style: { position: "absolute", inset: 0, background: "linear-gradient(160deg, #1E4030, #3A5A46)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 90 } }, EMOJI[item.subCategory] || "🐾")),
         React.createElement("div", { style: { position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.75), transparent 45%)" } }),
-        media && media.type === "video" && (React.createElement("button", { onClick: (e) => { e.stopPropagation(); setMuted(v => !v); }, style: { position: "absolute", right: 16, bottom: 310, width: 36, height: 36, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", opacity: 0.85 } },
-            React.createElement(IconSpeaker, { size: 20, color: "#C9C6BA", muted: muted }))),
-        React.createElement("button", { onClick: (e) => { e.stopPropagation(); onToggleLike(item.id); }, style: { position: "absolute", right: 14, bottom: 250, width: 42, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, background: "transparent", border: "none", cursor: "pointer", opacity: 0.9 } },
-            React.createElement(Heart, { size: 27, fill: isLiked ? COLORS.red : "none", color: isLiked ? COLORS.red : "#C9C6BA", strokeWidth: 1.8 }),
-            React.createElement("span", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 10.5, color: "#C9C6BA" } }, likeCount)),
-        React.createElement("button", { onClick: (e) => { e.stopPropagation(); toggleFavorite(item.id); }, style: { position: "absolute", right: 14, bottom: 190, width: 42, height: 42, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", opacity: 0.9 } },
-            React.createElement(IconBookmark, { size: 24, color: isFav ? COLORS.ochre : "#C9C6BA", filled: isFav })),
-        React.createElement("button", { onClick: (e) => { e.stopPropagation(); onShare(item); }, style: { position: "absolute", right: 14, bottom: 130, width: 42, height: 42, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", opacity: 0.9 } },
-            React.createElement(Send, { size: 23, color: "#C9C6BA" })),
+        media && media.type === "video" && (React.createElement("button", { onClick: (e) => { e.stopPropagation(); setMuted(v => !v); }, style: { position: "absolute", right: 15, bottom: 312, width: 36, height: 36, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.55))" } },
+            React.createElement(IconSpeaker, { size: 21, color: COLORS.white, muted: muted }))),
+        React.createElement("button", { onClick: (e) => { e.stopPropagation(); onToggleLike(item.id); }, style: { position: "absolute", right: 13, bottom: 248, width: 44, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, background: "transparent", border: "none", cursor: "pointer" } },
+            React.createElement(Heart, { size: 30, fill: isLiked ? "#FF3040" : "none", color: isLiked ? "#FF3040" : COLORS.white, strokeWidth: 1.9, style: { filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.55))" } }),
+            React.createElement("span", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 11, color: COLORS.white, filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.55))" } }, likeCount)),
+        React.createElement("button", { onClick: (e) => { e.stopPropagation(); toggleFavorite(item.id); }, style: { position: "absolute", right: 13, bottom: 188, width: 44, height: 44, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" } },
+            React.createElement(IconBookmark, { size: 27, color: COLORS.white, filled: isFav, style: { filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.55))" } })),
+        React.createElement("button", { onClick: (e) => { e.stopPropagation(); onShare(item); }, style: { position: "absolute", right: 13, bottom: 128, width: 44, height: 44, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" } },
+            React.createElement(Send, { size: 26, color: COLORS.white, style: { filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.55))" } })),
         React.createElement("div", { style: { position: "relative", padding: "0 16px 22px", width: "100%", zIndex: 2 } },
             React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 19, color: COLORS.white } },
                 item.breed,
@@ -18279,8 +18307,8 @@ function ReelItem({ item, isFav, toggleFavorite, likeCount, isLiked, onToggleLik
                 React.createElement("button", { onClick: () => onOpen(item), style: { ...btnPrimary, flex: 1 } }, "\u0130lana Git"),
                 React.createElement("button", { onClick: () => (requireAuth() ? onOpen(item) : null), style: { background: "rgba(255,255,255,0.15)", border: `1px solid rgba(255,255,255,0.4)`, color: COLORS.white, borderRadius: 10, padding: "11px 16px", fontFamily: "Inter", fontWeight: 600, fontSize: 13, cursor: "pointer" } }, "Teklif Ver")))));
 }
-function ReelsScreen({ listings, favorites, toggleFavorite, likes, me, requireAuth, refreshAll, onOpen, onBack }) {
-    const items = React.useMemo(() => rankReelsItems(listings.filter(l => l.status !== "kaldirildi"), likes, [], me), [listings, likes, me]);
+function ReelsScreen({ listings, favorites, toggleFavorite, likes, favoritesLog, me, requireAuth, refreshAll, onOpen, onBack }) {
+    const items = React.useMemo(() => rankReelsItems(listings.filter(l => l.status !== "kaldirildi"), likes, favoritesLog, me), [listings, likes, favoritesLog, me]);
     const [toast, setToast] = useState("");
     const toggleLike = async (listingId) => {
         if (!requireAuth())
@@ -18605,7 +18633,7 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
             dailyMilkLiters: gender === "Dişi" && dailyMilkLiters ? Number(dailyMilkLiters) : null,
             description: description.trim(),
             mediaUrls: media,
-            sellerName: me.name, profileType: me.profileType, status: "yayinda", createdAt: Date.now(),
+            sellerName: me.name, profileType: me.profileType, sellerCity: me.city || null, sellerRegion: me.region || null, status: "yayinda", createdAt: Date.now(),
         });
         await saveShared("listings", all);
         await refreshAll();
@@ -19050,6 +19078,13 @@ function ProfileScreen({ me, setMe, listings, members, favorites, pricing, setSc
         setMe(updatedMe);
         setSavingRegion(false);
     };
+    const setCity = async (city) => {
+        setSavingRegion(true);
+        const updatedMe = { ...me, city };
+        await savePersonal("me", updatedMe);
+        setMe(updatedMe);
+        setSavingRegion(false);
+    };
     return (React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "16px 18px 100px" } },
         React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 19, marginBottom: 14 } }, "Profilim"),
         React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 16 } },
@@ -19070,6 +19105,12 @@ function ProfileScreen({ me, setMe, listings, members, favorites, pricing, setSc
             React.createElement(PersonalInfoEdit, { me: me, setMe: setMe, refreshAll: refreshAll })),
         me.authMethod === "email" && (React.createElement("div", { style: { marginBottom: 14 } },
             React.createElement(PasswordChangeFlow, { me: me, setMe: setMe }))),
+        React.createElement("div", { style: { marginBottom: 14 } },
+            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12.5, fontWeight: 600, marginBottom: 6 } }, "\u015Eehriniz"),
+            React.createElement("select", { value: me.city || "", onChange: (e) => setCity(e.target.value), disabled: savingRegion, style: inputStyle },
+                React.createElement("option", { value: "" }, "Se\u00E7ilmedi"),
+                TURKISH_CITIES.map(c => React.createElement("option", { key: c, value: c }, c))),
+            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10, color: "#8A8776", marginTop: 4 } }, "Reels'te \u00F6nce \u015Fehrinizden, sonra b\u00F6lgenizden ilanlar \u00F6ne \u00E7\u0131kar.")),
         React.createElement("div", { style: { marginBottom: 14 } },
             React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12.5, fontWeight: 600, marginBottom: 6 } }, "B\u00F6lgeniz"),
             React.createElement("select", { value: me.region || "", onChange: (e) => setRegion(e.target.value), disabled: savingRegion, style: inputStyle },
