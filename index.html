@@ -17562,7 +17562,7 @@ async function askAssistant(messages, user) {
 }
 // Yapay zeka bağlantısı isteğiniz üzerine ŞİMDİLİK KAPATILDI. Tekrar açmak için
 // bu değeri true yapmanız yeterli — geri kalan kod (backend, API bağlantısı) hazır bekliyor.
-const ASSISTANT_AI_ENABLED = false;
+const ASSISTANT_AI_ENABLED = true;
 function AssistantWidget({ me, refreshAll }) {
     const [open, setOpen] = useState(false);
     const [input, setInput] = useState("");
@@ -17867,7 +17867,7 @@ function Onboarding({ onDone, onCancel }) {
         setErr("Kod hatalı. (Simülasyon kodu: 1234)");
         return;
     } setErr(""); setStep("profile"); };
-    const goToDoc = () => {
+    const goToDoc = async () => {
         if (!name.trim()) {
             setErr(accountType === "kurumsal" ? "Yetkili ad soyad girin." : "Ad soyad girin.");
             return;
@@ -17901,6 +17901,19 @@ function Onboarding({ onDone, onCancel }) {
             return;
         }
         setErr("");
+        if (accountType === "bireysel") {
+            // Bireysel hesaplarda belge yükleme istenmiyor — hesap doğrudan onaylı sayılır.
+            setSaving(true);
+            const me = { name: name.trim(), phone, email, authMethod: "email", passwordPlain: password, profileType: "bireysel", subscribed: false, joinedAt: Date.now(), documentStatus: "onaylandi" };
+            const result = await registerMember(me, { documentStatus: "onaylandi" });
+            setSaving(false);
+            if (!result.ok) {
+                setErr(result.error);
+                return;
+            }
+            onDone(me);
+            return;
+        }
         setStep("belge");
     };
     const registerMember = async (me, extra) => {
@@ -18387,11 +18400,16 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
                                     color: tab === mainKey && subTab === sub && breedTab === breed ? COLORS.white : "#8A8776",
                                 } }, breed)))))));
                     })))))))),
-        screen !== "detail" && screen !== "chat" && screen !== "regionChat" && screen !== "reels" && screen !== "search" && (React.createElement("div", { style: { display: "flex", borderTop: `1px solid ${COLORS.line}`, background: COLORS.white, padding: "10px 0 14px" } }, [["home", NavIconHome, "Ana Sayfa"], ["reels", NavIconFilm, "Reels"], ["create", NavIconPlus, "İlan Ver"], ["chatHub", NavIconChat, "Sohbet"], ["profile", NavIconUser, "Profil"]].map(([s, Icon, l]) => {
+        screen !== "detail" && screen !== "chat" && screen !== "regionChat" && screen !== "search" && (React.createElement("div", { style: screen === "reels"
+                ? { position: "absolute", left: 0, right: 0, bottom: 0, display: "flex", padding: "18px 0 14px", background: "linear-gradient(to top, rgba(0,0,0,0.65), transparent)", zIndex: 12 }
+                : { display: "flex", borderTop: `1px solid ${COLORS.line}`, background: COLORS.white, padding: "10px 0 14px" } }, [["home", NavIconHome, "Ana Sayfa"], ["reels", NavIconFilm, "Aktif"], ["create", NavIconPlus, "İlan Ver"], ["chatHub", NavIconChat, "Sohbet"], ["profile", NavIconUser, "Profil"]].map(([s, Icon, l]) => {
             const active = s === "chatHub" ? ["chatHub", "chat", "regionChat"].includes(screen) : screen === s;
+            const onReels = screen === "reels";
+            const activeColor = onReels ? COLORS.white : COLORS.pineDeep;
+            const inactiveColor = onReels ? "rgba(255,255,255,0.55)" : "#B7B4A6";
             return (React.createElement("button", { key: s, onClick: () => (s === "home" || s === "reels" ? setScreen(s) : goToProtected(s)), style: { flex: 1, background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, cursor: "pointer" } },
-                React.createElement(Icon, { size: s === "create" ? 25 : 19, color: active ? COLORS.pineDeep : "#B7B4A6" }),
-                React.createElement("span", { style: { fontFamily: "Inter", fontSize: 9, color: active ? COLORS.pineDeep : "#B7B4A6", fontWeight: 600 } }, l)));
+                React.createElement(Icon, { size: s === "create" ? 25 : 19, color: active ? activeColor : inactiveColor }),
+                React.createElement("span", { style: { fontFamily: "Inter", fontSize: 9, color: active ? activeColor : inactiveColor, fontWeight: 600 } }, l)));
         })))));
 }
 // ---------- ARAMA ----------
@@ -20344,13 +20362,69 @@ function AyarlarPanel({ pricing, session, refreshAll, goToSection, adminAccounts
             React.createElement(YedeklemeCard, { session: session, refreshAll: refreshAll }),
             React.createElement(GuvenlikCard, { session: session, refreshAll: refreshAll, goToSection: goToSection }))));
 }
+function StatCard({ label, value, icon: Icon, tone = "pine" }) {
+    const toneColors = { pine: COLORS.pineDeep, ochre: "#7A5A1E", red: COLORS.red };
+    return (React.createElement("div", { style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 12, flex: "1 1 140px" } },
+        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6, marginBottom: 6 } },
+            Icon && React.createElement(Icon, { size: 13, color: toneColors[tone] }),
+            React.createElement("span", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776", fontWeight: 600 } }, label)),
+        React.createElement("div", { style: { fontFamily: "IBM Plex Mono", fontWeight: 700, fontSize: 19, color: COLORS.ink } }, value)));
+}
+function OzetPanel({ listings, requests, offers, members, messages, reports, pricing, goToSection }) {
+    const subscribedCount = members.filter(m => m.subscribed).length;
+    const revenue = subscribedCount * pricing.subscriptionPrice;
+    const pendingDocs = members.filter(m => m.documentStatus === "beklemede");
+    const openReports = reports.filter(r => r.status !== "kapandi");
+    const activeListings = listings.filter(l => l.status === "yayinda");
+    const pendingOffers = offers.filter(o => o.status === "beklemede");
+    return (React.createElement("div", null,
+        React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 16, color: COLORS.ink, marginBottom: 14 } }, "Genel \u00D6zet"),
+        React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 18 } },
+            React.createElement(StatCard, { label: "Toplam \u00DCye", value: members.length, icon: Users }),
+            React.createElement(StatCard, { label: "Yay\u0131ndaki \u0130lan", value: activeListings.length, icon: Flag }),
+            React.createElement(StatCard, { label: "Aktif Abone", value: subscribedCount, icon: Star }),
+            React.createElement(StatCard, { label: "Ayl\u0131k Gelir", value: TL(revenue), icon: DollarSign }),
+            React.createElement(StatCard, { label: "Bekleyen Belge", value: pendingDocs.length, icon: ShieldCheck, tone: pendingDocs.length > 0 ? "ochre" : "pine" }),
+            React.createElement(StatCard, { label: "A\u00E7\u0131k \u015Eikayet", value: openReports.length, icon: LifeBuoy, tone: openReports.length > 0 ? "red" : "pine" }),
+            React.createElement(StatCard, { label: "Bekleyen Teklif", value: pendingOffers.length, icon: Repeat }),
+            React.createElement(StatCard, { label: "Toplam Mesaj", value: messages.length, icon: MessageCircle })),
+        React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12 } },
+            React.createElement(SettingsCard, { title: "Onay Bekleyen Belgeler", icon: ShieldCheck }, pendingDocs.length === 0 ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#8A8776" } }, "Bekleyen belge yok.")) : (React.createElement(React.Fragment, null,
+                pendingDocs.slice(0, 4).map(m => (React.createElement("div", { key: m.name + m.joinedAt, style: { display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: `1px solid ${COLORS.line}`, fontFamily: "Inter", fontSize: 11.5 } },
+                    React.createElement("span", null, m.name),
+                    React.createElement("span", { style: { color: "#8A8776" } }, PROFILE_TYPE_LABELS[m.profileType] || m.profileType)))),
+                React.createElement("button", { onClick: () => goToSection("belge"), style: { ...btnGhost, width: "100%", borderColor: COLORS.line, color: COLORS.pineDeep, marginTop: 10, padding: "8px" } },
+                    "T\u00FCm\u00FCn\u00FC G\u00F6r (",
+                    pendingDocs.length,
+                    ")")))),
+            React.createElement(SettingsCard, { title: "A\u00E7\u0131k \u015Eikayetler", icon: LifeBuoy }, openReports.length === 0 ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#8A8776" } }, "A\u00E7\u0131k \u015Fikayet yok.")) : (React.createElement(React.Fragment, null,
+                openReports.slice(0, 4).map(r => (React.createElement("div", { key: r.id, style: { padding: "5px 0", borderBottom: `1px solid ${COLORS.line}`, fontFamily: "Inter", fontSize: 11.5 } }, r.reason || "Sebep belirtilmemiş"))),
+                React.createElement("button", { onClick: () => goToSection("sikayet"), style: { ...btnGhost, width: "100%", borderColor: COLORS.line, color: COLORS.pineDeep, marginTop: 10, padding: "8px" } },
+                    "T\u00FCm\u00FCn\u00FC G\u00F6r (",
+                    openReports.length,
+                    ")")))),
+            React.createElement(SettingsCard, { title: "Son \u0130lanlar", icon: Flag },
+                listings.slice().reverse().slice(0, 4).map(l => (React.createElement("div", { key: l.id, style: { display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: `1px solid ${COLORS.line}`, fontFamily: "Inter", fontSize: 11.5 } },
+                    React.createElement("span", null,
+                        l.breed,
+                        " ",
+                        l.subCategory),
+                    React.createElement("span", { style: { color: "#8A8776" } }, TL(l.price))))),
+                React.createElement("button", { onClick: () => goToSection("ilan"), style: { ...btnGhost, width: "100%", borderColor: COLORS.line, color: COLORS.pineDeep, marginTop: 10, padding: "8px" } }, "T\u00FCm \u0130lanlar\u0131 Y\u00F6net")),
+            React.createElement(SettingsCard, { title: "H\u0131zl\u0131 Eri\u015Fim", icon: Settings },
+                React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } },
+                    React.createElement("button", { onClick: () => goToSection("ayarlar"), style: { ...btnGhost, borderColor: COLORS.line, color: COLORS.pineDeep, padding: "8px", textAlign: "left" } }, "Sistem Ayarlar\u0131"),
+                    React.createElement("button", { onClick: () => goToSection("yonetici"), style: { ...btnGhost, borderColor: COLORS.line, color: COLORS.pineDeep, padding: "8px", textAlign: "left" } }, "Y\u00F6netici Ekle"),
+                    React.createElement("button", { onClick: () => goToSection("duyuru"), style: { ...btnGhost, borderColor: COLORS.line, color: COLORS.pineDeep, padding: "8px", textAlign: "left" } }, "Duyuru Yay\u0131nla"))))));
+}
 // ---------- ADMİN PANELİ ----------
 const ADMIN_SECTIONS_BY_ROLE = {
-    super: ["ayarlar", "finans", "fiyat", "yonetici", "ilan", "kullanici", "belge", "sikayet", "kategori", "mesajlar", "degerlendirmeler", "talepler", "teklifler", "duyuru", "hamveri", "girislog", "denetim"],
-    mod: ["ilan", "kullanici", "belge", "sikayet", "kategori"],
-    destek: ["sikayet"],
+    super: ["ozet", "ayarlar", "finans", "fiyat", "yonetici", "ilan", "kullanici", "belge", "sikayet", "kategori", "mesajlar", "degerlendirmeler", "talepler", "teklifler", "duyuru", "hamveri", "girislog", "denetim"],
+    mod: ["ozet", "ilan", "kullanici", "belge", "sikayet", "kategori"],
+    destek: ["ozet", "sikayet"],
 };
 const ADMIN_SECTION_META = {
+    ozet: { title: "Özet", icon: BarChart3 },
     ayarlar: { title: "Ayarlar ve Sistem Yapılandırması", icon: Settings },
     finans: { title: "Finansal Yönetim", icon: DollarSign },
     fiyat: { title: "Fiyatlandırma Yönetimi", icon: Settings },
@@ -20375,43 +20449,53 @@ function AdminPanel({ session, onLogout, listings, requests, offers, members, me
     const subscribedCount = members.filter(m => m.subscribed).length;
     const revenue = subscribedCount * pricing.subscriptionPrice;
     const pendingDocs = members.filter(m => m.documentStatus === "beklemede");
-    return (React.createElement("div", { style: { width: 640, maxWidth: "94vw", background: COLORS.white, borderRadius: 18, border: `1px solid ${COLORS.line}`, overflow: "hidden", boxShadow: "0 20px 50px rgba(0,0,0,0.12)" } },
-        React.createElement("div", { style: { background: COLORS.pineDeep, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 } },
-            React.createElement("div", null,
-                React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 17, color: COLORS.white } }, "Y\u00F6netim Paneli"),
-                React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#D8E6DC" } },
-                    session.name,
-                    " \u00B7 ",
-                    ADMIN_ROLE_LABELS[session.role])),
+    return (React.createElement("div", { style: { width: 760, maxWidth: "96vw", background: COLORS.white, borderRadius: 18, border: `1px solid ${COLORS.line}`, overflow: "hidden", boxShadow: "0 20px 50px rgba(0,0,0,0.12)", display: "flex", flexDirection: "column" } },
+        React.createElement("div", { style: { background: COLORS.pineDeep, padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 } },
+            React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } },
+                React.createElement("div", { style: { width: 30, height: 30, borderRadius: 8, background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 } }, "\uD83D\uDC04"),
+                React.createElement("div", null,
+                    React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 16, color: COLORS.white } }, "Hayvan Pazar\u0131 Y\u00F6netim Paneli"),
+                    React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#D8E6DC" } },
+                        session.name,
+                        " \u00B7 ",
+                        ADMIN_ROLE_LABELS[session.role]))),
             React.createElement("button", { onClick: onLogout, style: { ...btnGhost, borderColor: "rgba(255,255,255,0.4)", color: COLORS.white } }, "\u00C7\u0131k\u0131\u015F Yap")),
-        React.createElement("div", { style: { display: "flex", gap: 6, padding: "12px 16px 0", flexWrap: "wrap" } }, availableSections.map(key => (React.createElement("button", { key: key, onClick: () => setActiveSection(key), style: { fontFamily: "Inter", fontWeight: 600, fontSize: 11, padding: "7px 10px", borderRadius: 8, border: "none", cursor: "pointer", background: activeSection === key ? COLORS.pineDeep : COLORS.paper, color: activeSection === key ? COLORS.white : "#5A574C" } }, ADMIN_SECTION_META[key].title)))),
-        React.createElement("div", { style: { padding: 18, maxHeight: 480, overflowY: "auto" } },
-            activeSection === "ayarlar" && React.createElement(AyarlarPanel, { pricing: pricing, session: session, refreshAll: refreshAll, goToSection: setActiveSection, adminAccounts: adminAccounts }),
-            activeSection === "finans" && (React.createElement("div", { style: { fontFamily: "IBM Plex Mono", fontSize: 13, color: "#5A574C" } },
-                "Aktif abone: ",
-                subscribedCount,
-                " \u00B7 Ayl\u0131k gelir: ",
-                TL(revenue),
-                " \u00B7 Toplam \u00FCye: ",
-                members.length,
-                " \u00B7 Toplam ilan: ",
-                listings.length)),
-            activeSection === "fiyat" && React.createElement(FiyatlandirmaPanel, { pricing: pricing, session: session, refreshAll: refreshAll }),
-            activeSection === "yonetici" && React.createElement(YoneticiPanel, { adminAccounts: adminAccounts, session: session, refreshAll: refreshAll }),
-            activeSection === "ilan" && React.createElement(IlanModerasyonPanel, { listings: listings, session: session, refreshAll: refreshAll }),
-            activeSection === "kullanici" && React.createElement(KullaniciYonetimiPanel, { members: members, session: session, refreshAll: refreshAll }),
-            activeSection === "belge" && (pendingDocs.length === 0 ? React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Bekleyen belge yok.")
-                : pendingDocs.map(m => React.createElement(PendingDocRow, { key: m.name + m.joinedAt, member: m, session: session, refreshAll: refreshAll }))),
-            activeSection === "sikayet" && React.createElement(SikayetPanel, { reports: reports, session: session, refreshAll: refreshAll }),
-            activeSection === "kategori" && React.createElement(KategoriPanel, { customBreeds: customBreeds, customSubcategories: customSubcategories, session: session, refreshAll: refreshAll }),
-            activeSection === "mesajlar" && React.createElement(MesajlarPanel, { messages: messages, session: session, refreshAll: refreshAll }),
-            activeSection === "degerlendirmeler" && React.createElement(DegerlendirmelerPanel, { reviews: reviews, session: session, refreshAll: refreshAll }),
-            activeSection === "talepler" && React.createElement(TaleplerPanel, { requests: requests, session: session, refreshAll: refreshAll }),
-            activeSection === "teklifler" && React.createElement(TekliflerPanel, { offers: offers, session: session, refreshAll: refreshAll }),
-            activeSection === "duyuru" && React.createElement(DuyuruPanel, { announcement: announcement, session: session, refreshAll: refreshAll }),
-            activeSection === "hamveri" && React.createElement(HamVeriPanel, { session: session, refreshAll: refreshAll }),
-            activeSection === "girislog" && React.createElement(GirisLoguPanel, { adminLoginLogs: adminLoginLogs }),
-            activeSection === "denetim" && React.createElement(DenetimPanel, { auditLog: auditLog }))));
+        React.createElement("div", { style: { display: "flex", flex: 1, minHeight: 0 } },
+            React.createElement("div", { style: { width: 176, flexShrink: 0, background: COLORS.paper, borderRight: `1px solid ${COLORS.line}`, padding: "12px 8px", overflowY: "auto", maxHeight: 560 } }, availableSections.map(key => {
+                const Icon = ADMIN_SECTION_META[key].icon;
+                const isActive = activeSection === key;
+                return (React.createElement("button", { key: key, onClick: () => setActiveSection(key), style: { width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "9px 10px", borderRadius: 9, border: "none", cursor: "pointer", textAlign: "left", marginBottom: 2, background: isActive ? COLORS.pineDeep : "transparent" } },
+                    React.createElement(Icon, { size: 14, color: isActive ? COLORS.white : COLORS.pineDeep }),
+                    React.createElement("span", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 11.5, color: isActive ? COLORS.white : "#5A574C", lineHeight: 1.2 } }, ADMIN_SECTION_META[key].title)));
+            })),
+            React.createElement("div", { style: { flex: 1, padding: 18, maxHeight: 560, overflowY: "auto" } },
+                activeSection === "ozet" && React.createElement(OzetPanel, { listings: listings, requests: requests, offers: offers, members: members, messages: messages, reports: reports, pricing: pricing, goToSection: setActiveSection }),
+                activeSection === "ayarlar" && React.createElement(AyarlarPanel, { pricing: pricing, session: session, refreshAll: refreshAll, goToSection: setActiveSection, adminAccounts: adminAccounts }),
+                activeSection === "finans" && (React.createElement("div", { style: { fontFamily: "IBM Plex Mono", fontSize: 13, color: "#5A574C" } },
+                    "Aktif abone: ",
+                    subscribedCount,
+                    " \u00B7 Ayl\u0131k gelir: ",
+                    TL(revenue),
+                    " \u00B7 Toplam \u00FCye: ",
+                    members.length,
+                    " \u00B7 Toplam ilan: ",
+                    listings.length)),
+                activeSection === "fiyat" && React.createElement(FiyatlandirmaPanel, { pricing: pricing, session: session, refreshAll: refreshAll }),
+                activeSection === "yonetici" && React.createElement(YoneticiPanel, { adminAccounts: adminAccounts, session: session, refreshAll: refreshAll }),
+                activeSection === "ilan" && React.createElement(IlanModerasyonPanel, { listings: listings, session: session, refreshAll: refreshAll }),
+                activeSection === "kullanici" && React.createElement(KullaniciYonetimiPanel, { members: members, session: session, refreshAll: refreshAll }),
+                activeSection === "belge" && (pendingDocs.length === 0 ? React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Bekleyen belge yok.")
+                    : pendingDocs.map(m => React.createElement(PendingDocRow, { key: m.name + m.joinedAt, member: m, session: session, refreshAll: refreshAll }))),
+                activeSection === "sikayet" && React.createElement(SikayetPanel, { reports: reports, session: session, refreshAll: refreshAll }),
+                activeSection === "kategori" && React.createElement(KategoriPanel, { customBreeds: customBreeds, customSubcategories: customSubcategories, session: session, refreshAll: refreshAll }),
+                activeSection === "mesajlar" && React.createElement(MesajlarPanel, { messages: messages, session: session, refreshAll: refreshAll }),
+                activeSection === "degerlendirmeler" && React.createElement(DegerlendirmelerPanel, { reviews: reviews, session: session, refreshAll: refreshAll }),
+                activeSection === "talepler" && React.createElement(TaleplerPanel, { requests: requests, session: session, refreshAll: refreshAll }),
+                activeSection === "teklifler" && React.createElement(TekliflerPanel, { offers: offers, session: session, refreshAll: refreshAll }),
+                activeSection === "duyuru" && React.createElement(DuyuruPanel, { announcement: announcement, session: session, refreshAll: refreshAll }),
+                activeSection === "hamveri" && React.createElement(HamVeriPanel, { session: session, refreshAll: refreshAll }),
+                activeSection === "girislog" && React.createElement(GirisLoguPanel, { adminLoginLogs: adminLoginLogs }),
+                activeSection === "denetim" && React.createElement(DenetimPanel, { auditLog: auditLog })))));
 }
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(React.createElement(BenimMeram, null));
