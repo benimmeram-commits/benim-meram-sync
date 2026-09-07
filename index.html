@@ -17456,6 +17456,17 @@ const TURKISH_CITIES = [
     "Trabzon", "Tunceli", "Şanlıurfa", "Uşak", "Van", "Yozgat", "Zonguldak", "Aksaray", "Bayburt", "Karaman",
     "Kırıkkale", "Batman", "Şırnak", "Bartın", "Ardahan", "Iğdır", "Yalova", "Karabük", "Kilis", "Osmaniye", "Düzce",
 ];
+// Bilinen büyük vergi daireleri — RESMİ/EKSİKSİZ BİR KAYIT DEĞİLDİR, sadece
+// kayıt formunda öneri (autocomplete) olarak kullanılır. Kullanıcı serbestçe
+// başka bir isim yazabilir.
+const VERGI_DAIRELERI_ORNEK = {
+    "İstanbul": ["Boğaziçi Kurumlar Vergi Dairesi", "Beyoğlu Vergi Dairesi", "Kadıköy Vergi Dairesi", "Üsküdar Vergi Dairesi", "Şişli Vergi Dairesi", "Bakırköy Vergi Dairesi"],
+    "Ankara": ["Çankaya Vergi Dairesi", "Ulus Vergi Dairesi", "Dikmen Vergi Dairesi", "Keçiören Vergi Dairesi"],
+    "İzmir": ["Konak Vergi Dairesi", "Bornova Vergi Dairesi", "Karşıyaka Vergi Dairesi"],
+    "Konya": ["Selçuklu Vergi Dairesi", "Meram Vergi Dairesi", "Karatay Vergi Dairesi"],
+    "Bursa": ["Osmangazi Vergi Dairesi", "Nilüfer Vergi Dairesi", "Yıldırım Vergi Dairesi"],
+    "Antalya": ["Muratpaşa Vergi Dairesi", "Kepez Vergi Dairesi", "Konyaaltı Vergi Dairesi"],
+};
 // ---------- REELS SIRALAMA ALGORİTMASI ----------
 // Basit, açıklanabilir bir ağırlıklı puanlama sistemi (gerçek bir makine
 // öğrenmesi modeli değildir): önce AYNI ŞEHİR, sonra AYNI BÖLGE satıcıları
@@ -17502,7 +17513,9 @@ async function logAdminLogin(entry) {
     all.push({ id: uid(), device: navigator.userAgent, timestamp: Date.now(), ...entry });
     await saveShared("adminLoginLogs", all);
 }
-const DEFAULT_PRICING = { subscriptionPrice: 1000, perListingPrice: 75, commissionRate: 0 };
+const DEFAULT_PRICING = { subscriptionPrice: 1000, perListingPrice: 75, commissionRate: 0, buyukbasCommission: 5, kucukbasCommission: 7, kargoFee: 0 };
+const DEFAULT_NOTIFICATION_SETTINGS = { yeniIlan: true, satisOnaylari: true, aliciMesajlari: true, channelEmail: false, channelSms: true, channelPush: false };
+const DEFAULT_PASSWORD_POLICY = { minLength: 8, requireUpper: true, requireNumber: true };
 const DEFAULT_ANNOUNCEMENT = { text: "", active: false, updatedAt: 0 };
 const ADMIN_ROLE_LABELS = { super: "Süper Admin", mod: "Moderatör", destek: "Destek" };
 // ---------- YARDIMCI ASİSTAN (basit kural tabanlı — GERÇEK YAPAY ZEKA DEĞİLDİR) ----------
@@ -17602,15 +17615,15 @@ function AssistantWidget({ me, refreshAll }) {
                 React.createElement("button", { onClick: ask, disabled: typing, style: { background: COLORS.pineDeep, border: "none", borderRadius: 8, padding: "0 10px", color: COLORS.white, fontFamily: "Inter", fontSize: 11, cursor: "pointer", opacity: typing ? 0.6 : 1 } }, "Sor"))))));
 }
 const SAMPLE_LISTINGS = [
-    { mainCategory: "buyukbas", subCategory: "Düve", breed: "Simental", age: "18 Ay", gender: "Dişi", price: 92000, weight: 380, purpose: "Damızlık", vaccinated: "Aşılı", isPregnant: "Gebe", dailyMilkLiters: null, description: "Anaç sürüden, ilk gebeliğini taşıyor. Aşıları ve kulak küpesi tam.", sellerName: "Mehmet Yıldız", profileType: "ciftlik" },
+    { mainCategory: "buyukbas", subCategory: "Düve", breed: "Simental", age: "18 Ay", gender: "Dişi", price: 92000, weight: 380, purpose: "Damızlık", vaccinated: "Aşılı", isPregnant: "Gebe", dailyMilkLiters: null, description: "Anaç sürüden, ilk gebeliğini taşıyor. Aşıları ve kulak küpesi tam.", sellerName: "Mehmet Yıldız", profileType: "kurumsal" },
     { mainCategory: "buyukbas", subCategory: "Tosun", breed: "Angus", age: "14 Ay", gender: "Erkek", price: 78500, weight: 410, purpose: "Besi", vaccinated: "Aşılı", description: "Düzenli besi programında, günlük kilo alımı takipli.", sellerName: "Ahmet Kaya", profileType: "bireysel" },
-    { mainCategory: "buyukbas", subCategory: "İnek", breed: "Holstein", age: "3 Yıl", gender: "Dişi", price: 118000, weight: 620, purpose: "Süt", vaccinated: "Aşılı", isPregnant: "Değil", dailyMilkLiters: 28, description: "Günlük 28 litre süt verimi, 2. laktasyon dönemi.", sellerName: "Yıldız Çiftliği", profileType: "ciftlik" },
+    { mainCategory: "buyukbas", subCategory: "İnek", breed: "Holstein", age: "3 Yıl", gender: "Dişi", price: 118000, weight: 620, purpose: "Süt", vaccinated: "Aşılı", isPregnant: "Değil", dailyMilkLiters: 28, description: "Günlük 28 litre süt verimi, 2. laktasyon dönemi.", sellerName: "Yıldız Çiftliği", profileType: "kurumsal" },
     { mainCategory: "buyukbas", subCategory: "Dana", breed: "Montofon", age: "9 Ay", gender: "Erkek", price: 54000, weight: 240, purpose: "Besi", vaccinated: "Aşısız", description: "Sütten yeni kesildi, besiye yeni başlanacak.", sellerName: "Hasan Demir", profileType: "bireysel" },
-    { mainCategory: "buyukbas", subCategory: "Manda", breed: "Anadolu Mandası", age: "2 Yıl", gender: "Dişi", price: 105000, weight: 480, purpose: "Süt", vaccinated: "Aşılı", isPregnant: "Değil", dailyMilkLiters: 8, description: "Manda sütü talebi olan işletmeler için idealdir.", sellerName: "Karaman Çiftliği", profileType: "ciftlik" },
+    { mainCategory: "buyukbas", subCategory: "Manda", breed: "Anadolu Mandası", age: "2 Yıl", gender: "Dişi", price: 105000, weight: 480, purpose: "Süt", vaccinated: "Aşılı", isPregnant: "Değil", dailyMilkLiters: 8, description: "Manda sütü talebi olan işletmeler için idealdir.", sellerName: "Karaman Çiftliği", profileType: "kurumsal" },
     { mainCategory: "kucukbas", subCategory: "Koç", breed: "Akkaraman", age: "2 Yıl", gender: "Erkek", price: 14200, weight: 75, purpose: "Damızlık", vaccinated: "Aşılı", description: "Güçlü yapılı, damızlık amaçlı yetiştirilmiştir.", sellerName: "Ali Şahin", profileType: "bireysel" },
     { mainCategory: "kucukbas", subCategory: "Keçi", breed: "Kilis", age: "1 Yıl", gender: "Dişi", price: 9800, weight: 42, purpose: "Süt", vaccinated: "Aşılı", isPregnant: "Değil", dailyMilkLiters: 3, description: "Kilis keçisi, süt verimi yüksek hatlardan.", sellerName: "Fatma Arslan", profileType: "bireysel" },
     { mainCategory: "kucukbas", subCategory: "Kuzu", breed: "Karayaka", age: "4 Ay", gender: "Erkek", price: 5200, weight: 28, purpose: "Kesimlik", vaccinated: "Aşılı", description: "Anne sütüyle beslenmiş, sağlıklı kuzu.", sellerName: "Mustafa Er", profileType: "bireysel" },
-    { mainCategory: "kucukbas", subCategory: "Koyun", breed: "İvesi", age: "1.5 Yıl", gender: "Dişi", price: 11500, weight: 55, purpose: "Süt", vaccinated: "Aşılı", isPregnant: "Gebe", dailyMilkLiters: null, description: "Gebe, yaklaşık 2 ay içinde doğum bekleniyor.", sellerName: "Konya Damızlık", profileType: "ciftlik" },
+    { mainCategory: "kucukbas", subCategory: "Koyun", breed: "İvesi", age: "1.5 Yıl", gender: "Dişi", price: 11500, weight: 55, purpose: "Süt", vaccinated: "Aşılı", isPregnant: "Gebe", dailyMilkLiters: null, description: "Gebe, yaklaşık 2 ay içinde doğum bekleniyor.", sellerName: "Konya Damızlık", profileType: "kurumsal" },
     { mainCategory: "kucukbas", subCategory: "Teke", breed: "Saanen", age: "2 Yıl", gender: "Erkek", price: 13800, weight: 68, purpose: "Damızlık", vaccinated: "Aşılı", description: "Saanen ırkı damızlık teke, belgeli soy kütüğü mevcuttur.", sellerName: "Osman Yıldırım", profileType: "bireysel" },
 ];
 const SAMPLE_REVIEWS = [
@@ -17723,6 +17736,11 @@ function Badge({ children, tone = "ochre" }) {
     const c = map[tone];
     return React.createElement("span", { style: { background: c.bg, color: c.fg, fontFamily: "Inter", fontWeight: 600, fontSize: 11, padding: "3px 8px", borderRadius: 20 } }, children);
 }
+function VerifiedBadge({ size = 13 }) {
+    return (React.createElement("span", { title: "Kurumsal \u2014 Do\u011Frulanm\u0131\u015F", style: { display: "inline-flex", alignItems: "center", justifyContent: "center", width: size, height: size, borderRadius: "50%", background: COLORS.pineDeep, flexShrink: 0 } },
+        React.createElement("svg", { width: size * 0.65, height: size * 0.65, viewBox: "0 0 24 24", fill: "none", stroke: "#fff", strokeWidth: "3", strokeLinecap: "round", strokeLinejoin: "round" },
+            React.createElement("path", { d: "M5 13l4 4L19 7" }))));
+}
 function FormField({ label, value, onChange, placeholder, type = "text" }) {
     return (React.createElement("div", null,
         React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, label),
@@ -17797,22 +17815,50 @@ async function savePersonal(key, value) {
     return rawSet(key, JSON.stringify(value), false);
 }
 // ---------- ONBOARDING (SMS doğrulama SİMÜLASYONU) ----------
+function isPasswordValid(pw, policy) {
+    const p = policy || DEFAULT_PASSWORD_POLICY;
+    if (pw.length < p.minLength)
+        return false;
+    if (p.requireUpper && !/[A-Z]/.test(pw))
+        return false;
+    if (p.requireNumber && !/[0-9]/.test(pw))
+        return false;
+    return true;
+}
 function Onboarding({ onDone, onCancel }) {
     const [step, setStep] = useState("choice");
+    const [accountType, setAccountType] = useState("bireysel"); // bireysel | kurumsal
     const [phone, setPhone] = useState("");
     const [code, setCode] = useState("");
     const [name, setName] = useState("");
-    const [profileType, setProfileType] = useState("bireysel");
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
     const [docRef, setDocRef] = useState("");
+    const [companyName, setCompanyName] = useState("");
+    const [companyType, setCompanyType] = useState("sahis"); // sahis | limited | anonim
+    const [companyIl, setCompanyIl] = useState("");
+    const [companyIlce, setCompanyIlce] = useState("");
+    const [authorizedTc, setAuthorizedTc] = useState("");
+    const [taxOffice, setTaxOffice] = useState("");
+    const [companyAddress, setCompanyAddress] = useState("");
     const [docPhoto, setDocPhoto] = useState(null);
     const [docPhotoBusy, setDocPhotoBusy] = useState(false);
     const [docPhotoError, setDocPhotoError] = useState("");
-    const [email, setEmail] = useState("");
-    const [emailPhone, setEmailPhone] = useState("");
-    const [password, setPassword] = useState("");
-    const [emailName, setEmailName] = useState("");
     const [err, setErr] = useState("");
     const [saving, setSaving] = useState(false);
+    const [passwordPolicy, setPasswordPolicy] = useState(DEFAULT_PASSWORD_POLICY);
+    useEffect(() => {
+        loadShared("passwordPolicy", DEFAULT_PASSWORD_POLICY).then(setPasswordPolicy);
+    }, []);
+    const startFlow = (type) => {
+        if (phone.length < 10) {
+            setErr("Geçerli bir telefon numarası girin.");
+            return;
+        }
+        setErr("");
+        setAccountType(type);
+        setStep("phone");
+    };
     const sendCode = () => { if (phone.length < 10) {
         setErr("Geçerli bir telefon numarası girin.");
         return;
@@ -17821,10 +17867,42 @@ function Onboarding({ onDone, onCancel }) {
         setErr("Kod hatalı. (Simülasyon kodu: 1234)");
         return;
     } setErr(""); setStep("profile"); };
-    const goToDoc = () => { if (!name.trim()) {
-        setErr("Ad soyad girin.");
-        return;
-    } setErr(""); setStep("belge"); };
+    const goToDoc = () => {
+        if (!name.trim()) {
+            setErr(accountType === "kurumsal" ? "Yetkili ad soyad girin." : "Ad soyad girin.");
+            return;
+        }
+        if (accountType === "kurumsal" && !companyName.trim()) {
+            setErr("Şirket/işletme unvanını girin.");
+            return;
+        }
+        if (accountType === "kurumsal" && !companyIl.trim()) {
+            setErr("İl seçin.");
+            return;
+        }
+        if (accountType === "kurumsal" && !companyIlce.trim()) {
+            setErr("İlçe girin.");
+            return;
+        }
+        if (accountType === "kurumsal" && !taxOffice.trim()) {
+            setErr("Vergi dairesini girin.");
+            return;
+        }
+        if (accountType === "kurumsal" && !isValidTcFormat(authorizedTc)) {
+            setErr("Yetkilinin geçerli bir TC Kimlik No'sunu girin.");
+            return;
+        }
+        if (!/^\S+@\S+\.\S+$/.test(email)) {
+            setErr("Geçerli bir e-posta adresi girin.");
+            return;
+        }
+        if (!isPasswordValid(password, passwordPolicy)) {
+            setErr(`Şifre en az ${passwordPolicy.minLength} karakter olmalı${passwordPolicy.requireUpper ? ", bir büyük harf" : ""}${passwordPolicy.requireNumber ? " ve bir rakam" : ""} içermeli.`);
+            return;
+        }
+        setErr("");
+        setStep("belge");
+    };
     const registerMember = async (me, extra) => {
         const saveMeResult = await savePersonal("me", me);
         if (!saveMeResult.ok)
@@ -17858,8 +17936,8 @@ function Onboarding({ onDone, onCancel }) {
         e.target.value = "";
     };
     const finish = async () => {
-        if (!docRef.trim()) {
-            setErr("Belge/vergi numarası girin.");
+        if (accountType === "kurumsal" && !docRef.trim()) {
+            setErr("Vergi numarası girin.");
             return;
         }
         if (!docPhoto) {
@@ -17867,8 +17945,26 @@ function Onboarding({ onDone, onCancel }) {
             return;
         }
         setSaving(true);
-        const me = { name: name.trim(), phone, email: null, authMethod: "phone", profileType, subscribed: false, joinedAt: Date.now(), documentStatus: "beklemede" };
-        const result = await registerMember(me, { documentStatus: "beklemede", documentRef: docRef.trim(), documentPhoto: docPhoto });
+        // Not: bu sadece PLATFORM İÇİNDE aynı vergi no'nun tekrar kullanılmasını engeller —
+        // şirketin gerçekten var olup olmadığını resmi olarak (Ticaret Sicili/MERSİS) doğrulamaz.
+        if (accountType === "kurumsal") {
+            const members = await loadShared("members", []);
+            const dup = members.find(m => m.profileType === "kurumsal" && m.documentRef && m.documentRef.trim() === docRef.trim());
+            if (dup) {
+                setSaving(false);
+                setErr(`Bu vergi numarası platformda zaten kayıtlı (${dup.companyName || dup.name}). Aynı şirket için birden fazla hesap açılamaz.`);
+                return;
+            }
+        }
+        const me = {
+            name: name.trim(), phone, email, authMethod: "email", passwordPlain: password, profileType: accountType,
+            subscribed: false, joinedAt: Date.now(), documentStatus: "beklemede",
+            ...(accountType === "kurumsal" ? { companyName: companyName.trim(), companyType, companyIl, companyIlce: companyIlce.trim(), taxOffice: taxOffice.trim(), authorizedTc } : {}),
+        };
+        const result = await registerMember(me, {
+            documentStatus: "beklemede", documentRef: docRef.trim(), documentPhoto: docPhoto,
+            ...(accountType === "kurumsal" ? { companyName: companyName.trim(), companyType, companyIl, companyIlce: companyIlce.trim(), taxOffice: taxOffice.trim(), authorizedTc } : {}),
+        });
         setSaving(false);
         if (!result.ok) {
             setErr(result.error);
@@ -17876,50 +17972,39 @@ function Onboarding({ onDone, onCancel }) {
         }
         onDone(me);
     };
-    const finishEmail = async () => {
-        if (!emailName.trim()) {
-            setErr("Ad soyad girin.");
-            return;
-        }
-        if (!/^\S+@\S+\.\S+$/.test(email)) {
-            setErr("Geçerli bir e-posta adresi girin.");
-            return;
-        }
-        if (emailPhone.length < 10) {
-            setErr("Geçerli bir telefon numarası girin.");
-            return;
-        }
-        if (password.length < 4) {
-            setErr("Şifre en az 4 karakter olmalı.");
-            return;
-        }
-        setSaving(true);
-        const me = { name: emailName.trim(), phone: emailPhone, email, authMethod: "email", passwordPlain: password, profileType: "alici", subscribed: false, joinedAt: Date.now() };
-        const result = await registerMember(me, {});
-        setSaving(false);
-        if (!result.ok) {
-            setErr(result.error);
-            return;
-        }
-        onDone(me);
-    };
+    const pwChecks = [
+        { ok: password.length >= passwordPolicy.minLength, label: `En az ${passwordPolicy.minLength} karakter` },
+        ...(passwordPolicy.requireUpper ? [{ ok: /[A-Z]/.test(password), label: "En az 1 büyük harf" }] : []),
+        ...(passwordPolicy.requireNumber ? [{ ok: /[0-9]/.test(password), label: "En az 1 rakam" }] : []),
+    ];
     return (React.createElement("div", { style: { flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 26px", position: "relative" } },
         onCancel && (React.createElement("button", { onClick: onCancel, style: { position: "absolute", top: 14, right: 0, background: "none", border: "none", cursor: "pointer" } },
             React.createElement(X, { size: 18, color: "#8A8776" }))),
         React.createElement("div", { style: { marginBottom: 4 } },
             React.createElement(Logo, { size: 30 })),
         step === "choice" && (React.createElement(React.Fragment, null,
-            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776", marginBottom: 22 } }, "Devam etmek i\u00E7in bir kay\u0131t y\u00F6ntemi se\u00E7in."),
-            React.createElement("button", { onClick: () => { setErr(""); setStep("phone"); }, style: { ...btnPrimary, marginBottom: 10, textAlign: "left" } },
-                "Telefon ile Kay\u0131t Ol",
-                React.createElement("br", null),
-                React.createElement("span", { style: { fontWeight: 400, fontSize: 11, opacity: 0.85 } }, "Hayvan satacak veya al\u0131p satacaksan\u0131z")),
-            React.createElement("button", { onClick: () => { setErr(""); setStep("email"); }, style: { ...btnPrimary, background: COLORS.white, color: COLORS.pineDeep, border: `1.5px solid ${COLORS.pine}`, textAlign: "left" } },
-                "Sadece Al\u0131c\u0131y\u0131m \u2014 E-posta ile Kay\u0131t Ol",
-                React.createElement("br", null),
-                React.createElement("span", { style: { fontWeight: 400, fontSize: 11, opacity: 0.75 } }, "Sadece hayvan aramak/sat\u0131n almak istiyorsan\u0131z")))),
+            React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 19, color: COLORS.ink, marginBottom: 20 } }, "Giri\u015F Yap veya \u00DCye Ol"),
+            React.createElement("label", { style: { fontFamily: "Inter", fontSize: 12, fontWeight: 600, color: COLORS.ink, marginBottom: 6, display: "block" } }, "Telefon Numaras\u0131"),
+            React.createElement("input", { value: phone, onChange: (e) => setPhone(e.target.value), placeholder: "05XX XXX XX XX", style: { width: "100%", padding: "13px 14px", borderRadius: 10, border: `1.5px solid ${COLORS.line}`, fontFamily: "Inter", fontSize: 14, outline: "none", marginBottom: 14, boxSizing: "border-box" } }),
+            React.createElement("button", { onClick: () => startFlow("bireysel"), style: { width: "100%", padding: "13px", borderRadius: 10, border: "none", background: phone.length >= 10 ? COLORS.pineDeep : "#D8D5C8", color: COLORS.white, fontFamily: "Inter", fontWeight: 700, fontSize: 14, cursor: "pointer" } }, "Devam Et"),
+            err && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11.5, marginTop: 6 } }, err),
+            React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, margin: "22px 0" } },
+                React.createElement("div", { style: { flex: 1, height: 1, background: COLORS.line } }),
+                React.createElement("span", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Veya"),
+                React.createElement("div", { style: { flex: 1, height: 1, background: COLORS.line } })),
+            React.createElement("button", { onClick: () => setErr("Google ile giriş için bir Google Geliştirici hesabı bağlanması gerekiyor — henüz aktif değil."), style: { width: "100%", padding: "12px", borderRadius: 10, border: `1.5px solid ${COLORS.line}`, background: COLORS.white, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontFamily: "Inter", fontWeight: 600, fontSize: 13.5, color: COLORS.ink, cursor: "pointer", marginBottom: 10 } },
+                React.createElement("span", { style: { fontFamily: "Inter", fontWeight: 800, fontSize: 15 } }, "G"),
+                " Google ile devam et"),
+            React.createElement("button", { onClick: () => setErr("Apple ile giriş için bir Apple Developer hesabı bağlanması gerekiyor — henüz aktif değil."), style: { width: "100%", padding: "12px", borderRadius: 10, border: `1.5px solid ${COLORS.line}`, background: COLORS.white, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontFamily: "Inter", fontWeight: 600, fontSize: 13.5, color: COLORS.ink, cursor: "pointer" } },
+                React.createElement("span", { style: { fontSize: 16 } }),
+                " Apple ile devam et"),
+            React.createElement("div", { style: { textAlign: "center", marginTop: 20, paddingTop: 16, borderTop: `1px solid ${COLORS.line}` } },
+                React.createElement("span", { style: { fontFamily: "Inter", fontSize: 12.5, color: "#5A574C" } }, "Ma\u011Faza/i\u015Fletme a\u00E7mak i\u00E7in "),
+                React.createElement("button", { onClick: () => startFlow("kurumsal"), style: { background: "none", border: "none", color: COLORS.pineDeep, fontFamily: "Inter", fontWeight: 700, fontSize: 12.5, cursor: "pointer", padding: 0 } }, "Kurumsal hesap a\u00E7 \u2192")))),
         step === "phone" && (React.createElement(React.Fragment, null,
-            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776", marginBottom: 16 } }, "Devam etmek i\u00E7in telefon numaran\u0131z\u0131 do\u011Frulay\u0131n."),
+            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776", marginBottom: 16 } },
+                accountType === "kurumsal" ? "Kurumsal hesap için" : "",
+                " telefon numaran\u0131z\u0131 do\u011Frulay\u0131n."),
             React.createElement(FormField, { label: "Telefon Numaras\u0131", value: phone, onChange: setPhone, placeholder: "05XX XXX XX XX" }),
             err && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11.5, marginTop: 6 } }, err),
             React.createElement("button", { onClick: sendCode, style: { ...btnPrimary, marginTop: 14 } }, "SMS Kodu G\u00F6nder"),
@@ -17932,36 +18017,60 @@ function Onboarding({ onDone, onCancel }) {
             err && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11.5, marginTop: 6 } }, err),
             React.createElement("button", { onClick: verifyCode, style: { ...btnPrimary, marginTop: 14 } }, "Do\u011Frula"))),
         step === "profile" && (React.createElement(React.Fragment, null,
-            React.createElement(FormField, { label: "Ad Soyad", value: name, onChange: setName, placeholder: "Ad\u0131n\u0131z Soyad\u0131n\u0131z" }),
-            React.createElement("div", { style: { marginTop: 10 } },
-                React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "Profil Tipi"),
-                React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 4 } }, [["bireysel", "Bireysel Yetiştirici"], ["ciftlik", "Çiftlik / Ticari"]].map(([k, l]) => (React.createElement("button", { key: k, onClick: () => setProfileType(k), style: { flex: 1, padding: "9px", borderRadius: 9, border: "none", cursor: "pointer", fontFamily: "Inter", fontWeight: 600, fontSize: 11.5, background: profileType === k ? COLORS.pineDeep : COLORS.white, color: profileType === k ? COLORS.white : "#5A574C", border: `1px solid ${COLORS.line}` } }, l))))),
+            React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6, marginBottom: 14 } },
+                React.createElement(Badge, { tone: accountType === "kurumsal" ? "pine" : "gray" }, accountType === "kurumsal" ? "Kurumsal Hesap" : "Bireysel Hesap"),
+                accountType === "kurumsal" && React.createElement(VerifiedBadge, { size: 15 })),
+            React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } },
+                accountType === "kurumsal" && (React.createElement(React.Fragment, null,
+                    React.createElement(FormField, { label: "\u015Eirket / \u0130\u015Fletme Unvan\u0131", value: companyName, onChange: setCompanyName, placeholder: "\u00D6rn. Y\u0131ld\u0131z Tar\u0131m Hayvanc\u0131l\u0131k Ltd. \u015Eti." }),
+                    React.createElement("div", null,
+                        React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "\u015Eirket T\u00FCr\u00FC"),
+                        React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 4 } }, [["sahis", "Şahıs Şirketi"], ["limited", "Limited"], ["anonim", "Anonim"]].map(([k, l]) => (React.createElement("button", { key: k, onClick: () => setCompanyType(k), style: { flex: 1, padding: "8px 4px", borderRadius: 8, cursor: "pointer", fontFamily: "Inter", fontWeight: 600, fontSize: 11, background: companyType === k ? COLORS.pineDeep : COLORS.white, color: companyType === k ? COLORS.white : "#5A574C", border: `1px solid ${COLORS.line}` } }, l))))),
+                    React.createElement("div", { style: { display: "flex", gap: 8 } },
+                        React.createElement("div", { style: { flex: 1 } },
+                            React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "\u0130l"),
+                            React.createElement("select", { value: companyIl, onChange: (e) => setCompanyIl(e.target.value), style: { ...inputStyle, marginTop: 4 } },
+                                React.createElement("option", { value: "" }, "Se\u00E7in"),
+                                TURKISH_CITIES.map(c => React.createElement("option", { key: c, value: c }, c)))),
+                        React.createElement("div", { style: { flex: 1 } },
+                            React.createElement(FormField, { label: "\u0130l\u00E7e", value: companyIlce, onChange: setCompanyIlce, placeholder: "\u0130l\u00E7e" }))),
+                    React.createElement("div", null,
+                        React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "Vergi Dairesi"),
+                        React.createElement("input", { list: "vergi-dairesi-list", value: taxOffice, onChange: (e) => setTaxOffice(e.target.value), placeholder: "Yazmaya ba\u015Flay\u0131n veya se\u00E7in", style: { ...inputStyle, marginTop: 4 } }),
+                        React.createElement("datalist", { id: "vergi-dairesi-list" }, (VERGI_DAIRELERI_ORNEK[companyIl] || []).map(v => React.createElement("option", { key: v, value: v }))),
+                        React.createElement("div", { style: { fontFamily: "Inter", fontSize: 9.5, color: "#8A8776", marginTop: 3 } }, "Listedekiler bilinen b\u00FCy\u00FCk vergi daireleridir, resmi/eksiksiz bir kay\u0131t de\u011Fildir \u2014 listede yoksa do\u011Frudan yazabilirsiniz.")),
+                    React.createElement(FormField, { label: "Yetkilinin TC Kimlik Numaras\u0131", value: authorizedTc, onChange: setAuthorizedTc, placeholder: "11 haneli TC Kimlik No" }))),
+                React.createElement(FormField, { label: accountType === "kurumsal" ? "Yetkili Ad Soyad" : "Ad Soyad", value: name, onChange: setName, placeholder: "Ad\u0131n\u0131z Soyad\u0131n\u0131z" }),
+                React.createElement(FormField, { label: "E-posta", value: email, onChange: setEmail, placeholder: "ornek@eposta.com", type: "email" }),
+                React.createElement("div", null,
+                    React.createElement(FormField, { label: "\u015Eifre", value: password, onChange: setPassword, placeholder: "\u015Eifre olu\u015Fturun", type: "password" }),
+                    React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 8, marginTop: 5 } }, pwChecks.map((c, i) => (React.createElement("span", { key: i, style: { fontFamily: "Inter", fontSize: 10, color: c.ok ? COLORS.pineDeep : "#B7B4A6", display: "flex", alignItems: "center", gap: 3 } },
+                        c.ok ? "✓" : "○",
+                        " ",
+                        c.label)))))),
+            accountType === "bireysel" && (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10, color: "#8A8776", marginTop: 10 } },
+                "Bireysel hesaplar ayda en fazla ",
+                MAX_MONTHLY_LISTINGS_BIREYSEL,
+                " ilan verebilir. S\u0131n\u0131rs\u0131z ilan i\u00E7in Kurumsal hesaba ge\u00E7ebilirsiniz.")),
             err && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11.5, marginTop: 6 } }, err),
-            React.createElement("button", { onClick: goToDoc, style: { ...btnPrimary, marginTop: 14 } }, "Devam Et"))),
+            React.createElement("button", { onClick: goToDoc, style: { ...btnPrimary, marginTop: 14 } }, "Devam Et"),
+            React.createElement("button", { onClick: () => { setErr(""); setStep("choice"); }, style: { background: "none", border: "none", color: "#8A8776", fontFamily: "Inter", fontSize: 11.5, marginTop: 10, cursor: "pointer" } }, "\u2190 Geri"))),
         step === "belge" && (React.createElement(React.Fragment, null,
-            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776", marginBottom: 10 } }, "Sat\u0131\u015F yapabilmeniz i\u00E7in kimlik/i\u015Fletme belgenizin y\u00F6netici taraf\u0131ndan onaylanmas\u0131 gerekir."),
-            React.createElement(FormField, { label: "Belge / Vergi Numaras\u0131", value: docRef, onChange: setDocRef, placeholder: "TC Kimlik No veya Vergi No" }),
+            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776", marginBottom: 10 } },
+                "Sat\u0131\u015F yapabilmeniz i\u00E7in ",
+                accountType === "kurumsal" ? "işletme belgenizin" : "kimlik belgenizin",
+                " y\u00F6netici taraf\u0131ndan onaylanmas\u0131 gerekir."),
+            accountType === "kurumsal" && (React.createElement(FormField, { label: "Vergi Numaras\u0131", value: docRef, onChange: setDocRef, placeholder: "Vergi No" })),
             React.createElement("div", { style: { marginTop: 10 } },
                 React.createElement("input", { id: "doc-photo-input", type: "file", accept: "image/*", onChange: handleDocPhoto, style: { display: "none" }, disabled: docPhotoBusy }),
                 docPhoto ? (React.createElement("div", { style: { position: "relative", display: "inline-block" } },
                     React.createElement("img", { src: docPhoto, style: { width: "100%", maxHeight: 160, objectFit: "cover", borderRadius: 12, border: `1px solid ${COLORS.line}` } }),
-                    React.createElement("button", { onClick: () => setDocPhoto(null), style: { position: "absolute", top: 6, right: 6, background: "rgba(0,0,0,0.65)", color: "#fff", border: "none", borderRadius: "50%", width: 22, height: 22, fontSize: 12, cursor: "pointer" } }, "\u2715"))) : (React.createElement("label", { htmlFor: "doc-photo-input", style: { display: "block", border: `1.5px dashed ${COLORS.line}`, borderRadius: 12, padding: 16, textAlign: "center", fontFamily: "Inter", fontSize: 11, color: "#8A8776", cursor: "pointer" } }, docPhotoBusy ? "İşleniyor..." : "+ Belge fotoğrafı yükle (kimlik/vergi levhası)")),
+                    React.createElement("button", { onClick: () => setDocPhoto(null), style: { position: "absolute", top: 6, right: 6, background: "rgba(0,0,0,0.65)", color: "#fff", border: "none", borderRadius: "50%", width: 22, height: 22, fontSize: 12, cursor: "pointer" } }, "\u2715"))) : (React.createElement("label", { htmlFor: "doc-photo-input", style: { display: "block", border: `1.5px dashed ${COLORS.line}`, borderRadius: 12, padding: 16, textAlign: "center", fontFamily: "Inter", fontSize: 11, color: "#8A8776", cursor: "pointer" } }, docPhotoBusy ? "İşleniyor..." : `+ Belge fotoğrafı yükle (${accountType === "kurumsal" ? "vergi levhası" : "kimlik"})`)),
                 docPhotoError && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11, marginTop: 4 } }, docPhotoError)),
             React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10, color: COLORS.ochre, marginTop: 8 } }, "Belgeniz onaylanana kadar hesab\u0131n\u0131z \"Onay Bekliyor\" durumunda olur ve ilan veremezsiniz. Y\u00FCkledi\u011Finiz foto\u011Fraf, Moderat\u00F6r veya S\u00FCper Admin taraf\u0131ndan y\u00F6netim panelinden manuel olarak incelenip onaylan\u0131r/reddedilir. (Not: ger\u00E7ek bir devlet/NV\u0130 kimlik do\u011Frulamas\u0131 otomatik olarak yap\u0131lmaz \u2014 bu t\u00FCr bir entegrasyon resmi kurumsal bir protokol gerektirir ve bu ortamda m\u00FCmk\u00FCn de\u011Fildir.)"),
             err && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11.5, marginTop: 6 } }, err),
             React.createElement("button", { onClick: finish, disabled: saving, style: { ...btnPrimary, marginTop: 14 } }, saving ? "Kaydediliyor..." : "Belgeyi Gönder ve Hesabı Oluştur"),
-            React.createElement("button", { onClick: () => { setErr(""); setStep("profile"); }, style: { background: "none", border: "none", color: "#8A8776", fontFamily: "Inter", fontSize: 11.5, marginTop: 10, cursor: "pointer" } }, "\u2190 Geri"))),
-        step === "email" && (React.createElement(React.Fragment, null,
-            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776", marginBottom: 16 } }, "Sadece al\u0131m yapmak i\u00E7in h\u0131zl\u0131 kay\u0131t."),
-            React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } },
-                React.createElement(FormField, { label: "Ad Soyad", value: emailName, onChange: setEmailName, placeholder: "Ad\u0131n\u0131z Soyad\u0131n\u0131z" }),
-                React.createElement(FormField, { label: "Telefon Numaras\u0131", value: emailPhone, onChange: setEmailPhone, placeholder: "05XX XXX XX XX" }),
-                React.createElement(FormField, { label: "E-posta", value: email, onChange: setEmail, placeholder: "ornek@eposta.com", type: "email" }),
-                React.createElement(FormField, { label: "\u015Eifre", value: password, onChange: setPassword, placeholder: "En az 4 karakter", type: "password" })),
-            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10, color: COLORS.ochre, marginTop: 8 } }, "\u26A0 S\u0130M\u00DCLASYON: bu \u015Fifre yaln\u0131zca bu cihazda saklan\u0131r, ger\u00E7ek bir kimlik do\u011Frulama sunucusuna g\u00F6nderilmez."),
-            err && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11.5, marginTop: 6 } }, err),
-            React.createElement("button", { onClick: finishEmail, disabled: saving, style: { ...btnPrimary, marginTop: 14 } }, saving ? "Kaydediliyor..." : "Hesabı Oluştur"),
-            React.createElement("button", { onClick: () => { setErr(""); setStep("choice"); }, style: { background: "none", border: "none", color: "#8A8776", fontFamily: "Inter", fontSize: 11.5, marginTop: 10, cursor: "pointer" } }, "\u2190 Geri")))));
+            React.createElement("button", { onClick: () => { setErr(""); setStep("profile"); }, style: { background: "none", border: "none", color: "#8A8776", fontFamily: "Inter", fontSize: 11.5, marginTop: 10, cursor: "pointer" } }, "\u2190 Geri")))));
 }
 // ---------- LISTING CARD ----------
 function ListingCard({ item, reviews, favorites, toggleFavorite, onOpen }) {
@@ -17990,7 +18099,9 @@ function ListingCard({ item, reviews, favorites, toggleFavorite, onOpen }) {
                 rating.count > 0 && (React.createElement("span", { style: { display: "flex", alignItems: "center", gap: 2 } },
                     React.createElement(Star, { size: 10, fill: COLORS.ochre, color: COLORS.ochre }),
                     React.createElement("span", { style: { fontFamily: "IBM Plex Mono", fontSize: 10, color: "#5A574C" } }, rating.avg)))),
-            React.createElement(Badge, { tone: item.profileType === "ciftlik" ? "pine" : "gray" }, item.profileType === "ciftlik" ? "Çiftlik" : "Bireysel"))));
+            React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 4 } },
+                React.createElement(Badge, { tone: item.profileType === "kurumsal" ? "pine" : "gray" }, item.profileType === "kurumsal" ? "Kurumsal" : "Bireysel"),
+                item.profileType === "kurumsal" && React.createElement(VerifiedBadge, { size: 14 })))));
 }
 // ---------- MAIN APP ----------
 function BenimMeram() {
@@ -18463,7 +18574,9 @@ function DetailScreen({ item, me, requireAuth, offers, reviews, favorites, toggl
             React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 16, padding: "10px 12px", background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12 } },
                 React.createElement("div", { style: { width: 32, height: 32, borderRadius: "50%", background: COLORS.ochreSoft, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Fraunces", fontWeight: 600, color: "#7A5A1E" } }, item.sellerName[0]),
                 React.createElement("div", { style: { flex: 1 } },
-                    React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 13 } }, item.sellerName),
+                    React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", gap: 5 } },
+                        item.sellerName,
+                        item.profileType === "kurumsal" && React.createElement(VerifiedBadge, { size: 13 })),
                     React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776", display: "flex", alignItems: "center", gap: 5 } },
                         React.createElement(ShieldCheck, { size: 11, color: COLORS.pineDeep }),
                         " Telefon do\u011Fruland\u0131 (sim\u00FClasyon)"),
@@ -18664,6 +18777,15 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
         }
         setSaving(true);
         const all = await loadShared("listings", []);
+        if (me.profileType === "bireysel") {
+            const now = new Date();
+            const monthCount = all.filter(l => l.sellerName === me.name && l.status !== "kaldirildi" && new Date(l.createdAt).getMonth() === now.getMonth() && new Date(l.createdAt).getFullYear() === now.getFullYear()).length;
+            if (monthCount >= MAX_MONTHLY_LISTINGS_BIREYSEL) {
+                setSaving(false);
+                setErr(`Bireysel hesaplar ayda en fazla ${MAX_MONTHLY_LISTINGS_BIREYSEL} ilan verebilir. Bu ay hakkınızı kullandınız — sınırsız ilan için Kurumsal hesaba geçebilirsiniz.`);
+                return;
+            }
+        }
         const duplicate = all.find(l => l.earTag && l.earTag.trim().toUpperCase() === earTag.trim().toUpperCase() && l.status !== "kaldirildi");
         if (duplicate) {
             setSaving(false);
@@ -18765,7 +18887,8 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
             err && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11.5 } }, err),
             React.createElement("button", { onClick: submitRequest, disabled: saving, style: btnPrimary }, saving ? "Yayınlanıyor..." : "Talebi Yayınla")))));
 }
-const PROFILE_TYPE_LABELS = { ciftlik: "Çiftlik / Ticari", bireysel: "Bireysel Yetiştirici", alici: "Sadece Alıcı" };
+const PROFILE_TYPE_LABELS = { kurumsal: "Kurumsal", bireysel: "Bireysel", alici: "Sadece Alıcı" };
+const MAX_MONTHLY_LISTINGS_BIREYSEL = 5; // bireysel satıcılar için aylık ilan sınırı
 // ---------- SOHBET MERKEZİ ----------
 function ChatHub({ me, messages, listings, region, onOpenChat, onOpenRegion, myConversationIds }) {
     const [tab, setTab] = useState("mesajlar");
@@ -19137,7 +19260,8 @@ function ProfileScreen({ me, setMe, listings, members, favorites, pricing, setSc
             React.createElement("div", null,
                 React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600 } }, me.name),
                 React.createElement("div", { style: { display: "flex", gap: 5, marginTop: 3, flexWrap: "wrap" } },
-                    React.createElement(Badge, { tone: me.profileType === "ciftlik" ? "pine" : me.profileType === "alici" ? "ochre" : "gray" }, PROFILE_TYPE_LABELS[me.profileType] || me.profileType),
+                    React.createElement(Badge, { tone: me.profileType === "kurumsal" ? "pine" : me.profileType === "alici" ? "ochre" : "gray" }, PROFILE_TYPE_LABELS[me.profileType] || me.profileType),
+                    me.profileType === "kurumsal" && React.createElement(VerifiedBadge, { size: 15 }),
                     documentStatus && (React.createElement(Badge, { tone: documentStatus === "onaylandi" ? "pine" : documentStatus === "reddedildi" ? "gray" : "ochre" }, documentStatus === "onaylandi" ? "Belge Onaylı" : documentStatus === "reddedildi" ? "Belge Reddedildi" : "Belge Onay Bekliyor"))))),
         React.createElement("button", { onClick: () => setScreen("favorites"), style: { display: "flex", alignItems: "center", gap: 8, width: "100%", background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: "11px 13px", marginBottom: 14, cursor: "pointer" } },
             React.createElement(Heart, { size: 15, color: COLORS.red }),
@@ -19354,14 +19478,21 @@ function PendingDocRow({ member, refreshAll, session }) {
         React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } },
             member.documentPhoto && (React.createElement("img", { src: member.documentPhoto, onClick: () => window.open(member.documentPhoto, "_blank"), style: { width: 52, height: 52, objectFit: "cover", borderRadius: 8, border: `1px solid ${COLORS.line}`, cursor: "pointer", flexShrink: 0 } })),
             React.createElement("div", { style: { flex: 1 } },
-                React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5 } }, member.name),
+                React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5 } },
+                    member.name,
+                    member.companyName ? ` · ${member.companyName}` : ""),
                 React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776" } },
                     PROFILE_TYPE_LABELS[member.profileType] || member.profileType,
                     " \u00B7 Belge No: ",
                     member.documentRef || "belirtilmemiş",
                     " \u00B7 ",
                     member.phone || "telefon yok",
-                    !member.documentPhoto && React.createElement("span", { style: { color: COLORS.ochre } }, " \u00B7 foto\u011Fraf yok")))),
+                    !member.documentPhoto && React.createElement("span", { style: { color: COLORS.ochre } }, " \u00B7 foto\u011Fraf yok")),
+                member.companyName && (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10, color: "#8A8776", marginTop: 2 } },
+                    member.companyType && `${{ sahis: "Şahıs Şirketi", limited: "Limited", anonim: "Anonim" }[member.companyType] || member.companyType} · `,
+                    member.companyIl && `${member.companyIl}${member.companyIlce ? "/" + member.companyIlce : ""} · `,
+                    member.taxOffice && `Vergi D.: ${member.taxOffice}`,
+                    member.authorizedTc && ` · Yetkili TC: ***${member.authorizedTc.slice(-4)}`)))),
         React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 8 } },
             React.createElement("button", { disabled: busy, onClick: () => decide("onaylandi"), style: { ...btnGhost, borderColor: COLORS.pine, color: COLORS.pineDeep } },
                 React.createElement(Check, { size: 12, style: { marginRight: 3 } }),
@@ -19661,7 +19792,7 @@ function UserEditRow({ member, session, refreshAll }) {
                 React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "Profil Tipi"),
                 React.createElement("select", { value: profileType, onChange: (e) => setProfileType(e.target.value), style: { ...inputStyle, marginTop: 4 } },
                     React.createElement("option", { value: "bireysel" }, "Bireysel Yeti\u015Ftirici"),
-                    React.createElement("option", { value: "ciftlik" }, "\u00C7iftlik / Ticari"),
+                    React.createElement("option", { value: "kurumsal" }, "Kurumsal"),
                     React.createElement("option", { value: "alici" }, "Sadece Al\u0131c\u0131"))),
             profileType !== "alici" && (React.createElement("div", null,
                 React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "Belge Durumu"),
@@ -19973,6 +20104,7 @@ const RAW_DATA_KEYS = [
     "listings", "requests", "offers", "members", "reviews", "messages",
     "pricing", "adminAccounts", "adminLoginLogs", "auditLog", "reports",
     "customBreeds", "customSubcategories", "announcement",
+    "notificationSettings", "passwordPolicy", "ipRestrictions",
 ];
 function RawDataKeyEditor({ dataKey, session, refreshAll }) {
     const [open, setOpen] = useState(false);
@@ -20045,13 +20177,181 @@ function DenetimPanel({ auditLog }) {
                 l.target ? `: ${l.target}` : ""),
             React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10, color: "#8A8776" } }, new Date(l.timestamp).toLocaleString("tr-TR")))))));
 }
+// ---------- AYARLAR VE SİSTEM YAPILANDIRMASI ----------
+function SettingsCard({ title, icon: Icon, children }) {
+    return (React.createElement("div", { style: { background: COLORS.paper, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 14 } },
+        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 7, marginBottom: 12 } },
+            Icon && React.createElement(Icon, { size: 15, color: COLORS.pineDeep }),
+            React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 12.5, color: COLORS.ink, letterSpacing: 0.2 } }, title)),
+        children));
+}
+function KomisyonCard({ pricing, session, refreshAll }) {
+    var _a, _b, _c;
+    const [buyukbas, setBuyukbas] = useState((_a = pricing.buyukbasCommission) !== null && _a !== void 0 ? _a : 5);
+    const [kucukbas, setKucukbas] = useState((_b = pricing.kucukbasCommission) !== null && _b !== void 0 ? _b : 7);
+    const [kargo, setKargo] = useState((_c = pricing.kargoFee) !== null && _c !== void 0 ? _c : 0);
+    const [saving, setSaving] = useState(false);
+    const save = async () => {
+        setSaving(true);
+        const current = await loadShared("pricing", DEFAULT_PRICING);
+        const next = { ...current, buyukbasCommission: Number(buyukbas), kucukbasCommission: Number(kucukbas), kargoFee: Number(kargo) };
+        await saveShared("pricing", next);
+        await logAudit(session.name, session.role, "Komisyon oranları güncellendi", `Büyükbaş %${buyukbas}, Küçükbaş %${kucukbas}`);
+        await refreshAll();
+        setSaving(false);
+    };
+    return (React.createElement(SettingsCard, { title: "Sat\u0131\u015F ve Komisyon Ayarlar\u0131", icon: DollarSign },
+        React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } },
+            React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" } },
+                React.createElement("span", { style: { fontFamily: "Inter", fontSize: 12, color: "#5A574C" } }, "B\u00FCy\u00FCkba\u015F Komisyonu"),
+                React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 4 } },
+                    React.createElement("input", { type: "number", value: buyukbas, onChange: (e) => setBuyukbas(e.target.value), style: { width: 56, padding: "5px 7px", borderRadius: 7, border: `1px solid ${COLORS.line}`, fontFamily: "IBM Plex Mono", fontSize: 12 } }),
+                    React.createElement("span", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "%"))),
+            React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" } },
+                React.createElement("span", { style: { fontFamily: "Inter", fontSize: 12, color: "#5A574C" } }, "K\u00FC\u00E7\u00FCkba\u015F Komisyonu"),
+                React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 4 } },
+                    React.createElement("input", { type: "number", value: kucukbas, onChange: (e) => setKucukbas(e.target.value), style: { width: 56, padding: "5px 7px", borderRadius: 7, border: `1px solid ${COLORS.line}`, fontFamily: "IBM Plex Mono", fontSize: 12 } }),
+                    React.createElement("span", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "%"))),
+            React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" } },
+                React.createElement("span", { style: { fontFamily: "Inter", fontSize: 12, color: "#5A574C" } }, "Kargo/Lojistik \u00DCcreti"),
+                React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 4 } },
+                    React.createElement("input", { type: "number", value: kargo, onChange: (e) => setKargo(e.target.value), style: { width: 56, padding: "5px 7px", borderRadius: 7, border: `1px solid ${COLORS.line}`, fontFamily: "IBM Plex Mono", fontSize: 12 } }),
+                    React.createElement("span", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "TL")))),
+        React.createElement("button", { onClick: save, disabled: saving, style: { ...btnPrimary, marginTop: 10, padding: "8px" } }, saving ? "Kaydediliyor..." : "Kaydet")));
+}
+function BildirimCard({ session }) {
+    const [settings, setSettings] = useState(DEFAULT_NOTIFICATION_SETTINGS);
+    const [loaded, setLoaded] = useState(false);
+    const [saving, setSaving] = useState(false);
+    useEffect(() => { loadShared("notificationSettings", DEFAULT_NOTIFICATION_SETTINGS).then(s => { setSettings(s); setLoaded(true); }); }, []);
+    const toggle = (key) => setSettings(prev => ({ ...prev, [key]: !prev[key] }));
+    const save = async () => {
+        setSaving(true);
+        await saveShared("notificationSettings", settings);
+        await logAudit(session.name, session.role, "Bildirim ayarları güncellendi", "");
+        setSaving(false);
+    };
+    if (!loaded)
+        return React.createElement(SettingsCard, { title: "Bildirim ve \u0130leti\u015Fim", icon: Bell },
+            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776" } }, "Y\u00FCkleniyor..."));
+    const events = [["yeniIlan", "Yeni İlan Bildirimleri"], ["satisOnaylari", "Satış Onayları"], ["aliciMesajlari", "Alıcı Mesajları"]];
+    const channels = [["channelEmail", "E-mail"], ["channelSms", "SMS"], ["channelPush", "In-App Push"]];
+    return (React.createElement(SettingsCard, { title: "Bildirim ve \u0130leti\u015Fim", icon: Bell },
+        events.map(([k, l]) => (React.createElement("label", { key: k, style: { display: "flex", alignItems: "center", gap: 7, fontFamily: "Inter", fontSize: 12, color: "#5A574C", marginBottom: 6, cursor: "pointer" } },
+            React.createElement("input", { type: "checkbox", checked: settings[k], onChange: () => toggle(k) }),
+            " ",
+            l))),
+        React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776", fontWeight: 600, margin: "8px 0 4px" } }, "Bildirimi nereden g\u00F6nder:"),
+        React.createElement("div", { style: { display: "flex", gap: 12, flexWrap: "wrap" } }, channels.map(([k, l]) => (React.createElement("label", { key: k, style: { display: "flex", alignItems: "center", gap: 5, fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", cursor: "pointer" } },
+            React.createElement("input", { type: "checkbox", checked: settings[k], onChange: () => toggle(k) }),
+            " ",
+            l)))),
+        React.createElement("div", { style: { fontFamily: "Inter", fontSize: 9.5, color: COLORS.ochre, marginTop: 8 } }, "SMS/E-posta g\u00F6nderimi, sa\u011Flay\u0131c\u0131 ba\u011Flanana kadar sim\u00FClasyon modundad\u0131r."),
+        React.createElement("button", { onClick: save, disabled: saving, style: { ...btnPrimary, marginTop: 10, padding: "8px" } }, saving ? "Kaydediliyor..." : "Kaydet")));
+}
+function YedeklemeCard({ session, refreshAll }) {
+    const [backups, setBackups] = useState([]);
+    const [loaded, setLoaded] = useState(false);
+    const [busy, setBusy] = useState(false);
+    const loadBackups = async () => { const b = await loadShared("backups", []); setBackups(b); setLoaded(true); };
+    useEffect(() => { loadBackups(); }, []);
+    const createBackup = async () => {
+        setBusy(true);
+        const snapshot = {};
+        for (const k of RAW_DATA_KEYS)
+            snapshot[k] = await loadShared(k, null);
+        const backup = { id: uid(), createdAt: Date.now(), data: snapshot };
+        const all = await loadShared("backups", []);
+        const next = [backup, ...all].slice(0, 10); // en fazla son 10 yedek tutulur
+        await saveShared("backups", next);
+        await logAudit(session.name, session.role, "Manuel yedek oluşturuldu", new Date(backup.createdAt).toLocaleString("tr-TR"));
+        setBackups(next);
+        setBusy(false);
+    };
+    const restore = async (backup) => {
+        if (!window.confirm(`${new Date(backup.createdAt).toLocaleString("tr-TR")} tarihli yedeği geri yüklemek istediğinize emin misiniz? Şu anki tüm veriler bu yedekle değiştirilecek.`))
+            return;
+        setBusy(true);
+        for (const k of RAW_DATA_KEYS) {
+            if (backup.data[k] !== null && backup.data[k] !== undefined)
+                await saveShared(k, backup.data[k]);
+        }
+        await logAudit(session.name, session.role, "Yedekten geri yüklendi", new Date(backup.createdAt).toLocaleString("tr-TR"));
+        await refreshAll();
+        setBusy(false);
+    };
+    return (React.createElement(SettingsCard, { title: "Veri ve Yedekleme", icon: Settings },
+        React.createElement("button", { onClick: createBackup, disabled: busy, style: { ...btnPrimary, width: "100%", padding: "9px" } }, busy ? "İşleniyor..." : "Manuel Yedek Oluştur"),
+        React.createElement("div", { style: { fontFamily: "Inter", fontSize: 9.5, color: "#8A8776", marginTop: 6 } }, "Otomatik yedekleme bu ortamda yok \u2014 d\u00FCzenli aral\u0131klarla manuel yedek alman\u0131z \u00F6nerilir. En fazla son 10 yedek saklan\u0131r."),
+        React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, fontWeight: 600, color: COLORS.ink, margin: "12px 0 6px" } }, "Ge\u00E7mi\u015F Yedekler"),
+        !loaded ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776" } }, "Y\u00FCkleniyor...")) : backups.length === 0 ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776" } }, "Hen\u00FCz yedek al\u0131nmam\u0131\u015F.")) : (backups.map(b => (React.createElement("div", { key: b.id, style: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 0", borderBottom: `1px solid ${COLORS.line}` } },
+            React.createElement("span", { style: { fontFamily: "IBM Plex Mono", fontSize: 10.5, color: "#5A574C" } }, new Date(b.createdAt).toLocaleString("tr-TR")),
+            React.createElement("button", { onClick: () => restore(b), disabled: busy, style: { ...btnGhost, borderColor: COLORS.line, color: COLORS.pineDeep, padding: "4px 9px", fontSize: 10.5 } }, "Restore")))))));
+}
+function GuvenlikCard({ session, refreshAll, goToSection }) {
+    const [policy, setPolicy] = useState(DEFAULT_PASSWORD_POLICY);
+    const [ipList, setIpList] = useState("");
+    const [loaded, setLoaded] = useState(false);
+    const [saving, setSaving] = useState(false);
+    useEffect(() => {
+        Promise.all([loadShared("passwordPolicy", DEFAULT_PASSWORD_POLICY), loadShared("ipRestrictions", "")]).then(([p, ip]) => {
+            setPolicy(p);
+            setIpList(ip);
+            setLoaded(true);
+        });
+    }, []);
+    const save = async () => {
+        setSaving(true);
+        await saveShared("passwordPolicy", policy);
+        await saveShared("ipRestrictions", ipList);
+        await logAudit(session.name, session.role, "Güvenlik ayarları güncellendi", "");
+        setSaving(false);
+    };
+    if (!loaded)
+        return React.createElement(SettingsCard, { title: "G\u00FCvenlik ve Eri\u015Fim", icon: Lock },
+            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776" } }, "Y\u00FCkleniyor..."));
+    return (React.createElement(SettingsCard, { title: "G\u00FCvenlik ve Eri\u015Fim", icon: Lock },
+        React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, fontWeight: 700, color: COLORS.ink, marginBottom: 6 } }, "\u015Eifre Politikas\u0131"),
+        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6, marginBottom: 6 } },
+            React.createElement("span", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C" } }, "Min. uzunluk:"),
+            React.createElement("input", { type: "number", value: policy.minLength, onChange: (e) => setPolicy(p => ({ ...p, minLength: Number(e.target.value) })), style: { width: 48, padding: "4px 6px", borderRadius: 6, border: `1px solid ${COLORS.line}`, fontFamily: "IBM Plex Mono", fontSize: 11.5 } })),
+        React.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", marginBottom: 4, cursor: "pointer" } },
+            React.createElement("input", { type: "checkbox", checked: policy.requireUpper, onChange: (e) => setPolicy(p => ({ ...p, requireUpper: e.target.checked })) }),
+            " B\u00FCy\u00FCk harf zorunlu"),
+        React.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", marginBottom: 10, cursor: "pointer" } },
+            React.createElement("input", { type: "checkbox", checked: policy.requireNumber, onChange: (e) => setPolicy(p => ({ ...p, requireNumber: e.target.checked })) }),
+            " Rakam zorunlu"),
+        React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, fontWeight: 700, color: COLORS.ink, marginBottom: 4 } }, "IP K\u0131s\u0131tlamalar\u0131"),
+        React.createElement("input", { value: ipList, onChange: (e) => setIpList(e.target.value), placeholder: "\u00F6rn. 192.168.1.1, 10.0.0.5", style: { ...inputStyle, fontSize: 11.5 } }),
+        React.createElement("div", { style: { fontFamily: "Inter", fontSize: 9.5, color: COLORS.ochre, marginTop: 4, marginBottom: 10 } }, "Not: bu liste kay\u0131t ama\u00E7l\u0131d\u0131r \u2014 ger\u00E7ek a\u011F seviyesinde engelleme bu ortamda uygulanmaz, ger\u00E7ek bir sunucu/g\u00FCvenlik duvar\u0131 yap\u0131land\u0131rmas\u0131 gerekir."),
+        React.createElement("button", { onClick: save, disabled: saving, style: { ...btnPrimary, width: "100%", padding: "8px", marginBottom: 8 } }, saving ? "Kaydediliyor..." : "Kaydet"),
+        React.createElement("button", { onClick: () => goToSection("denetim"), style: { ...btnGhost, width: "100%", borderColor: COLORS.line, color: COLORS.pineDeep, padding: "8px" } }, "\u0130\u015Flem G\u00FCnl\u00FCklerini G\u00F6r\u00FCnt\u00FCle")));
+}
+function AyarlarPanel({ pricing, session, refreshAll, goToSection, adminAccounts }) {
+    return (React.createElement("div", null,
+        React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 16, color: COLORS.ink, marginBottom: 14 } }, "Ayarlar ve Sistem Yap\u0131land\u0131rmas\u0131"),
+        React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12 } },
+            React.createElement(SettingsCard, { title: "Kullan\u0131c\u0131 ve Rol Y\u00F6netimi", icon: Users },
+                React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", marginBottom: 10 } },
+                    adminAccounts.length,
+                    " y\u00F6netici hesab\u0131 kay\u0131tl\u0131."),
+                adminAccounts.slice(0, 3).map(a => (React.createElement("div", { key: a.id, style: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "5px 0", borderBottom: `1px solid ${COLORS.line}` } },
+                    React.createElement("span", { style: { fontFamily: "Inter", fontSize: 11.5, color: COLORS.ink } }, a.name),
+                    React.createElement(Badge, { tone: "gray" }, ADMIN_ROLE_LABELS[a.role])))),
+                React.createElement("button", { onClick: () => goToSection("yonetici"), style: { ...btnGhost, width: "100%", borderColor: COLORS.line, color: COLORS.pineDeep, marginTop: 10, padding: "8px" } }, "T\u00FCm\u00FCn\u00FC Y\u00F6net")),
+            React.createElement(KomisyonCard, { pricing: pricing, session: session, refreshAll: refreshAll }),
+            React.createElement(BildirimCard, { session: session }),
+            React.createElement(YedeklemeCard, { session: session, refreshAll: refreshAll }),
+            React.createElement(GuvenlikCard, { session: session, refreshAll: refreshAll, goToSection: goToSection }))));
+}
 // ---------- ADMİN PANELİ ----------
 const ADMIN_SECTIONS_BY_ROLE = {
-    super: ["finans", "fiyat", "yonetici", "ilan", "kullanici", "belge", "sikayet", "kategori", "mesajlar", "degerlendirmeler", "talepler", "teklifler", "duyuru", "hamveri", "girislog", "denetim"],
+    super: ["ayarlar", "finans", "fiyat", "yonetici", "ilan", "kullanici", "belge", "sikayet", "kategori", "mesajlar", "degerlendirmeler", "talepler", "teklifler", "duyuru", "hamveri", "girislog", "denetim"],
     mod: ["ilan", "kullanici", "belge", "sikayet", "kategori"],
     destek: ["sikayet"],
 };
 const ADMIN_SECTION_META = {
+    ayarlar: { title: "Ayarlar ve Sistem Yapılandırması", icon: Settings },
     finans: { title: "Finansal Yönetim", icon: DollarSign },
     fiyat: { title: "Fiyatlandırma Yönetimi", icon: Settings },
     yonetici: { title: "Yönetici Yönetimi", icon: Users },
@@ -20086,6 +20386,7 @@ function AdminPanel({ session, onLogout, listings, requests, offers, members, me
             React.createElement("button", { onClick: onLogout, style: { ...btnGhost, borderColor: "rgba(255,255,255,0.4)", color: COLORS.white } }, "\u00C7\u0131k\u0131\u015F Yap")),
         React.createElement("div", { style: { display: "flex", gap: 6, padding: "12px 16px 0", flexWrap: "wrap" } }, availableSections.map(key => (React.createElement("button", { key: key, onClick: () => setActiveSection(key), style: { fontFamily: "Inter", fontWeight: 600, fontSize: 11, padding: "7px 10px", borderRadius: 8, border: "none", cursor: "pointer", background: activeSection === key ? COLORS.pineDeep : COLORS.paper, color: activeSection === key ? COLORS.white : "#5A574C" } }, ADMIN_SECTION_META[key].title)))),
         React.createElement("div", { style: { padding: 18, maxHeight: 480, overflowY: "auto" } },
+            activeSection === "ayarlar" && React.createElement(AyarlarPanel, { pricing: pricing, session: session, refreshAll: refreshAll, goToSection: setActiveSection, adminAccounts: adminAccounts }),
             activeSection === "finans" && (React.createElement("div", { style: { fontFamily: "IBM Plex Mono", fontSize: 13, color: "#5A574C" } },
                 "Aktif abone: ",
                 subscribedCount,
