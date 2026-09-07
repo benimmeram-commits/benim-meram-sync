@@ -18366,7 +18366,7 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
         screen === "chatHub" && (React.createElement(ChatHub, { me: me, messages: messages, listings: listings, region: me.region, onOpenChat: openChat, onOpenRegion: (r) => { setChatRegion(r); setScreen("regionChat"); }, myConversationIds: myConversationIds })),
         screen === "chat" && chatTarget && (React.createElement(ChatScreen, { key: chatTarget.conversationId, title: chatTarget.otherName, subtitle: chatTarget.listingLabel, conversationId: chatTarget.conversationId, me: me, messages: messages.filter(m => m.conversationId === chatTarget.conversationId), refreshAll: refreshAll, onBack: () => setScreen("chatHub") })),
         screen === "regionChat" && chatRegion && (React.createElement(ChatScreen, { key: chatRegion, title: chatRegion, subtitle: "B\u00F6lge Sohbeti \u2014 herkese a\u00E7\u0131k", conversationId: regionChatKey(chatRegion), me: me, messages: messages.filter(m => m.conversationId === regionChatKey(chatRegion)), refreshAll: refreshAll, onBack: () => setScreen("chatHub"), isGroup: true })),
-        screen === "profile" && React.createElement(ProfileScreen, { me: me, setMe: setMe, listings: listings, members: members, favorites: favorites, pricing: pricing, setScreen: setScreen, refreshAll: refreshAll }),
+        screen === "profile" && React.createElement(ProfileScreen, { me: me, setMe: setMe, listings: listings, members: members, favorites: favorites, pricing: pricing, offers: offers, reviews: reviews, setScreen: setScreen, refreshAll: refreshAll }),
         drawer && (React.createElement("div", { style: { position: "absolute", inset: 0, background: "rgba(20,48,31,0.4)", zIndex: 10 }, onClick: () => setDrawer(false) },
             React.createElement("div", { onClick: (e) => e.stopPropagation(), style: { width: 280, height: "100%", background: COLORS.white, padding: 18, overflowY: "auto" } },
                 React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 } },
@@ -18400,16 +18400,11 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
                                     color: tab === mainKey && subTab === sub && breedTab === breed ? COLORS.white : "#8A8776",
                                 } }, breed)))))));
                     })))))))),
-        screen !== "detail" && screen !== "chat" && screen !== "regionChat" && screen !== "search" && (React.createElement("div", { style: screen === "reels"
-                ? { position: "absolute", left: 0, right: 0, bottom: 0, display: "flex", padding: "18px 0 14px", background: "linear-gradient(to top, rgba(0,0,0,0.65), transparent)", zIndex: 12 }
-                : { display: "flex", borderTop: `1px solid ${COLORS.line}`, background: COLORS.white, padding: "10px 0 14px" } }, [["home", NavIconHome, "Ana Sayfa"], ["reels", NavIconFilm, "Aktif"], ["create", NavIconPlus, "İlan Ver"], ["chatHub", NavIconChat, "Sohbet"], ["profile", NavIconUser, "Profil"]].map(([s, Icon, l]) => {
+        screen !== "detail" && screen !== "chat" && screen !== "regionChat" && screen !== "search" && screen !== "reels" && (React.createElement("div", { style: { display: "flex", borderTop: `1px solid ${COLORS.line}`, background: COLORS.white, padding: "10px 0 14px" } }, [["home", NavIconHome, "Ana Sayfa"], ["reels", NavIconFilm, "Aktif"], ["create", NavIconPlus, "İlan Ver"], ["chatHub", NavIconChat, "Sohbet"], ["profile", NavIconUser, "Profil"]].map(([s, Icon, l]) => {
             const active = s === "chatHub" ? ["chatHub", "chat", "regionChat"].includes(screen) : screen === s;
-            const onReels = screen === "reels";
-            const activeColor = onReels ? COLORS.white : COLORS.pineDeep;
-            const inactiveColor = onReels ? "rgba(255,255,255,0.55)" : "#B7B4A6";
             return (React.createElement("button", { key: s, onClick: () => (s === "home" || s === "reels" ? setScreen(s) : goToProtected(s)), style: { flex: 1, background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, cursor: "pointer" } },
-                React.createElement(Icon, { size: s === "create" ? 25 : 19, color: active ? activeColor : inactiveColor }),
-                React.createElement("span", { style: { fontFamily: "Inter", fontSize: 9, color: active ? activeColor : inactiveColor, fontWeight: 600 } }, l)));
+                React.createElement(Icon, { size: s === "create" ? 25 : 19, color: active ? COLORS.pineDeep : "#B7B4A6" }),
+                React.createElement("span", { style: { fontFamily: "Inter", fontSize: 9, color: active ? COLORS.pineDeep : "#B7B4A6", fontWeight: 600 } }, l)));
         })))));
 }
 // ---------- ARAMA ----------
@@ -19142,30 +19137,29 @@ function PersonalInfoEdit({ me, setMe, refreshAll }) {
     const [name, setName] = useState(me.name);
     const [phone, setPhone] = useState(me.phone || "");
     const [email, setEmail] = useState(me.email || "");
+    const [address, setAddress] = useState(me.address || "");
     const [saving, setSaving] = useState(false);
     const [err, setErr] = useState("");
     const [notice, setNotice] = useState("");
-    const save = async () => {
-        if (!name.trim() || !phone.trim()) {
-            setErr("Ad ve telefon boş olamaz.");
-            return;
-        }
+    // Telefon değişikliği için onay prosedürü: mevcut şifre → yeni numaraya SMS kodu
+    const [phoneStep, setPhoneStep] = useState("idle"); // idle | confirmPassword | verifySms
+    const [currentPasswordInput, setCurrentPasswordInput] = useState("");
+    const [smsCode, setSmsCode] = useState("");
+    const applyChanges = async (finalPhone) => {
         setErr("");
         setSaving(true);
         const oldName = me.name;
         const oldPhone = me.phone || "";
         const newName = name.trim();
-        const phoneChanged = phone.trim() !== oldPhone;
-        const updatedMe = { ...me, name: newName, phone: phone.trim(), email: email.trim() || null };
+        const phoneChanged = finalPhone.trim() !== oldPhone;
+        const updatedMe = { ...me, name: newName, phone: finalPhone.trim(), email: email.trim() || null, address: address.trim() || null };
         await savePersonal("me", updatedMe);
         const membersAll = await loadShared("members", []);
         const idx = membersAll.findIndex(m => m.name === oldName && m.joinedAt === me.joinedAt);
         if (idx > -1) {
-            membersAll[idx] = { ...membersAll[idx], name: newName, phone: phone.trim() };
+            membersAll[idx] = { ...membersAll[idx], name: newName, phone: finalPhone.trim() };
             await saveShared("members", membersAll);
         }
-        // İsim değiştiyse mevcut ilan/teklif/değerlendirmelerdeki adı da güncelle
-        // (aksi halde eski ilanlarınızın sahibi siz görünmemeye devam eder).
         if (newName !== oldName) {
             const listingsAll = await loadShared("listings", []);
             let changed = false;
@@ -19207,36 +19201,218 @@ function PersonalInfoEdit({ me, setMe, refreshAll }) {
         setMe(updatedMe);
         await refreshAll();
         setSaving(false);
+        setPhoneStep("idle");
+        setCurrentPasswordInput("");
+        setSmsCode("");
         if (phoneChanged) {
-            if (updatedMe.email) {
-                setNotice(`✓ Telefon numaranız değişti. Güvenlik bildirimi ${updatedMe.email} adresine gönderildi (simülasyon).`);
-            }
-            else {
-                setNotice("✓ Telefon numaranız değişti. Bildirim gönderilecek bir e-posta adresiniz kayıtlı değil — yukarıya ekleyebilirsiniz.");
-            }
+            setNotice(updatedMe.email ? `✓ Telefon numaranız güncellendi. Bilgilendirme ${updatedMe.email} adresine gönderildi (simülasyon).` : "✓ Telefon numaranız güncellendi.");
             setTimeout(() => setNotice(""), 5000);
         }
         else {
             setOpen(false);
         }
     };
+    const save = () => {
+        if (!name.trim() || !phone.trim()) {
+            setErr("Ad ve telefon boş olamaz.");
+            return;
+        }
+        const phoneChanged = phone.trim() !== (me.phone || "");
+        if (!phoneChanged) {
+            applyChanges(phone);
+            return;
+        }
+        // Telefon değişiyor — önce kimlik doğrulama prosedürü gerekir.
+        setErr("");
+        if (me.authMethod === "email" && me.passwordPlain) {
+            setPhoneStep("confirmPassword");
+        }
+        else {
+            setPhoneStep("verifySms");
+        }
+    };
+    const confirmPassword = () => {
+        if (currentPasswordInput !== me.passwordPlain) {
+            setErr("Şifre hatalı.");
+            return;
+        }
+        setErr("");
+        setPhoneStep("verifySms");
+    };
+    const verifySms = () => {
+        if (smsCode !== "1234") {
+            setErr("Kod hatalı. (Simülasyon kodu: 1234)");
+            return;
+        }
+        applyChanges(phone);
+    };
     if (!open) {
         return React.createElement("button", { onClick: () => setOpen(true), style: { ...btnGhost, borderColor: COLORS.line, color: COLORS.pineDeep, width: "100%", justifyContent: "center" } }, "Ki\u015Fisel Bilgilerimi D\u00FCzenle");
+    }
+    if (phoneStep === "confirmPassword") {
+        return (React.createElement("div", { style: { background: COLORS.paper, borderRadius: 12, padding: 14 } },
+            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", marginBottom: 8 } }, "Telefon numaran\u0131z\u0131 de\u011Fi\u015Ftirmek i\u00E7in \u00F6nce mevcut \u015Fifrenizi do\u011Frulay\u0131n."),
+            React.createElement(FormField, { label: "Mevcut \u015Eifreniz", value: currentPasswordInput, onChange: setCurrentPasswordInput, type: "password", placeholder: "\u015Eifreniz" }),
+            err && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11, marginTop: 6 } }, err),
+            React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 10 } },
+                React.createElement("button", { onClick: confirmPassword, style: btnPrimary }, "Devam Et"),
+                React.createElement("button", { onClick: () => { setPhoneStep("idle"); setErr(""); }, style: { ...btnGhost, borderColor: COLORS.line, color: "#8A8776" } }, "Vazge\u00E7"))));
+    }
+    if (phoneStep === "verifySms") {
+        return (React.createElement("div", { style: { background: COLORS.paper, borderRadius: 12, padding: 14 } },
+            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: COLORS.ochre, background: COLORS.ochreSoft, padding: 8, borderRadius: 8, marginBottom: 8 } },
+                "S\u0130M\u00DCLASYON: ",
+                phone,
+                " numaras\u0131na do\u011Frulama kodu g\u00F6nderildi. Test kodu: ",
+                React.createElement("b", null, "1234")),
+            React.createElement(FormField, { label: "SMS Do\u011Frulama Kodu", value: smsCode, onChange: setSmsCode, placeholder: "1234" }),
+            err && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11, marginTop: 6 } }, err),
+            React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 10 } },
+                React.createElement("button", { onClick: verifySms, disabled: saving, style: btnPrimary }, saving ? "Kaydediliyor..." : "Doğrula ve Kaydet"),
+                React.createElement("button", { onClick: () => { setPhoneStep("idle"); setErr(""); }, style: { ...btnGhost, borderColor: COLORS.line, color: "#8A8776" } }, "Vazge\u00E7"))));
     }
     return (React.createElement("div", { style: { background: COLORS.paper, borderRadius: 12, padding: 14 } },
         React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } },
             React.createElement(FormField, { label: "Ad Soyad", value: name, onChange: setName, placeholder: "Ad Soyad" }),
             React.createElement(FormField, { label: "Telefon", value: phone, onChange: setPhone, placeholder: "Telefon" }),
-            React.createElement(FormField, { label: "E-posta (bildirim i\u00E7in, opsiyonel)", value: email, onChange: setEmail, placeholder: "ornek@eposta.com", type: "email" })),
+            React.createElement(FormField, { label: "E-posta (bildirim i\u00E7in, opsiyonel)", value: email, onChange: setEmail, placeholder: "ornek@eposta.com", type: "email" }),
+            React.createElement("div", null,
+                React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "A\u00E7\u0131k Adres"),
+                React.createElement("textarea", { value: address, onChange: (e) => setAddress(e.target.value), rows: 2, placeholder: "Adresiniz", style: { ...inputStyle, marginTop: 4, resize: "vertical" } }))),
         me.name !== name && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10, color: COLORS.ochre, marginTop: 6 } }, "\u0130sminizi de\u011Fi\u015Ftirirseniz mevcut ilan, teklif ve de\u011Ferlendirmeleriniz de otomatik g\u00FCncellenir."),
-        me.phone !== phone && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10, color: COLORS.ochre, marginTop: 4 } }, "Telefon numaran\u0131z\u0131 de\u011Fi\u015Ftirirseniz, kay\u0131tl\u0131 e-postan\u0131za bir g\u00FCvenlik bildirimi g\u00F6nderilir."),
+        me.phone !== phone && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10, color: COLORS.ochre, marginTop: 4 } }, "Telefon de\u011Fi\u015Fikli\u011Fi i\u00E7in \u015Fifre do\u011Frulama + SMS kodu gerekir."),
         err && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11, marginTop: 6 } }, err),
         notice && React.createElement("div", { style: { color: COLORS.pineDeep, fontFamily: "Inter", fontSize: 11, marginTop: 6 } }, notice),
         React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 10 } },
             React.createElement("button", { onClick: save, disabled: saving, style: btnPrimary }, saving ? "Kaydediliyor..." : "Kaydet"),
             React.createElement("button", { onClick: () => setOpen(false), style: { ...btnGhost, borderColor: COLORS.line, color: "#8A8776" } }, "Vazge\u00E7"))));
 }
-function ProfileScreen({ me, setMe, listings, members, favorites, pricing, setScreen, refreshAll }) {
+function AvatarUpload({ me, setMe }) {
+    const [busy, setBusy] = useState(false);
+    const handleFile = async (e) => {
+        const file = (e.target.files || [])[0];
+        if (!file || !file.type.startsWith("image/"))
+            return;
+        setBusy(true);
+        try {
+            const dataUrl = await resizeImageFile(file, 300);
+            const updatedMe = { ...me, avatarPhoto: dataUrl };
+            await savePersonal("me", updatedMe);
+            setMe(updatedMe);
+        }
+        catch { /* sessizce geç */ }
+        setBusy(false);
+    };
+    return (React.createElement("label", { style: { position: "relative", cursor: "pointer", display: "block" } },
+        React.createElement("input", { type: "file", accept: "image/*", onChange: handleFile, style: { display: "none" }, disabled: busy }),
+        me.avatarPhoto ? (React.createElement("img", { src: me.avatarPhoto, style: { width: 56, height: 56, borderRadius: "50%", objectFit: "cover" } })) : (React.createElement("div", { style: { width: 56, height: 56, borderRadius: "50%", background: COLORS.ochreSoft, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Fraunces", fontWeight: 600, color: "#7A5A1E", fontSize: 20 } }, me.name[0])),
+        React.createElement("div", { style: { position: "absolute", bottom: -2, right: -2, width: 20, height: 20, borderRadius: "50%", background: COLORS.pineDeep, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${COLORS.white}` } },
+            React.createElement("span", { style: { fontSize: 10, color: COLORS.white } }, "\u270E"))));
+}
+function StatMini({ label, value, icon: Icon }) {
+    return (React.createElement("div", { style: { flex: 1, background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: "10px 8px", textAlign: "center" } },
+        Icon && React.createElement(Icon, { size: 14, color: COLORS.pineDeep, style: { marginBottom: 3 } }),
+        React.createElement("div", { style: { fontFamily: "IBM Plex Mono", fontWeight: 700, fontSize: 16, color: COLORS.ink } }, value),
+        React.createElement("div", { style: { fontFamily: "Inter", fontSize: 9.5, color: "#8A8776", marginTop: 1 } }, label)));
+}
+function KurumsalBilgilerCard({ me, setMe, myMember }) {
+    const [open, setOpen] = useState(false);
+    const [isletmeNo, setIsletmeNo] = useState(me.isletmeNo || "");
+    const [saving, setSaving] = useState(false);
+    const docStatus = myMember ? myMember.documentStatus : me.documentStatus;
+    const save = async () => {
+        setSaving(true);
+        const updatedMe = { ...me, isletmeNo: isletmeNo.trim() };
+        await savePersonal("me", updatedMe);
+        setMe(updatedMe);
+        setSaving(false);
+        setOpen(false);
+    };
+    return (React.createElement("div", { style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 14, marginBottom: 14 } },
+        React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 12.5, color: COLORS.ink, marginBottom: 10 } }, "Kurumsal ve Resmi Bilgiler"),
+        React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6, fontFamily: "Inter", fontSize: 12 } },
+            React.createElement("div", { style: { display: "flex", justifyContent: "space-between" } },
+                React.createElement("span", { style: { color: "#8A8776" } }, "\u015Eirket Unvan\u0131"),
+                React.createElement("span", { style: { fontWeight: 600 } }, me.companyName || "—")),
+            React.createElement("div", { style: { display: "flex", justifyContent: "space-between" } },
+                React.createElement("span", { style: { color: "#8A8776" } }, "Vergi Dairesi"),
+                React.createElement("span", { style: { fontWeight: 600 } }, me.taxOffice || "—")),
+            React.createElement("div", { style: { display: "flex", justifyContent: "space-between" } },
+                React.createElement("span", { style: { color: "#8A8776" } }, "VKN / Vergi Levhas\u0131"),
+                React.createElement(Badge, { tone: docStatus === "onaylandi" ? "pine" : docStatus === "reddedildi" ? "gray" : "ochre" }, docStatus === "onaylandi" ? "✓ Onaylı" : docStatus === "reddedildi" ? "Reddedildi" : "Onay Bekliyor")),
+            React.createElement("div", { style: { display: "flex", justifyContent: "space-between" } },
+                React.createElement("span", { style: { color: "#8A8776" } }, "Konum"),
+                React.createElement("span", { style: { fontWeight: 600 } }, me.companyIl ? `${me.companyIl}${me.companyIlce ? "/" + me.companyIlce : ""}` : "—"))),
+        React.createElement("div", { style: { marginTop: 10 } }, open ? (React.createElement("div", { style: { background: COLORS.paper, borderRadius: 10, padding: 10 } },
+            React.createElement(FormField, { label: "\u0130\u015Fletme Numaras\u0131 (T\u00DCRKVET)", value: isletmeNo, onChange: setIsletmeNo, placeholder: "\u0130\u015Fletme No" }),
+            React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 8 } },
+                React.createElement("button", { onClick: save, disabled: saving, style: btnPrimary }, saving ? "Kaydediliyor..." : "Kaydet"),
+                React.createElement("button", { onClick: () => setOpen(false), style: { ...btnGhost, borderColor: COLORS.line, color: "#8A8776" } }, "Vazge\u00E7")))) : (React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
+            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12 } },
+                React.createElement("span", { style: { color: "#8A8776" } }, "\u0130\u015Fletme No: "),
+                React.createElement("span", { style: { fontWeight: 600 } }, me.isletmeNo || "belirtilmemiş")),
+            React.createElement("button", { onClick: () => setOpen(true), style: { ...btnGhost, borderColor: COLORS.line, color: COLORS.pineDeep, padding: "5px 9px", fontSize: 11 } }, "D\u00FCzenle")))),
+        myMember && myMember.documentPhoto && (React.createElement("div", { style: { marginTop: 10 } },
+            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776", marginBottom: 4 } }, "Belgelerim (Vergi Levhas\u0131)"),
+            React.createElement("img", { src: myMember.documentPhoto, onClick: () => window.open(myMember.documentPhoto, "_blank"), style: { width: 60, height: 60, objectFit: "cover", borderRadius: 8, border: `1px solid ${COLORS.line}`, cursor: "pointer" } })))));
+}
+function BireyselBilgilerCard({ me, myMember }) {
+    const docStatus = myMember ? myMember.documentStatus : me.documentStatus;
+    return (React.createElement("div", { style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 14, marginBottom: 14 } },
+        React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 12.5, color: COLORS.ink, marginBottom: 10 } }, "Hesap Do\u011Frulama"),
+        React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6, fontFamily: "Inter", fontSize: 12 } },
+            React.createElement("div", { style: { display: "flex", justifyContent: "space-between" } },
+                React.createElement("span", { style: { color: "#8A8776" } }, "Hesap Durumu"),
+                React.createElement(Badge, { tone: docStatus === "onaylandi" ? "pine" : "ochre" }, docStatus === "onaylandi" ? "✓ Onaylı Bireysel Satıcı" : "Onay Bekliyor")),
+            React.createElement("div", { style: { display: "flex", justifyContent: "space-between" } },
+                React.createElement("span", { style: { color: "#8A8776" } }, "Konum"),
+                React.createElement("span", { style: { fontWeight: 600 } }, me.city ? `${me.city}${me.ilce ? "/" + me.ilce : ""}` : "belirtilmemiş")))));
+}
+function NotificationPrefsCard({ me, setMe }) {
+    const [prefs, setPrefs] = useState(me.notifPrefs || { yeniTeklif: true, fiyatDususu: true, mesaj: true });
+    const [saving, setSaving] = useState(false);
+    const toggle = (k) => setPrefs(p => ({ ...p, [k]: !p[k] }));
+    const save = async () => {
+        setSaving(true);
+        const updatedMe = { ...me, notifPrefs: prefs };
+        await savePersonal("me", updatedMe);
+        setMe(updatedMe);
+        setSaving(false);
+    };
+    return (React.createElement("div", { style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 14, marginBottom: 14 } },
+        React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 12.5, color: COLORS.ink, marginBottom: 10 } }, "Bildirim Tercihleri"),
+        [["yeniTeklif", "Yeni teklif geldiğinde"], ["fiyatDususu", "Favorilediğim ilanda fiyat düşünce"], ["mesaj", "Yeni mesaj geldiğinde"]].map(([k, l]) => (React.createElement("label", { key: k, style: { display: "flex", alignItems: "center", gap: 8, fontFamily: "Inter", fontSize: 12, color: "#5A574C", marginBottom: 6, cursor: "pointer" } },
+            React.createElement("input", { type: "checkbox", checked: prefs[k], onChange: () => toggle(k) }),
+            " ",
+            l))),
+        React.createElement("button", { onClick: save, disabled: saving, style: { ...btnGhost, borderColor: COLORS.line, color: COLORS.pineDeep, marginTop: 6, padding: "7px 12px" } }, saving ? "Kaydediliyor..." : "Kaydet")));
+}
+function SupportRequestCard({ me }) {
+    const [open, setOpen] = useState(false);
+    const [text, setText] = useState("");
+    const [sent, setSent] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const submit = async () => {
+        if (!text.trim())
+            return;
+        setSaving(true);
+        const all = await loadShared("reports", []);
+        all.push({ id: uid(), reporterId: me.name, targetType: "kullanici", reason: `[Destek talebi - ${me.name}] ${text.trim()}`, status: "inceleniyor", createdAt: Date.now() });
+        await saveShared("reports", all);
+        setSaving(false);
+        setSent(true);
+        setText("");
+        setTimeout(() => { setSent(false); setOpen(false); }, 2500);
+    };
+    return (React.createElement("div", { style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 14, marginBottom: 14 } },
+        React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 12.5, color: COLORS.ink, marginBottom: 10 } }, "Destek ve Talep Olu\u015Ftur"),
+        sent ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: COLORS.pineDeep } }, "\u2713 Talebiniz iletildi, destek ekibi inceleyecek.")) : open ? (React.createElement(React.Fragment, null,
+            React.createElement("textarea", { value: text, onChange: (e) => setText(e.target.value), rows: 3, placeholder: "Sorununuzu veya anla\u015Fmazl\u0131k (dispute) detay\u0131n\u0131z\u0131 yaz\u0131n...", style: { ...inputStyle, resize: "vertical" } }),
+            React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 8 } },
+                React.createElement("button", { onClick: submit, disabled: saving, style: btnPrimary }, saving ? "Gönderiliyor..." : "Gönder"),
+                React.createElement("button", { onClick: () => setOpen(false), style: { ...btnGhost, borderColor: COLORS.line, color: "#8A8776" } }, "Vazge\u00E7")))) : (React.createElement("button", { onClick: () => setOpen(true), style: { ...btnGhost, width: "100%", justifyContent: "center", borderColor: COLORS.line, color: COLORS.pineDeep } }, "Destek Talebi / Anla\u015Fmazl\u0131k Bildir"))));
+}
+function ProfileScreen({ me, setMe, listings, members, favorites, pricing, offers, reviews, setScreen, refreshAll }) {
     const [paying, setPaying] = useState(false);
     const [savingRegion, setSavingRegion] = useState(false);
     const myListings = listings.filter(l => l.sellerName === me.name);
@@ -19271,16 +19447,46 @@ function ProfileScreen({ me, setMe, listings, members, favorites, pricing, setSc
         setMe(updatedMe);
         setSavingRegion(false);
     };
+    const setIlce = async (ilce) => {
+        const updatedMe = { ...me, ilce };
+        await savePersonal("me", updatedMe);
+        setMe(updatedMe);
+    };
+    const activeListingsCount = myListings.filter(l => l.status === "yayinda").length;
+    const completedSales = offers.filter(o => o.sellerName === me.name && o.status === "kabul").length;
+    const rating = sellerRating(reviews, me.name);
+    const memberSince = me.joinedAt ? new Date(me.joinedAt).toLocaleDateString("tr-TR", { month: "long", year: "numeric" }) : null;
     return (React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "16px 18px 100px" } },
         React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 19, marginBottom: 14 } }, "Profilim"),
-        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 16 } },
-            React.createElement("div", { style: { width: 48, height: 48, borderRadius: "50%", background: COLORS.ochreSoft, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Fraunces", fontWeight: 600, color: "#7A5A1E", fontSize: 18 } }, me.name[0]),
-            React.createElement("div", null,
-                React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600 } }, me.name),
-                React.createElement("div", { style: { display: "flex", gap: 5, marginTop: 3, flexWrap: "wrap" } },
-                    React.createElement(Badge, { tone: me.profileType === "kurumsal" ? "pine" : me.profileType === "alici" ? "ochre" : "gray" }, PROFILE_TYPE_LABELS[me.profileType] || me.profileType),
-                    me.profileType === "kurumsal" && React.createElement(VerifiedBadge, { size: 15 }),
-                    documentStatus && (React.createElement(Badge, { tone: documentStatus === "onaylandi" ? "pine" : documentStatus === "reddedildi" ? "gray" : "ochre" }, documentStatus === "onaylandi" ? "Belge Onaylı" : documentStatus === "reddedildi" ? "Belge Reddedildi" : "Belge Onay Bekliyor"))))),
+        React.createElement("div", { style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: 14, marginBottom: 12 } },
+            React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12 } },
+                React.createElement(AvatarUpload, { me: me, setMe: setMe }),
+                React.createElement("div", { style: { flex: 1 } },
+                    React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 14.5 } }, me.profileType === "kurumsal" && me.companyName ? me.companyName : me.name),
+                    me.profileType === "kurumsal" && me.companyName && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776" } }, me.name),
+                    React.createElement("div", { style: { display: "flex", gap: 5, marginTop: 4, flexWrap: "wrap", alignItems: "center" } },
+                        React.createElement(Badge, { tone: me.profileType === "kurumsal" ? "pine" : me.profileType === "alici" ? "ochre" : "gray" }, PROFILE_TYPE_LABELS[me.profileType] || me.profileType),
+                        documentStatus === "onaylandi" && (React.createElement("span", { style: { display: "flex", alignItems: "center", gap: 3, fontFamily: "Inter", fontSize: 10.5, fontWeight: 600, color: COLORS.pineDeep } },
+                            React.createElement(VerifiedBadge, { size: 13 }),
+                            " ",
+                            me.profileType === "kurumsal" ? "Onaylı Kurumsal İşletme" : "Onaylı Bireysel Satıcı"))))),
+            React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 10, paddingTop: 10, borderTop: `1px solid ${COLORS.line}` } },
+                React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 5 } }, rating.count > 0 ? (React.createElement(React.Fragment, null,
+                    React.createElement(StarRow, { value: rating.avg, size: 13 }),
+                    React.createElement("span", { style: { fontFamily: "IBM Plex Mono", fontSize: 11.5, color: COLORS.ink, fontWeight: 600 } },
+                        rating.avg,
+                        " / 5"),
+                    React.createElement("span", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776" } },
+                        "(",
+                        rating.count,
+                        " de\u011Ferlendirme)"))) : (React.createElement("span", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776" } }, "Hen\u00FCz de\u011Ferlendirme yok"))),
+                memberSince && React.createElement("span", { style: { fontFamily: "Inter", fontSize: 10, color: "#8A8776" } },
+                    "\u00DCye: ",
+                    memberSince))),
+        React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 14 } },
+            React.createElement(StatMini, { label: "Aktif \u0130lan", value: activeListingsCount, icon: Flag }),
+            React.createElement(StatMini, { label: "Tamamlanan Sat\u0131\u015F", value: completedSales, icon: Star }),
+            React.createElement(StatMini, { label: "Favorim", value: favorites.length, icon: Heart })),
         React.createElement("button", { onClick: () => setScreen("favorites"), style: { display: "flex", alignItems: "center", gap: 8, width: "100%", background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: "11px 13px", marginBottom: 14, cursor: "pointer" } },
             React.createElement(Heart, { size: 15, color: COLORS.red }),
             React.createElement("span", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5, color: COLORS.ink } },
@@ -19288,6 +19494,11 @@ function ProfileScreen({ me, setMe, listings, members, favorites, pricing, setSc
                 favorites.length,
                 ")"),
             React.createElement(ChevronRight, { size: 14, style: { marginLeft: "auto" }, color: "#B7B4A6" })),
+        React.createElement("button", { onClick: () => setScreen("myoffers"), style: { display: "flex", alignItems: "center", gap: 8, width: "100%", background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: "11px 13px", marginBottom: 14, cursor: "pointer" } },
+            React.createElement(Repeat, { size: 15, color: COLORS.pineDeep }),
+            React.createElement("span", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5, color: COLORS.ink } }, "Gelen / Giden Tekliflerim"),
+            React.createElement(ChevronRight, { size: 14, style: { marginLeft: "auto" }, color: "#B7B4A6" })),
+        me.profileType === "kurumsal" ? (React.createElement(KurumsalBilgilerCard, { me: me, setMe: setMe, myMember: myMember })) : (React.createElement(BireyselBilgilerCard, { me: me, myMember: myMember })),
         React.createElement("div", { style: { marginBottom: 14 } },
             React.createElement(PersonalInfoEdit, { me: me, setMe: setMe, refreshAll: refreshAll })),
         me.authMethod === "email" && (React.createElement("div", { style: { marginBottom: 14 } },
@@ -19298,14 +19509,18 @@ function ProfileScreen({ me, setMe, listings, members, favorites, pricing, setSc
                 React.createElement("option", { value: "" }, "Se\u00E7ilmedi"),
                 TURKISH_CITIES.map(c => React.createElement("option", { key: c, value: c }, c))),
             React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10, color: "#8A8776", marginTop: 4 } }, "Reels'te \u00F6nce \u015Fehrinizden, sonra b\u00F6lgenizden ilanlar \u00F6ne \u00E7\u0131kar.")),
+        me.profileType !== "kurumsal" && (React.createElement("div", { style: { marginBottom: 14 } },
+            React.createElement(FormField, { label: "\u0130l\u00E7eniz", value: me.ilce || "", onChange: setIlce, placeholder: "\u0130l\u00E7e" }))),
         React.createElement("div", { style: { marginBottom: 14 } },
             React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12.5, fontWeight: 600, marginBottom: 6 } }, "B\u00F6lgeniz"),
             React.createElement("select", { value: me.region || "", onChange: (e) => setRegion(e.target.value), disabled: savingRegion, style: inputStyle },
                 React.createElement("option", { value: "" }, "Se\u00E7ilmedi"),
                 REGIONS.map(r => React.createElement("option", { key: r, value: r }, r))),
             React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10, color: "#8A8776", marginTop: 4 } }, "B\u00F6lge sohbetlerinde varsay\u0131lan olarak bu b\u00F6lge a\u00E7\u0131l\u0131r.")),
+        React.createElement(NotificationPrefsCard, { me: me, setMe: setMe }),
+        React.createElement(SupportRequestCard, { me: me }),
         React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12.5, fontWeight: 600, marginBottom: 6 } },
-            "\u0130lanlar\u0131m (",
+            "\u0130lan Y\u00F6netimi (",
             myListings.length,
             ")"),
         myListings.length === 0 && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#8A8776", marginBottom: 12 } }, "Hen\u00FCz ilan\u0131n\u0131z yok."),
