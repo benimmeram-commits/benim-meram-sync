@@ -17458,6 +17458,30 @@ const TURKISH_CITIES = [
     "Trabzon", "Tunceli", "Şanlıurfa", "Uşak", "Van", "Yozgat", "Zonguldak", "Aksaray", "Bayburt", "Karaman",
     "Kırıkkale", "Batman", "Şırnak", "Bartın", "Ardahan", "Iğdır", "Yalova", "Karabük", "Kilis", "Osmaniye", "Düzce",
 ];
+// İl merkezlerinin yaklaşık koordinatları — haritada işaretçi (pin) göstermek için.
+// İlçe düzeyinde hassasiyet değil, il merkezine yakın bir nokta gösterir.
+const TURKEY_CITY_COORDS = {
+    "Adana": [37.0, 35.32], "Adıyaman": [37.76, 38.28], "Afyonkarahisar": [38.76, 30.54], "Ağrı": [39.72, 43.05],
+    "Amasya": [40.65, 35.83], "Ankara": [39.93, 32.86], "Antalya": [36.89, 30.71], "Artvin": [41.18, 41.82],
+    "Aydın": [37.85, 27.85], "Balıkesir": [39.65, 27.89], "Bilecik": [40.15, 29.98], "Bingöl": [38.89, 40.5],
+    "Bitlis": [38.4, 42.11], "Bolu": [40.74, 31.6], "Burdur": [37.72, 30.29], "Bursa": [40.18, 29.06],
+    "Çanakkale": [40.15, 26.41], "Çankırı": [40.6, 33.62], "Çorum": [40.55, 34.95], "Denizli": [37.77, 29.09],
+    "Diyarbakır": [37.91, 40.24], "Edirne": [41.68, 26.56], "Elazığ": [38.68, 39.22], "Erzincan": [39.75, 39.49],
+    "Erzurum": [39.9, 41.27], "Eskişehir": [39.78, 30.52], "Gaziantep": [37.06, 37.38], "Giresun": [40.91, 38.39],
+    "Gümüşhane": [40.46, 39.48], "Hakkari": [37.58, 43.74], "Hatay": [36.2, 36.16], "Isparta": [37.76, 30.55],
+    "Mersin": [36.8, 34.63], "İstanbul": [41.01, 28.98], "İzmir": [38.42, 27.14], "Kars": [40.6, 43.09],
+    "Kastamonu": [41.38, 33.78], "Kayseri": [38.73, 35.49], "Kırklareli": [41.73, 27.22], "Kırşehir": [39.15, 34.16],
+    "Kocaeli": [40.85, 29.88], "Konya": [37.87, 32.48], "Kütahya": [39.42, 29.98], "Malatya": [38.36, 38.31],
+    "Manisa": [38.61, 27.43], "Kahramanmaraş": [37.58, 36.92], "Mardin": [37.31, 40.74], "Muğla": [37.22, 28.36],
+    "Muş": [38.75, 41.49], "Nevşehir": [38.62, 34.72], "Niğde": [37.97, 34.68], "Ordu": [40.99, 37.88],
+    "Rize": [41.02, 40.52], "Sakarya": [40.78, 30.4], "Samsun": [41.29, 36.33], "Siirt": [37.93, 41.94],
+    "Sinop": [42.03, 35.15], "Sivas": [39.75, 37.02], "Tekirdağ": [40.98, 27.51], "Tokat": [40.31, 36.55],
+    "Trabzon": [41.0, 39.72], "Tunceli": [39.11, 39.54], "Şanlıurfa": [37.16, 38.79], "Uşak": [38.68, 29.41],
+    "Van": [38.49, 43.38], "Yozgat": [39.82, 34.81], "Zonguldak": [41.46, 31.79], "Aksaray": [38.37, 34.03],
+    "Bayburt": [40.26, 40.22], "Karaman": [37.18, 33.22], "Kırıkkale": [39.85, 33.51], "Batman": [37.89, 41.13],
+    "Şırnak": [37.52, 42.46], "Bartın": [41.63, 32.34], "Ardahan": [41.11, 42.7], "Iğdır": [39.92, 44.04],
+    "Yalova": [40.65, 29.28], "Karabük": [41.2, 32.62], "Kilis": [36.72, 37.12], "Osmaniye": [37.07, 36.25], "Düzce": [40.84, 31.16],
+};
 // Bilinen büyük vergi daireleri — RESMİ/EKSİKSİZ BİR KAYIT DEĞİLDİR, sadece
 // kayıt formunda öneri (autocomplete) olarak kullanılır. Kullanıcı serbestçe
 // başka bir isim yazabilir.
@@ -18252,6 +18276,8 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
     const [chatTarget, setChatTarget] = useState(null); // { conversationId, otherName, listingLabel }
     const [chatRegion, setChatRegion] = useState(null);
     const [selectedRequest, setSelectedRequest] = useState(null);
+    const [viewedProfileName, setViewedProfileName] = useState(null);
+    const openProfile = (name) => { setViewedProfileName(name); setScreen("publicProfile"); };
     const runSeed = async () => {
         setSeedState({ loading: true, error: null, fallback: false });
         const result = await seedSampleListings(refreshAll);
@@ -18274,7 +18300,7 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
         return p.buyerName === me.name || p.sellerName === me.name;
     }))) : [];
     return (React.createElement(React.Fragment, null,
-        screen !== "detail" && screen !== "chat" && screen !== "regionChat" && screen !== "reels" && screen !== "search" && (React.createElement("div", { style: { background: COLORS.pine, padding: "14px 14px 10px", display: "flex", alignItems: "center", gap: 10 } },
+        screen !== "detail" && screen !== "chat" && screen !== "regionChat" && screen !== "reels" && screen !== "search" && screen !== "publicProfile" && (React.createElement("div", { style: { background: COLORS.pine, padding: "14px 14px 10px", display: "flex", alignItems: "center", gap: 10 } },
             React.createElement("button", { onClick: () => setDrawer(true), style: { background: "none", border: "none", cursor: "pointer" } },
                 React.createElement(IconMenu, { color: COLORS.white, size: 20 })),
             React.createElement(Logo, { size: 30, color: COLORS.white }),
@@ -18307,7 +18333,7 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
                         "Hata: ",
                         seedState.error)),
                     seedState.fallback && (React.createElement("div", { style: { color: COLORS.ochre, fontSize: 10.5, marginTop: 6, maxWidth: 260, marginLeft: "auto", marginRight: "auto" } }, "Not: kal\u0131c\u0131 depolama \u015Fu an bu ortamda \u00E7al\u0131\u015Fm\u0131yor, veriler bu oturum i\u00E7in ge\u00E7ici olarak tutuluyor (sayfa tamamen yenilenirse silinir)."))))) : (React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 } }, filtered.map(item => React.createElement(ListingCard, { key: item.id, item: item, reviews: reviews, favorites: favorites, toggleFavorite: toggleFavorite, onOpen: open }))))))),
-        screen === "detail" && selected && (React.createElement(DetailScreen, { item: listings.find(l => l.id === selected.id) || selected, me: me, requireAuth: requireAuth, offers: offers, reviews: reviews, favorites: favorites, toggleFavorite: toggleFavorite, onOpenChat: openChat, refreshAll: refreshAll, onBack: () => setScreen("home") })),
+        screen === "detail" && selected && (React.createElement(DetailScreen, { item: listings.find(l => l.id === selected.id) || selected, me: me, requireAuth: requireAuth, offers: offers, reviews: reviews, favorites: favorites, toggleFavorite: toggleFavorite, onOpenChat: openChat, onOpenProfile: openProfile, refreshAll: refreshAll, onBack: () => setScreen("home") })),
         screen === "create" && React.createElement(CreateScreen, { me: me, members: members, customSubcategories: customSubcategories, refreshAll: refreshAll, onDone: () => setScreen("home") }),
         screen === "requests" && (React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "16px 18px 100px" } },
             React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 19, marginBottom: 12 } }, "Al\u0131m Talepleri"),
@@ -18361,6 +18387,7 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
                     React.createElement(OfferStatusView, { offer: o, refreshAll: refreshAll })));
             }))),
         screen === "reels" && (React.createElement(ReelsScreen, { listings: listings, favorites: favorites, toggleFavorite: toggleFavorite, likes: likes, favoritesLog: favoritesLog, me: me, requireAuth: requireAuth, refreshAll: refreshAll, onOpen: open, onBack: () => setScreen("home") })),
+        screen === "publicProfile" && (React.createElement(PublicProfileScreen, { targetName: viewedProfileName, members: members, listings: listings, offers: offers, reviews: reviews, me: me, requireAuth: requireAuth, onOpen: open, onOpenChat: openChat, onBack: () => setScreen("home") })),
         screen === "search" && (React.createElement(SearchScreen, { listings: listings, reviews: reviews, favorites: favorites, toggleFavorite: toggleFavorite, onOpen: open, onBack: () => setScreen("home") })),
         screen === "favorites" && (React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "16px 18px 100px" } },
             React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 19, marginBottom: 12 } }, "Favorilerim"),
@@ -18402,7 +18429,7 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
                                     color: tab === mainKey && subTab === sub && breedTab === breed ? COLORS.white : "#8A8776",
                                 } }, breed)))))));
                     })))))))),
-        screen !== "detail" && screen !== "chat" && screen !== "regionChat" && screen !== "search" && screen !== "reels" && (React.createElement("div", { style: { display: "flex", borderTop: `1px solid ${COLORS.line}`, background: COLORS.white, padding: "10px 0 14px" } }, [["home", NavIconHome, "Ana Sayfa"], ["reels", NavIconFilm, "Aktif"], ["create", NavIconPlus, "İlan Ver"], ["chatHub", NavIconChat, "Sohbet"], ["profile", NavIconUser, "Profil"]].map(([s, Icon, l]) => {
+        screen !== "detail" && screen !== "chat" && screen !== "regionChat" && screen !== "search" && screen !== "reels" && screen !== "publicProfile" && (React.createElement("div", { style: { display: "flex", borderTop: `1px solid ${COLORS.line}`, background: COLORS.white, padding: "10px 0 14px" } }, [["home", NavIconHome, "Ana Sayfa"], ["reels", NavIconFilm, "Aktif"], ["create", NavIconPlus, "İlan Ver"], ["chatHub", NavIconChat, "Sohbet"], ["profile", NavIconUser, "Profil"]].map(([s, Icon, l]) => {
             const active = s === "chatHub" ? ["chatHub", "chat", "regionChat"].includes(screen) : screen === s;
             return (React.createElement("button", { key: s, onClick: () => (s === "home" || s === "reels" ? setScreen(s) : goToProtected(s)), style: { flex: 1, background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, cursor: "pointer" } },
                 React.createElement(Icon, { size: s === "create" ? 25 : 19, color: active ? COLORS.pineDeep : "#B7B4A6" }),
@@ -18538,7 +18565,7 @@ function ReelsScreen({ listings, favorites, toggleFavorite, likes, favoritesLog,
             }))));
 }
 // ---------- DETAIL + TEKLİF ----------
-function DetailScreen({ item, me, requireAuth, offers, reviews, favorites, toggleFavorite, onOpenChat, refreshAll, onBack }) {
+function DetailScreen({ item, me, requireAuth, offers, reviews, favorites, toggleFavorite, onOpenChat, onOpenProfile, refreshAll, onBack }) {
     const isOwner = me && item.sellerName === me.name;
     const myOffer = me ? offers.find(o => o.listingId === item.id && o.buyerName === me.name) : null;
     const listingOffers = offers.filter(o => o.listingId === item.id);
@@ -18569,7 +18596,6 @@ function DetailScreen({ item, me, requireAuth, offers, reviews, favorites, toggl
         item.gender === "Dişi" && item.isPregnant ? ["Gebelik", item.isPregnant] : null,
         item.gender === "Dişi" && item.dailyMilkLiters ? ["Süt Verimi", `${item.dailyMilkLiters} L/gün`] : null,
         item.earTag ? ["Küpe No", item.earTag] : null,
-        item.animalIl ? ["Konum", item.animalIlce ? `${item.animalIl}/${item.animalIlce}` : item.animalIl] : null,
         typeof item.nakliye === "boolean" ? ["Nakliye", item.nakliye ? "Var" : "Yok"] : null,
     ].filter(Boolean);
     return (React.createElement("div", { style: { flex: 1, overflowY: "auto", paddingBottom: 20 } },
@@ -18595,10 +18621,11 @@ function DetailScreen({ item, me, requireAuth, offers, reviews, favorites, toggl
             React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 } }, infoRows.map(([k, v]) => (React.createElement("div", { key: k, style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: "8px 10px" } },
                 React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776" } }, k),
                 React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5, color: COLORS.ink } }, v))))),
+            React.createElement(LocationMap, { il: item.animalIl, ilce: item.animalIlce }),
             item.description && (React.createElement("div", { style: { marginBottom: 14 } },
                 React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12, color: "#5A574C", marginBottom: 4 } }, "A\u00E7\u0131klama"),
                 React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12.5, color: COLORS.ink, lineHeight: 1.5, background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: "10px 12px" } }, item.description))),
-            React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 16, padding: "10px 12px", background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12 } },
+            React.createElement("div", { onClick: () => onOpenProfile && onOpenProfile(item.sellerName), style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 16, padding: "10px 12px", background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, cursor: onOpenProfile ? "pointer" : "default" } },
                 React.createElement("div", { style: { width: 32, height: 32, borderRadius: "50%", background: COLORS.ochreSoft, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Fraunces", fontWeight: 600, color: "#7A5A1E" } }, item.sellerName[0]),
                 React.createElement("div", { style: { flex: 1 } },
                     React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", gap: 5 } },
@@ -18731,10 +18758,10 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
     const isApprovedSeller = isBuyerOnly || documentStatus === "onaylandi";
     const [createType, setCreateType] = useState(isBuyerOnly || !isApprovedSeller ? "talep" : "ilan");
     const [mainCategory, setMainCategory] = useState("buyukbas");
-    const [subCategory, setSubCategory] = useState("Düve");
+    const [subCategory, setSubCategory] = useState("");
     const [breed, setBreed] = useState("");
-    const [age, setAge] = useState(AGE_OPTIONS[3]);
-    const [gender, setGender] = useState("Dişi");
+    const [age, setAge] = useState("");
+    const [gender, setGender] = useState("");
     const [price, setPrice] = useState("");
     const [weight, setWeight] = useState("");
     const [purpose, setPurpose] = useState("Damızlık");
@@ -18743,7 +18770,7 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
     const [dailyMilkLiters, setDailyMilkLiters] = useState("");
     const [description, setDescription] = useState("");
     const [earTag, setEarTag] = useState("");
-    const [nakliye, setNakliye] = useState("var");
+    const [nakliye, setNakliye] = useState("");
     const [animalIl, setAnimalIl] = useState(me.city || "");
     const [animalIlce, setAnimalIlce] = useState(me.ilce || "");
     const [media, setMedia] = useState([]);
@@ -18753,6 +18780,8 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
     const [prefBreed, setPrefBreed] = useState("");
     const [saving, setSaving] = useState(false);
     const [err, setErr] = useState("");
+    const [wizardStep, setWizardStep] = useState(0);
+    const touchStartX = React.useRef(null);
     const handleFiles = async (e) => {
         const files = Array.from(e.target.files || []);
         setMediaError("");
@@ -18797,8 +18826,8 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
             setErr("Belgeniz onaylanmadan ilan veremezsiniz.");
             return;
         }
-        if (!breed || !age || !price) {
-            setErr("Tüm alanları doldurun.");
+        if (!breed || !age || !gender || !price) {
+            setErr("Tüm zorunlu alanları doldurun.");
             return;
         }
         if (!earTag.trim()) {
@@ -18850,84 +18879,151 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
         }
         setSaving(true);
         const all = await loadShared("requests", []);
-        all.push({ id: uid(), budget: Number(budget), category: subCategory, breed: prefBreed, buyerName: me.name, status: "acik", createdAt: Date.now() });
+        all.push({ id: uid(), budget: Number(budget), category: subCategory || mainCategory, breed: prefBreed, buyerName: me.name, status: "acik", createdAt: Date.now() });
         await saveShared("requests", all);
         await refreshAll();
         setSaving(false);
         onDone();
+    };
+    const subCategoryOptions = [...ALT_KATEGORI[mainCategory], ...((customSubcategories && customSubcategories[mainCategory]) || [])];
+    // ---------- SAHİBİNDEN TARZI SORU-CEVAP SİHİRBAZI ----------
+    const WIZARD = [
+        { key: "kategori", q: "Ne satıyorsunuz?", valid: () => !!mainCategory },
+        { key: "altkategori", q: "Hangi tür?", valid: () => !!subCategory },
+        { key: "irk", q: "Irkı nedir?", valid: () => breed.trim().length > 0 },
+        { key: "yas", q: "Yaşı nedir?", valid: () => !!age },
+        { key: "cinsiyet", q: "Cinsiyeti nedir?", valid: () => !!gender },
+        { key: "kupe", q: "Küpe numarası nedir?", valid: () => earTag.trim().length > 0 },
+        { key: "konum", q: "Hayvan nerede bulunuyor?", valid: () => animalIl.trim().length > 0 },
+        { key: "nakliye", q: "Nakliye imkanınız var mı?", valid: () => !!nakliye },
+        { key: "fiyat", q: "Fiyatı nedir?", valid: () => price !== "" && Number(price) > 0 },
+        { key: "medya", q: "Fotoğraf veya video ekleyin", valid: () => true },
+        { key: "ozet", q: "Son kontrol", valid: () => true },
+    ];
+    const total = WIZARD.length;
+    const goNext = () => { if (WIZARD[wizardStep].valid() && wizardStep < total - 1)
+        setWizardStep(s => s + 1); };
+    const goBack = () => { if (wizardStep > 0)
+        setWizardStep(s => s - 1); };
+    const onTouchStart = (e) => { touchStartX.current = e.touches[0].clientX; };
+    const onTouchEnd = (e) => {
+        if (touchStartX.current === null)
+            return;
+        const dx = e.changedTouches[0].clientX - touchStartX.current;
+        touchStartX.current = null;
+        if (Math.abs(dx) < 55)
+            return;
+        if (dx < 0)
+            goNext();
+        else
+            goBack();
+    };
+    const bigChoice = (label, active, onClick) => (React.createElement("button", { key: label, onClick: onClick, style: { width: "100%", textAlign: "left", padding: "14px 16px", borderRadius: 12, border: `1.5px solid ${active ? COLORS.pineDeep : COLORS.line}`, background: active ? COLORS.pineDeep : COLORS.white, color: active ? COLORS.white : COLORS.ink, fontFamily: "Inter", fontWeight: 600, fontSize: 14, cursor: "pointer", marginBottom: 8 } }, label));
+    const renderWizardStep = () => {
+        const key = WIZARD[wizardStep].key;
+        switch (key) {
+            case "kategori":
+                return (React.createElement(React.Fragment, null,
+                    bigChoice("Büyükbaş (Sığır, Manda...)", mainCategory === "buyukbas", () => { setMainCategory("buyukbas"); setSubCategory(""); }),
+                    bigChoice("Küçükbaş (Koyun, Keçi...)", mainCategory === "kucukbas", () => { setMainCategory("kucukbas"); setSubCategory(""); })));
+            case "altkategori":
+                return subCategoryOptions.map(c => bigChoice(c, subCategory === c, () => setSubCategory(c)));
+            case "irk":
+                return React.createElement(FormField, { label: "Irk", value: breed, onChange: setBreed, placeholder: "\u00D6rn. Simental, Holstein, Akkaraman" });
+            case "yas":
+                return AGE_OPTIONS.map(a => bigChoice(a, age === a, () => setAge(a)));
+            case "cinsiyet":
+                return (React.createElement("div", { style: { display: "flex", gap: 8 } }, ["Dişi", "Erkek"].map(g => (React.createElement("button", { key: g, onClick: () => setGender(g), style: { flex: 1, padding: "16px", borderRadius: 12, border: `1.5px solid ${gender === g ? COLORS.pineDeep : COLORS.line}`, background: gender === g ? COLORS.pineDeep : COLORS.white, color: gender === g ? COLORS.white : COLORS.ink, fontFamily: "Inter", fontWeight: 700, fontSize: 15, cursor: "pointer" } }, g)))));
+            case "kupe":
+                return (React.createElement(React.Fragment, null,
+                    React.createElement(FormField, { label: "Hayvan K\u00FCpe Numaras\u0131", value: earTag, onChange: setEarTag, placeholder: "\u00D6rn. TR123456789012" }),
+                    React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10, color: "#8A8776", marginTop: 6 } }, "Sistem, ayn\u0131 k\u00FCpe numaras\u0131n\u0131n platformda ba\u015Fka bir ilanda kullan\u0131l\u0131p kullan\u0131lmad\u0131\u011F\u0131n\u0131 kontrol eder.")));
+            case "konum":
+                return (React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } },
+                    React.createElement("div", null,
+                        React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "\u0130l"),
+                        React.createElement("select", { value: animalIl, onChange: (e) => setAnimalIl(e.target.value), style: { ...inputStyle, marginTop: 4 } },
+                            React.createElement("option", { value: "" }, "Se\u00E7in"),
+                            TURKISH_CITIES.map(c => React.createElement("option", { key: c, value: c }, c)))),
+                    React.createElement(FormField, { label: "\u0130l\u00E7e", value: animalIlce, onChange: setAnimalIlce, placeholder: "\u0130l\u00E7e" })));
+            case "nakliye":
+                return (React.createElement("div", { style: { display: "flex", gap: 8 } }, [["var", "Nakliye Var"], ["yok", "Nakliye Yok"]].map(([k, l]) => (React.createElement("button", { key: k, onClick: () => setNakliye(k), style: { flex: 1, padding: "16px", borderRadius: 12, border: `1.5px solid ${nakliye === k ? COLORS.pineDeep : COLORS.line}`, background: nakliye === k ? COLORS.pineDeep : COLORS.white, color: nakliye === k ? COLORS.white : COLORS.ink, fontFamily: "Inter", fontWeight: 700, fontSize: 13.5, cursor: "pointer" } }, l)))));
+            case "fiyat":
+                return React.createElement(FormField, { label: "Fiyat (TL)", value: price, onChange: setPrice, placeholder: "\u00D6rn. 92000", type: "number" });
+            case "medya":
+                return (React.createElement("div", null,
+                    React.createElement("input", { id: "media-input", type: "file", accept: "image/*,video/*", multiple: true, onChange: handleFiles, style: { display: "none" }, disabled: mediaBusy || media.length >= 6 }),
+                    React.createElement("label", { htmlFor: "media-input", style: { display: "block", border: `1.5px dashed ${COLORS.line}`, borderRadius: 12, padding: 20, textAlign: "center", fontFamily: "Inter", fontSize: 12, color: "#8A8776", cursor: media.length >= 6 ? "not-allowed" : "pointer" } }, mediaBusy ? "İşleniyor..." : `+ Fotoğraf veya video ekle (${media.length}/6, video max 8 MB)`),
+                    mediaError && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11, marginTop: 4 } }, mediaError),
+                    media.length > 0 && (React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 } }, media.map((m, i) => (React.createElement("div", { key: i, style: { position: "relative", width: 62, height: 62, borderRadius: 8, overflow: "hidden", border: `1px solid ${COLORS.line}`, background: "#000" } },
+                        m.type === "image" ? React.createElement("img", { src: m.dataUrl, style: { width: "100%", height: "100%", objectFit: "cover" } }) : React.createElement("video", { src: m.dataUrl, style: { width: "100%", height: "100%", objectFit: "cover" }, muted: true }),
+                        React.createElement("button", { onClick: () => removeMedia(i), style: { position: "absolute", top: 2, right: 2, background: "rgba(0,0,0,0.65)", color: "#fff", border: "none", borderRadius: "50%", width: 16, height: 16, fontSize: 10, cursor: "pointer", lineHeight: 1 } }, "\u2715"))))))));
+            case "ozet":
+                return (React.createElement("div", null,
+                    React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 } }, [["Kategori", `${mainCategory === "buyukbas" ? "Büyükbaş" : "Küçükbaş"} · ${subCategory}`], ["Irk", breed], ["Yaş", age], ["Cinsiyet", gender], ["Küpe No", earTag], ["Konum", `${animalIl}${animalIlce ? "/" + animalIlce : ""}`], ["Nakliye", nakliye === "var" ? "Var" : "Yok"], ["Fiyat", price ? TL(Number(price)) : "—"], ["Medya", `${media.length} dosya`]].map(([k, v]) => (React.createElement("div", { key: k, style: { display: "flex", justifyContent: "space-between", fontFamily: "Inter", fontSize: 12.5, borderBottom: `1px solid ${COLORS.line}`, paddingBottom: 6 } },
+                        React.createElement("span", { style: { color: "#8A8776" } }, k),
+                        React.createElement("span", { style: { fontWeight: 600 } }, v))))),
+                    React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12, color: "#8A8776", marginBottom: 8 } }, "Opsiyonel Ek Bilgiler"),
+                    React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8, marginBottom: 10 } },
+                        React.createElement(FormField, { label: "A\u011F\u0131rl\u0131k (kg)", value: weight, onChange: setWeight, placeholder: "\u00D6rn. 380", type: "number" }),
+                        React.createElement("div", null,
+                            React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "Ama\u00E7"),
+                            React.createElement("select", { value: purpose, onChange: (e) => setPurpose(e.target.value), style: { ...inputStyle, marginTop: 4 } },
+                                React.createElement("option", null, "Dam\u0131zl\u0131k"),
+                                React.createElement("option", null, "S\u00FCt"),
+                                React.createElement("option", null, "Besi"),
+                                React.createElement("option", null, "Kesimlik"))),
+                        React.createElement("div", null,
+                            React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "A\u015F\u0131 Durumu"),
+                            React.createElement("select", { value: vaccinated, onChange: (e) => setVaccinated(e.target.value), style: { ...inputStyle, marginTop: 4 } },
+                                React.createElement("option", null, "A\u015F\u0131l\u0131"),
+                                React.createElement("option", null, "A\u015F\u0131s\u0131z"))),
+                        gender === "Dişi" && (React.createElement(React.Fragment, null,
+                            React.createElement("div", null,
+                                React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "Gebelik Durumu"),
+                                React.createElement("select", { value: isPregnant, onChange: (e) => setIsPregnant(e.target.value), style: { ...inputStyle, marginTop: 4 } },
+                                    React.createElement("option", null, "De\u011Fil"),
+                                    React.createElement("option", null, "Gebe"))),
+                            React.createElement(FormField, { label: "G\u00FCnl\u00FCk S\u00FCt Verimi (L)", value: dailyMilkLiters, onChange: setDailyMilkLiters, placeholder: "\u00D6rn. 25", type: "number" }))),
+                        React.createElement("div", null,
+                            React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "A\u00E7\u0131klama"),
+                            React.createElement("textarea", { value: description, onChange: (e) => setDescription(e.target.value), placeholder: "Ek bilgi, sa\u011Fl\u0131k ge\u00E7mi\u015Fi, \u00F6zel notlar...", rows: 3, style: { ...inputStyle, marginTop: 4, resize: "vertical" } }))),
+                    err && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11.5, marginBottom: 8 } }, err),
+                    React.createElement("button", { onClick: submitListing, disabled: saving, style: btnPrimary }, saving ? "Yayınlanıyor..." : "İlanı Yayınla")));
+            default:
+                return null;
+        }
     };
     return (React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "16px 18px 100px" } },
         React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 19, marginBottom: 12 } }, "Yeni Olu\u015Ftur"),
         isBuyerOnly ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#8A8776", background: COLORS.paper, borderRadius: 10, padding: "9px 12px", marginBottom: 14 } }, "Sadece al\u0131c\u0131 hesab\u0131yla sat\u0131l\u0131k ilan veremezsiniz \u2014 yaln\u0131zca \"Hayvan Ar\u0131yorum\" talebi a\u00E7abilirsiniz.")) : !isApprovedSeller ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11.5, color: documentStatus === "reddedildi" ? COLORS.red : "#7A5A1E", background: documentStatus === "reddedildi" ? "#F6E2DC" : COLORS.ochreSoft, borderRadius: 10, padding: "9px 12px", marginBottom: 14 } }, documentStatus === "reddedildi" ? 'Belgeniz reddedildi, bu nedenle satılık ilan veremezsiniz. Yalnızca "Hayvan Arıyorum" talebi açabilirsiniz.' : 'Belgeniz onay bekliyor — onaylanana kadar satılık ilan veremezsiniz. Yalnızca "Hayvan Arıyorum" talebi açabilirsiniz.')) : (React.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 16 } },
             React.createElement("button", { onClick: () => setCreateType("ilan"), style: { flex: 1, padding: "10px", borderRadius: 10, border: "none", cursor: "pointer", fontFamily: "Inter", fontWeight: 600, fontSize: 12.5, background: createType === "ilan" ? COLORS.pineDeep : COLORS.white, color: createType === "ilan" ? COLORS.white : "#5A574C" } }, "Sat\u0131l\u0131k \u0130lan\u0131"),
             React.createElement("button", { onClick: () => setCreateType("talep"), style: { flex: 1, padding: "10px", borderRadius: 10, border: "none", cursor: "pointer", fontFamily: "Inter", fontWeight: 600, fontSize: 12.5, background: createType === "talep" ? COLORS.pineDeep : COLORS.white, color: createType === "talep" ? COLORS.white : "#5A574C" } }, "\"Hayvan Ar\u0131yorum\""))),
-        React.createElement("div", { style: { marginBottom: 10 } },
-            React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "Ana Kategori"),
-            React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 4 } }, ["buyukbas", "kucukbas"].map(k => (React.createElement("button", { key: k, onClick: () => { setMainCategory(k); setSubCategory(ALT_KATEGORI[k][0]); }, style: { flex: 1, padding: "8px", borderRadius: 8, border: `1px solid ${COLORS.line}`, cursor: "pointer", fontFamily: "Inter", fontWeight: 600, fontSize: 11.5, background: mainCategory === k ? COLORS.pineDeep : COLORS.white, color: mainCategory === k ? COLORS.white : "#5A574C" } }, k === "buyukbas" ? "Büyükbaş" : "Küçükbaş"))))),
-        React.createElement("div", { style: { marginBottom: 10 } },
-            React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "Alt Kategori"),
-            React.createElement("select", { value: subCategory, onChange: (e) => setSubCategory(e.target.value), style: { ...inputStyle, marginTop: 4 } }, [...ALT_KATEGORI[mainCategory], ...((customSubcategories && customSubcategories[mainCategory]) || [])].map(c => React.createElement("option", { key: c, value: c }, c)))),
-        createType === "ilan" ? (React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } },
-            React.createElement(FormField, { label: "Irk", value: breed, onChange: setBreed, placeholder: "\u00D6rn. Simental" }),
+        createType === "ilan" ? (React.createElement("div", null,
+            React.createElement("div", { style: { display: "flex", gap: 4, marginBottom: 14 } }, WIZARD.map((s, i) => (React.createElement("div", { key: s.key, onClick: () => i < wizardStep && setWizardStep(i), style: { flex: 1, height: 4, borderRadius: 3, cursor: i < wizardStep ? "pointer" : "default", background: i <= wizardStep ? COLORS.pineDeep : COLORS.line } })))),
+            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776", marginBottom: 6 } },
+                "Ad\u0131m ",
+                wizardStep + 1,
+                "/",
+                total),
+            React.createElement("div", { onTouchStart: onTouchStart, onTouchEnd: onTouchEnd, style: { minHeight: 260 } },
+                React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 18, color: COLORS.ink, marginBottom: 14 } }, WIZARD[wizardStep].q),
+                renderWizardStep()),
+            wizardStep < total - 1 && (React.createElement(React.Fragment, null,
+                err && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11.5, marginTop: 10 } }, err),
+                React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 18 } },
+                    wizardStep > 0 && React.createElement("button", { onClick: goBack, style: { ...btnGhost, borderColor: COLORS.line, color: "#5A574C", flex: 1, justifyContent: "center" } }, "\u2190 Geri"),
+                    React.createElement("button", { onClick: goNext, disabled: !WIZARD[wizardStep].valid(), style: { ...btnPrimary, flex: 2, opacity: WIZARD[wizardStep].valid() ? 1 : 0.5 } }, "\u0130leri \u2192")),
+                React.createElement("div", { style: { fontFamily: "Inter", fontSize: 9.5, color: "#B7B4A6", marginTop: 8, textAlign: "center" } }, "Sa\u011Fa/sola kayd\u0131rarak da ge\u00E7ebilirsiniz"))),
+            wizardStep === total - 1 && wizardStep > 0 && (React.createElement("button", { onClick: goBack, style: { ...btnGhost, borderColor: COLORS.line, color: "#5A574C", marginTop: 10 } }, "\u2190 Geri")))) : (React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } },
             React.createElement("div", null,
-                React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "Ya\u015F"),
-                React.createElement("select", { value: age, onChange: (e) => setAge(e.target.value), style: { ...inputStyle, marginTop: 4 } }, AGE_OPTIONS.map(a => React.createElement("option", { key: a, value: a }, a)))),
+                React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "Ana Kategori"),
+                React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 4 } }, ["buyukbas", "kucukbas"].map(k => (React.createElement("button", { key: k, onClick: () => { setMainCategory(k); setSubCategory(""); }, style: { flex: 1, padding: "8px", borderRadius: 8, border: `1px solid ${COLORS.line}`, cursor: "pointer", fontFamily: "Inter", fontWeight: 600, fontSize: 11.5, background: mainCategory === k ? COLORS.pineDeep : COLORS.white, color: mainCategory === k ? COLORS.white : "#5A574C" } }, k === "buyukbas" ? "Büyükbaş" : "Küçükbaş"))))),
             React.createElement("div", null,
-                React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "Cinsiyet"),
-                React.createElement("select", { value: gender, onChange: (e) => setGender(e.target.value), style: { ...inputStyle, marginTop: 4 } },
-                    React.createElement("option", null, "Di\u015Fi"),
-                    React.createElement("option", null, "Erkek"))),
-            React.createElement(FormField, { label: "A\u011F\u0131rl\u0131k (kg, opsiyonel)", value: weight, onChange: setWeight, placeholder: "\u00D6rn. 380", type: "number" }),
-            React.createElement("div", null,
-                React.createElement(FormField, { label: "Hayvan K\u00FCpe Numaras\u0131", value: earTag, onChange: setEarTag, placeholder: "\u00D6rn. TR123456789012" }),
-                React.createElement("div", { style: { fontFamily: "Inter", fontSize: 9.5, color: "#8A8776", marginTop: 3 } }, "Sistem, girdi\u011Finiz numaray\u0131 platformdaki di\u011Fer ilanlarla kar\u015F\u0131la\u015Ft\u0131r\u0131p ayn\u0131 hayvan\u0131n birden fazla kez listelenmesini engeller. (Not: T\u00DCRKVET/resmi devlet kayd\u0131yla kar\u015F\u0131la\u015Ft\u0131rma yap\u0131lmaz \u2014 sadece bu platformdaki ilanlar kontrol edilir.)")),
-            React.createElement("div", { style: { display: "flex", gap: 8 } },
-                React.createElement("div", { style: { flex: 1 } },
-                    React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "Hayvan\u0131n Bulundu\u011Fu \u0130l"),
-                    React.createElement("select", { value: animalIl, onChange: (e) => setAnimalIl(e.target.value), style: { ...inputStyle, marginTop: 4 } },
-                        React.createElement("option", { value: "" }, "Se\u00E7in"),
-                        TURKISH_CITIES.map(c => React.createElement("option", { key: c, value: c }, c)))),
-                React.createElement("div", { style: { flex: 1 } },
-                    React.createElement(FormField, { label: "\u0130l\u00E7e", value: animalIlce, onChange: setAnimalIlce, placeholder: "\u0130l\u00E7e" }))),
-            React.createElement("div", null,
-                React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "Nakliye"),
-                React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 4 } }, [["var", "Nakliye Var"], ["yok", "Nakliye Yok"]].map(([k, l]) => (React.createElement("button", { key: k, onClick: () => setNakliye(k), style: { flex: 1, padding: "8px", borderRadius: 8, border: `1px solid ${COLORS.line}`, cursor: "pointer", fontFamily: "Inter", fontWeight: 600, fontSize: 11.5, background: nakliye === k ? COLORS.pineDeep : COLORS.white, color: nakliye === k ? COLORS.white : "#5A574C" } }, l))))),
-            React.createElement("div", null,
-                React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "Ama\u00E7"),
-                React.createElement("select", { value: purpose, onChange: (e) => setPurpose(e.target.value), style: { ...inputStyle, marginTop: 4 } },
-                    React.createElement("option", null, "Dam\u0131zl\u0131k"),
-                    React.createElement("option", null, "S\u00FCt"),
-                    React.createElement("option", null, "Besi"),
-                    React.createElement("option", null, "Kesimlik"))),
-            React.createElement("div", null,
-                React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "A\u015F\u0131 Durumu"),
-                React.createElement("select", { value: vaccinated, onChange: (e) => setVaccinated(e.target.value), style: { ...inputStyle, marginTop: 4 } },
-                    React.createElement("option", null, "A\u015F\u0131l\u0131"),
-                    React.createElement("option", null, "A\u015F\u0131s\u0131z"))),
-            gender === "Dişi" && (React.createElement(React.Fragment, null,
-                React.createElement("div", null,
-                    React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "Gebelik Durumu"),
-                    React.createElement("select", { value: isPregnant, onChange: (e) => setIsPregnant(e.target.value), style: { ...inputStyle, marginTop: 4 } },
-                        React.createElement("option", null, "De\u011Fil"),
-                        React.createElement("option", null, "Gebe"))),
-                React.createElement(FormField, { label: "G\u00FCnl\u00FCk S\u00FCt Verimi (L, opsiyonel)", value: dailyMilkLiters, onChange: setDailyMilkLiters, placeholder: "\u00D6rn. 25", type: "number" }))),
-            React.createElement("div", null,
-                React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "A\u00E7\u0131klama (opsiyonel)"),
-                React.createElement("textarea", { value: description, onChange: (e) => setDescription(e.target.value), placeholder: "Hayvan hakk\u0131nda ek bilgi, sa\u011Fl\u0131k ge\u00E7mi\u015Fi, \u00F6zel notlar...", rows: 3, style: { ...inputStyle, marginTop: 4, resize: "vertical", fontFamily: "Inter" } })),
-            React.createElement(FormField, { label: "Fiyat (TL)", value: price, onChange: setPrice, placeholder: "\u00D6rn. 92000", type: "number" }),
-            React.createElement("div", null,
-                React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } },
-                    "Foto\u011Fraf / Video (",
-                    media.length,
-                    "/6)"),
-                React.createElement("input", { id: "media-input", type: "file", accept: "image/*,video/*", multiple: true, onChange: handleFiles, style: { display: "none" }, disabled: mediaBusy || media.length >= 6 }),
-                React.createElement("label", { htmlFor: "media-input", style: { display: "block", marginTop: 4, border: `1.5px dashed ${COLORS.line}`, borderRadius: 12, padding: 16, textAlign: "center", fontFamily: "Inter", fontSize: 11.5, color: "#8A8776", cursor: media.length >= 6 ? "not-allowed" : "pointer" } }, mediaBusy ? "İşleniyor..." : "+ Fotoğraf veya video ekle (video max 8 MB)"),
-                mediaError && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11, marginTop: 4 } }, mediaError),
-                media.length > 0 && (React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 } }, media.map((m, i) => (React.createElement("div", { key: i, style: { position: "relative", width: 62, height: 62, borderRadius: 8, overflow: "hidden", border: `1px solid ${COLORS.line}`, background: "#000" } },
-                    m.type === "image" ? React.createElement("img", { src: m.dataUrl, style: { width: "100%", height: "100%", objectFit: "cover" } }) : React.createElement("video", { src: m.dataUrl, style: { width: "100%", height: "100%", objectFit: "cover" }, muted: true }),
-                    React.createElement("button", { onClick: () => removeMedia(i), style: { position: "absolute", top: 2, right: 2, background: "rgba(0,0,0,0.65)", color: "#fff", border: "none", borderRadius: "50%", width: 16, height: 16, fontSize: 10, cursor: "pointer", lineHeight: 1 } }, "\u2715"))))))),
-            err && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11.5 } }, err),
-            React.createElement("button", { onClick: submitListing, disabled: saving, style: btnPrimary }, saving ? "Yayınlanıyor..." : "İlanı Yayınla"))) : (React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } },
+                React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "Alt Kategori"),
+                React.createElement("select", { value: subCategory, onChange: (e) => setSubCategory(e.target.value), style: { ...inputStyle, marginTop: 4 } },
+                    React.createElement("option", { value: "" }, "Fark etmez"),
+                    subCategoryOptions.map(c => React.createElement("option", { key: c, value: c }, c)))),
             React.createElement(FormField, { label: "B\u00FCt\u00E7e (TL)", value: budget, onChange: setBudget, placeholder: "\u00D6rn. 100000", type: "number" }),
             React.createElement(FormField, { label: "Tercih edilen \u0131rk (opsiyonel)", value: prefBreed, onChange: setPrefBreed, placeholder: "\u00D6rn. Holstein" }),
             React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776" } }, "Yay\u0131nland\u0131\u011F\u0131nda bu ekran\u0131 kullanan di\u011Fer sat\u0131c\u0131lar talebi g\u00F6rebilir."),
@@ -19334,6 +19430,13 @@ function AvatarUpload({ me, setMe }) {
             const updatedMe = { ...me, avatarPhoto: dataUrl };
             await savePersonal("me", updatedMe);
             setMe(updatedMe);
+            // Avatar başka kullanıcılara da görünsün diye paylaşılan üye kaydına da yazılır.
+            const membersAll = await loadShared("members", []);
+            const idx = membersAll.findIndex(m => m.name === me.name && m.joinedAt === me.joinedAt);
+            if (idx > -1) {
+                membersAll[idx].avatarPhoto = dataUrl;
+                await saveShared("members", membersAll);
+            }
         }
         catch { /* sessizce geç */ }
         setBusy(false);
@@ -20867,6 +20970,103 @@ function LocationSettings({ me, setMe }) {
                     REGIONS.map(r => React.createElement("option", { key: r, value: r }, r)))),
             React.createElement("div", { style: { fontFamily: "Inter", fontSize: 9.5, color: "#8A8776" } }, "\u015Eehir/b\u00F6lge, Reels'te ve b\u00F6lge sohbetlerinde ilanlar\u0131n\u0131z\u0131n \u00F6nceli\u011Fini belirler.")),
         React.createElement("button", { onClick: () => setOpen(false), style: { background: "none", border: "none", color: COLORS.pineDeep, fontFamily: "Inter", fontWeight: 600, fontSize: 11, cursor: "pointer", padding: 0, marginTop: 8 } }, "Kapat \u2191")));
+}
+
+function LocationMap({ il, ilce }) {
+    if (!il)
+        return null;
+    const coords = TURKEY_CITY_COORDS[il];
+    const query = encodeURIComponent(ilce ? `${ilce}, ${il}, Türkiye` : `${il}, Türkiye`);
+    const mapsUrl = coords
+        ? `https://www.google.com/maps/search/?api=1&query=${coords[0]},${coords[1]}`
+        : `https://www.google.com/maps/search/?api=1&query=${query}`;
+    return (React.createElement("div", { style: { marginTop: 12, background: "#DFE8E1", borderRadius: 12, padding: 12, display: "flex", alignItems: "center", gap: 10 } },
+        React.createElement("div", { style: { width: 36, height: 36, borderRadius: "50%", background: COLORS.pineDeep, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 } },
+            React.createElement(MapPin, { size: 16, color: "#fff" })),
+        React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+            React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5, color: COLORS.ink } }, ilce ? `${il} / ${ilce}` : il),
+            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10, color: "#5A574C" } }, "Hayvan\u0131n bulundu\u011Fu konum")),
+        React.createElement("a", { href: mapsUrl, target: "_blank", rel: "noopener noreferrer", style: { background: COLORS.pineDeep, color: COLORS.white, textDecoration: "none", borderRadius: 8, padding: "8px 12px", fontFamily: "Inter", fontWeight: 600, fontSize: 11, whiteSpace: "nowrap" } }, "Haritada A\u00E7")));
+}
+
+function PublicProfileScreen({ targetName, members, listings, offers, reviews, me, requireAuth, onOpen, onOpenChat, onBack }) {
+    const theirListings = listings.filter(l => l.sellerName === targetName && l.status === "yayinda");
+    // Kayıtlı bir üye bulunamazsa (örn. örnek/demo veri), ilan üzerindeki
+    // bilgilerden en azından temel bir profil görünümü oluşturulur.
+    const fallbackListing = listings.find(l => l.sellerName === targetName);
+    const member = members.find(m => m.name === targetName) || (fallbackListing ? {
+        name: targetName, profileType: fallbackListing.profileType, documentStatus: "onaylandi",
+        companyName: null, companyIl: fallbackListing.sellerCity || null, companyIlce: null,
+        avatarPhoto: null, joinedAt: null,
+    } : null);
+    const completedSales = offers.filter(o => o.sellerName === targetName && o.status === "kabul").length;
+    const rating = sellerRating(reviews, targetName);
+    const memberSince = member && member.joinedAt ? new Date(member.joinedAt).toLocaleDateString("tr-TR", { month: "long", year: "numeric" }) : null;
+    const isMe = me && me.name === targetName;
+    const messageThem = () => {
+        if (!requireAuth())
+            return;
+        onOpenChat(convId(`profil-${targetName}`, me.name, targetName), targetName, "Profil");
+    };
+    if (!member) {
+        return (React.createElement("div", { style: { flex: 1, padding: "16px 18px" } },
+            React.createElement("button", { onClick: onBack, style: { background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, padding: 0, color: COLORS.pineDeep, fontFamily: "Inter", fontSize: 12.5, marginBottom: 14 } },
+                React.createElement(ChevronLeft, { size: 16 }),
+                " Geri"),
+            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12.5, color: "#8A8776" } }, "Bu kullan\u0131c\u0131 bulunamad\u0131.")));
+    }
+    return (React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "16px 18px 100px" } },
+        React.createElement("button", { onClick: onBack, style: { background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, padding: 0, color: COLORS.pineDeep, fontFamily: "Inter", fontSize: 12.5, marginBottom: 14 } },
+            React.createElement(ChevronLeft, { size: 16 }),
+            " Geri"),
+        React.createElement("div", { style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: 14, marginBottom: 12 } },
+            React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12 } },
+                member.avatarPhoto ? (React.createElement("img", { src: member.avatarPhoto, style: { width: 56, height: 56, borderRadius: "50%", objectFit: "cover" } })) : (React.createElement("div", { style: { width: 56, height: 56, borderRadius: "50%", background: COLORS.ochreSoft, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Fraunces", fontWeight: 600, color: "#7A5A1E", fontSize: 20 } }, member.name[0])),
+                React.createElement("div", { style: { flex: 1 } },
+                    React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 14.5 } }, member.profileType === "kurumsal" && member.companyName ? member.companyName : member.name),
+                    member.profileType === "kurumsal" && member.companyName && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776" } }, member.name),
+                    React.createElement("div", { style: { display: "flex", gap: 5, marginTop: 4, flexWrap: "wrap", alignItems: "center" } },
+                        React.createElement(Badge, { tone: member.profileType === "kurumsal" ? "pine" : member.profileType === "alici" ? "ochre" : "gray" }, PROFILE_TYPE_LABELS[member.profileType] || member.profileType),
+                        member.documentStatus === "onaylandi" && (React.createElement("span", { style: { display: "flex", alignItems: "center", gap: 3, fontFamily: "Inter", fontSize: 10.5, fontWeight: 600, color: COLORS.pineDeep } },
+                            React.createElement(VerifiedBadge, { size: 13 }),
+                            " ",
+                            member.profileType === "kurumsal" ? "Onaylı Kurumsal İşletme" : "Onaylı Bireysel Satıcı"))))),
+            React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 10, paddingTop: 10, borderTop: `1px solid ${COLORS.line}` } },
+                React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 5 } }, rating.count > 0 ? (React.createElement(React.Fragment, null,
+                    React.createElement(StarRow, { value: rating.avg, size: 13 }),
+                    React.createElement("span", { style: { fontFamily: "IBM Plex Mono", fontSize: 11.5, color: COLORS.ink, fontWeight: 600 } },
+                        rating.avg,
+                        " / 5"),
+                    React.createElement("span", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776" } },
+                        "(",
+                        rating.count,
+                        ")"))) : (React.createElement("span", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776" } }, "Hen\u00FCz de\u011Ferlendirme yok"))),
+                memberSince && React.createElement("span", { style: { fontFamily: "Inter", fontSize: 10, color: "#8A8776" } },
+                    "\u00DCye: ",
+                    memberSince))),
+        React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 14 } },
+            React.createElement(StatMini, { label: "Aktif \u0130lan", value: theirListings.length, icon: Flag }),
+            React.createElement(StatMini, { label: "Tamamlanan Sat\u0131\u015F", value: completedSales, icon: Star })),
+        member.profileType === "kurumsal" && (member.companyName || member.taxOffice) && (React.createElement("div", { style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 14, marginBottom: 14 } },
+            React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 12.5, color: COLORS.ink, marginBottom: 8 } }, "\u0130\u015Fletme Bilgileri"),
+            React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 5, fontFamily: "Inter", fontSize: 12 } },
+                member.companyName && React.createElement("div", { style: { display: "flex", justifyContent: "space-between" } },
+                    React.createElement("span", { style: { color: "#8A8776" } }, "Unvan"),
+                    React.createElement("span", { style: { fontWeight: 600 } }, member.companyName)),
+                member.companyIl && React.createElement("div", { style: { display: "flex", justifyContent: "space-between" } },
+                    React.createElement("span", { style: { color: "#8A8776" } }, "Konum"),
+                    React.createElement("span", { style: { fontWeight: 600 } },
+                        member.companyIl,
+                        member.companyIlce ? "/" + member.companyIlce : ""))))),
+        !isMe && (React.createElement("button", { onClick: messageThem, style: { ...btnPrimary, width: "100%", marginBottom: 16 } },
+            React.createElement(MessageCircle, { size: 13, style: { marginRight: 5 } }),
+            member.name,
+            " ile Mesajla\u015F")),
+        React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12.5, fontWeight: 600, marginBottom: 6 } },
+            "Yay\u0131ndaki \u0130lanlar\u0131 (",
+            theirListings.length,
+            ")"),
+        theirListings.length === 0 ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#8A8776" } }, "\u015Eu an yay\u0131nda ilan\u0131 yok.")) : (React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 } }, theirListings.map(item => React.createElement(ListingCard, { key: item.id, item: item, reviews: reviews, favorites: [], toggleFavorite: () => { }, onOpen: onOpen }))))));
 }
 
 </script>
