@@ -21896,12 +21896,14 @@ function AhirYonetimiTab({ me, animals, barns, refreshAll }) {
             const isOpen = expandedId === a.id;
             return (React.createElement("div", { key: a.id, style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 12, marginBottom: 8 } },
                 React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" } },
-                    React.createElement("div", null,
-                        React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 13 } },
-                            a.tag,
-                            a.breed ? ` · ${a.breed}` : ""),
-                        React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776" } }, a.barn ? `${a.barn}${a.stallName ? " / " + a.stallName : ""}` : "Bölme atanmamış")),
-                    React.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center" } },
+                    React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, minWidth: 0 } },
+                        React.createElement("div", { style: { width: 38, height: 38, borderRadius: 10, background: a.pregnant ? COLORS.ochreSoft : "#DCEAE0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0 } }, a.pregnant ? "🤰" : "🐄"),
+                        React.createElement("div", { style: { minWidth: 0 } },
+                            React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 13 } },
+                                a.tag,
+                                a.breed ? ` · ${a.breed}` : ""),
+                            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776" } }, a.barn ? `${a.barn}${a.stallName ? " / " + a.stallName : ""}` : "Bölme atanmamış"))),
+                    React.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center", flexShrink: 0 } },
                         checkupDays !== null && checkupDays <= 7 && checkupDays >= 0 && React.createElement(Badge, { tone: "ochre" },
                             "Kontrol ",
                             checkupDays === 0 ? "bugün" : `${checkupDays} gün sonra`),
@@ -22086,35 +22088,46 @@ function AsiTakvimiTab({ animals }) {
     animals.forEach(a => {
         if (a.nextCheckup) {
             const d = daysUntil(a.nextCheckup);
-            upcoming.push({ tag: a.tag, label: "Genel Kontrol", date: a.nextCheckup, days: d });
+            upcoming.push({ tag: a.tag, breed: a.breed, gender: a.gender, label: "Genel Kontrol", date: a.nextCheckup, days: d });
         }
     });
     upcoming.sort((a, b) => a.days - b.days);
+    const yaklasanlar = upcoming.filter(u => u.days >= 0);
+    const gecikenler = upcoming.filter(u => u.days < 0);
     return (React.createElement("div", null,
         React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#8A8776", marginBottom: 10 } }, "Yakla\u015Fan kontrol/a\u015F\u0131 tarihleri burada otomatik listelenir."),
-        upcoming.length === 0 && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Yakla\u015Fan bir kontrol yok."),
-        upcoming.map((u, i) => (React.createElement("div", { key: i, style: { background: u.days <= 3 ? "#F6E2DC" : u.days <= 7 ? COLORS.ochreSoft : COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 12, marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" } },
-            React.createElement("div", null,
+        React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16 } }, [["Toplam", upcoming.length, COLORS.pineDeep, "#DCEAE0"], ["Yaklaşan", yaklasanlar.length, "#7A5A1E", COLORS.ochreSoft], ["Geciken", gecikenler.length, "#8A3B2A", "#F6E2DC"]].map(([label, count, fg, bg]) => (React.createElement("div", { key: label, style: { background: bg, borderRadius: 12, padding: "10px 8px", textAlign: "center" } },
+            React.createElement("div", { style: { fontFamily: "IBM Plex Mono", fontWeight: 700, fontSize: 18, color: fg } }, count),
+            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10, color: fg, marginTop: 1 } }, label))))),
+        upcoming.length === 0 ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Yakla\u015Fan bir kontrol yok.")) : (upcoming.map((u, i) => (React.createElement("div", { key: i, style: { display: "flex", alignItems: "center", gap: 10, background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 12, marginBottom: 8 } },
+            React.createElement("div", { style: { width: 38, height: 38, borderRadius: 10, background: u.days < 0 ? "#F6E2DC" : u.days <= 7 ? COLORS.ochreSoft : "#DCEAE0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0 } }, "\uD83D\uDC89"),
+            React.createElement("div", { style: { flex: 1, minWidth: 0 } },
                 React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 13 } }, u.tag),
-                React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776" } },
-                    u.label,
-                    " \u2014 ",
-                    u.date)),
-            React.createElement(Badge, { tone: u.days < 0 ? "gray" : u.days <= 7 ? "ochre" : "pine" }, u.days < 0 ? "Gecikti" : u.days === 0 ? "Bugün" : `${u.days} gün`))))));
+                React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776" } },
+                    [u.breed, u.gender].filter(Boolean).join(" | "),
+                    u.breed || u.gender ? " · " : "",
+                    u.label)),
+            React.createElement(Badge, { tone: u.days < 0 ? "gray" : u.days <= 7 ? "ochre" : "pine" }, u.days < 0 ? "Gecikti" : u.days === 0 ? "Bugün" : `${u.days} gün`)))))));
 }
 
 function DogumTakvimiTab({ animals }) {
     const pregnant = animals.filter(a => a.pregnant && a.dueDate).map(a => ({ ...a, days: daysUntil(a.dueDate) })).sort((a, b) => a.days - b.days);
+    const soonCount = pregnant.filter(a => a.days >= 0 && a.days <= 14).length;
     return (React.createElement("div", null,
         React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#8A8776", marginBottom: 10 } }, "Gebe hayvanlar\u0131n tahmini do\u011Fum tarihleri (Ah\u0131r Y\u00F6netimi'nden i\u015Faretlenir)."),
-        pregnant.length === 0 && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Gebe olarak i\u015Faretlenmi\u015F hayvan yok."),
-        pregnant.map(a => (React.createElement("div", { key: a.id, style: { background: a.days <= 14 ? COLORS.ochreSoft : COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 12, marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" } },
-            React.createElement("div", null,
+        React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 } }, [["Gebe Hayvan", pregnant.length, COLORS.pineDeep, "#DCEAE0"], ["Bu Ay Beklenen", soonCount, "#7A5A1E", COLORS.ochreSoft]].map(([label, count, fg, bg]) => (React.createElement("div", { key: label, style: { background: bg, borderRadius: 12, padding: "10px 8px", textAlign: "center" } },
+            React.createElement("div", { style: { fontFamily: "IBM Plex Mono", fontWeight: 700, fontSize: 18, color: fg } }, count),
+            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10, color: fg, marginTop: 1 } }, label))))),
+        pregnant.length === 0 ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Gebe olarak i\u015Faretlenmi\u015F hayvan yok.")) : (pregnant.map(a => (React.createElement("div", { key: a.id, style: { display: "flex", alignItems: "center", gap: 10, background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 12, marginBottom: 8 } },
+            React.createElement("div", { style: { width: 38, height: 38, borderRadius: 10, background: a.days <= 14 ? COLORS.ochreSoft : "#DCEAE0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0 } }, "\uD83E\uDD30"),
+            React.createElement("div", { style: { flex: 1, minWidth: 0 } },
                 React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 13 } }, a.tag),
-                React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776" } },
+                React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776" } },
+                    [a.breed, a.gender].filter(Boolean).join(" | "),
+                    a.breed || a.gender ? " · " : "",
                     "Tahmini do\u011Fum: ",
                     a.dueDate)),
-            React.createElement(Badge, { tone: a.days <= 14 ? "ochre" : "pine" }, a.days < 0 ? "Gecikti" : `${a.days} gün`))))));
+            React.createElement(Badge, { tone: a.days <= 14 ? "ochre" : "pine" }, a.days < 0 ? "Gecikti" : `${a.days} gün`)))))));
 }
 
 function YemStokTab({ me, feedStock, refreshAll }) {
