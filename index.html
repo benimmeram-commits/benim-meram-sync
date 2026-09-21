@@ -21911,6 +21911,15 @@ function daysUntil(dateStr) {
     const diff = new Date(dateStr + "T00:00:00") - new Date(new Date().toDateString());
     return Math.round(diff / (1000 * 60 * 60 * 24));
 }
+function ageFromBirthDate(dateStr) {
+    if (!dateStr) return null;
+    const days = Math.floor((new Date() - new Date(dateStr + "T00:00:00")) / (1000 * 60 * 60 * 24));
+    if (days < 0) return null;
+    if (days < 60) return `${days} günlük`;
+    const months = Math.floor(days / 30.44);
+    if (months < 24) return `${months} aylık`;
+    return `${Math.floor(months / 12)} yaşında`;
+}
 
 function AhirYonetimiTab({ me, animals, barns, refreshAll }) {
     const [showAdd, setShowAdd] = useState(false);
@@ -21960,6 +21969,9 @@ function AnimalDetailEditor({ animal, barns, animals, refreshAll }) {
     const [dailyFeed, setDailyFeed] = useState(animal.dailyFeedKg || "");
     const [feedType, setFeedType] = useState(animal.feedType || "");
     const [treatName, setTreatName] = useState("");
+    const [vetNoteText, setVetNoteText] = useState("");
+    const [salePrice, setSalePrice] = useState("");
+    const [showSaleForm, setShowSaleForm] = useState(false);
     const [treatNote, setTreatNote] = useState("");
     const [medName, setMedName] = useState("");
     const [medDose, setMedDose] = useState("");
@@ -21977,7 +21989,22 @@ function AnimalDetailEditor({ animal, barns, animals, refreshAll }) {
         await refreshAll();
         setBusy(false);
     };
-    const setStatus = async (status) => { await update({ status, statusDate: new Date().toISOString().slice(0, 10) }); };
+    const setStatus = async (status) => {
+        if (status === "satildi") { setShowSaleForm(true); return; }
+        await update({ status, statusDate: new Date().toISOString().slice(0, 10) });
+    };
+    const confirmSale = async () => {
+        setBusy(true);
+        const saleDate = new Date().toISOString().slice(0, 10);
+        if (salePrice) {
+            const fin = await loadShared("farmFinance", []);
+            fin.push({ id: uid(), ownerName: animal.ownerName, type: "gelir", category: "Hayvan Satışı", amount: Number(salePrice), date: saleDate, note: `${animal.tag} satışı`, createdAt: Date.now() });
+            await saveShared("farmFinance", fin);
+        }
+        await update({ status: "satildi", statusDate: saleDate, salePrice: salePrice ? Number(salePrice) : null });
+        setShowSaleForm(false); setSalePrice("");
+        setBusy(false);
+    };
     const getActorName = async () => {
         const empSession = await loadPersonal("employeeSession", null);
         if (empSession) return `${empSession.name} (çalışan)`;
@@ -21999,6 +22026,13 @@ function AnimalDetailEditor({ animal, barns, animals, refreshAll }) {
         await update({ treatments: [...(animal.treatments || []), { name: treatName.trim(), note: treatNote.trim(), date: new Date().toISOString().slice(0, 10), performedBy }] });
         setTreatName("");
         setTreatNote("");
+    };
+    const addVetNote = async () => {
+        if (!vetNoteText.trim())
+            return;
+        const performedBy = await getActorName();
+        await update({ vetNotes: [...(animal.vetNotes || []), { note: vetNoteText.trim(), date: new Date().toISOString().slice(0, 10), performedBy }] });
+        setVetNoteText("");
     };
     const addMedication = async () => {
         if (!medName.trim())
@@ -22061,6 +22095,7 @@ function AnimalDetailEditor({ animal, barns, animals, refreshAll }) {
     (animal.vaccinations || []).forEach(v => timeline.push({ date: v.date, text: `Aşı: ${v.name}${v.performedBy ? ` — ${v.performedBy}` : ""}` }));
     (animal.treatments || []).forEach(t => timeline.push({ date: t.date, text: `Tedavi: ${t.name}${t.note ? " — " + t.note : ""}${t.performedBy ? ` (${t.performedBy})` : ""}` }));
     (animal.medications || []).forEach(m => timeline.push({ date: m.date, text: `İlaç: ${m.name}${m.dose ? ` (${m.dose})` : ""}${m.performedBy ? ` — ${m.performedBy}` : ""}` }));
+    (animal.vetNotes || []).forEach(n => timeline.push({ date: n.date, text: `Veteriner notu: ${n.note}${n.performedBy ? ` — ${n.performedBy}` : ""}` }));
     (animal.breedingNotes || []).forEach(n => timeline.push({ date: n.date, text: `Üreme notu: ${n.note}` }));
     (animal.births || []).forEach(b => timeline.push({ date: b.date, text: `Doğum: ${b.offspringTag} doğdu` }));
     timeline.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -22084,12 +22119,22 @@ function AnimalDetailEditor({ animal, barns, animals, refreshAll }) {
                 animal.birthDate && React.createElement("span", null,
                     React.createElement("span", { style: { color: "#8A8776" } }, "\u00B7 Do\u011Fum:"),
                     " ",
-                    animal.birthDate),
+                    animal.birthDate,
+                    ageFromBirthDate(animal.birthDate) ? ` (${ageFromBirthDate(animal.birthDate)})` : ""),
                 animal.motherTag && React.createElement("div", { style: { color: "#8A8776", marginTop: 2 } },
                     "Anne: ",
                     animal.motherTag)),
             React.createElement(Badge, { tone: animal.status === "satilik" ? "ochre" : animal.status === "oldu" ? "gray" : "pine" }, STATUS_LABELS[animal.status || "aktif"])),
         React.createElement("div", { style: { display: "flex", gap: 4, marginBottom: 10 } }, Object.entries(STATUS_LABELS).map(([k, l]) => (React.createElement("button", { key: k, onClick: () => setStatus(k), disabled: busy, style: { flex: 1, padding: "5px 4px", borderRadius: 7, border: `1px solid ${(animal.status || "aktif") === k ? COLORS.pineDeep : COLORS.line}`, background: (animal.status || "aktif") === k ? COLORS.pineDeep : COLORS.white, color: (animal.status || "aktif") === k ? COLORS.white : "#5A574C", fontFamily: "Inter", fontWeight: 600, fontSize: 9.5, cursor: "pointer" } }, l)))),
+        showSaleForm && React.createElement("div", { style: { background: COLORS.ochreSoft, borderRadius: 10, padding: 10, marginBottom: 10 } },
+            React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 11, color: "#7A5A1E", marginBottom: 6 } }, "Sat\u0131\u015F Fiyat\u0131 (opsiyonel \u2014 girilirse Gelir-Gider'e otomatik i\u015Flenir)"),
+            React.createElement("div", { style: { display: "flex", gap: 6 } },
+                React.createElement("input", { type: "number", value: salePrice, onChange: (e) => setSalePrice(e.target.value), placeholder: "\u00D6rn. 45000", style: { ...inputStyle, flex: 1, fontSize: 11.5, padding: "7px 9px" } }),
+                React.createElement("button", { onClick: confirmSale, disabled: busy, style: { ...btnPrimary, padding: "7px 12px", fontSize: 11.5 } }, "Onayla"),
+                React.createElement("button", { onClick: () => setShowSaleForm(false), style: { ...btnGhost, borderColor: COLORS.line, color: "#8A8776", padding: "7px 10px", fontSize: 11.5 } }, "\u2715"))),
+        animal.status === "satildi" && animal.salePrice && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776", marginBottom: 10 } },
+            "Sat\u0131\u015F fiyat\u0131: ",
+            TL(animal.salePrice)),
         React.createElement("div", { style: { display: "flex", gap: 4, marginBottom: 10, overflowX: "auto" } }, SUBTABS.map(([k, l]) => (React.createElement("button", { key: k, onClick: () => setSubTab(k), style: { flexShrink: 0, padding: "5px 9px", borderRadius: 7, border: "none", cursor: "pointer", fontFamily: "Inter", fontWeight: 600, fontSize: 10.5, background: subTab === k ? COLORS.pineDeep : COLORS.paper, color: subTab === k ? COLORS.white : "#5A574C" } }, l)))),
         subTab === "saglik" && (React.createElement("div", null,
             React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 11.5, marginBottom: 6 } }, "B\u00F6lme (Ta\u015F\u0131)"),
@@ -22105,6 +22150,16 @@ function AnimalDetailEditor({ animal, barns, animals, refreshAll }) {
             React.createElement("div", { style: { display: "flex", gap: 6 } },
                 React.createElement("input", { type: "date", value: nextCheckup, onChange: (e) => setNextCheckup(e.target.value), style: { ...inputStyle, flex: 1, fontSize: 11.5, padding: "7px 9px" } }),
                 React.createElement("button", { onClick: () => update({ nextCheckup }), disabled: busy, style: { ...btnGhost, borderColor: COLORS.line, color: COLORS.pineDeep, padding: "6px 10px", fontSize: 11 } }, "Kaydet")),
+            React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 11.5, margin: "12px 0 4px" } }, "Veteriner Notlar\u0131"),
+            (animal.vetNotes || []).length === 0 && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776", marginBottom: 4 } }, "Kay\u0131t yok."),
+            (animal.vetNotes || []).map((n, i) => (React.createElement("div", { key: i, style: { fontFamily: "Inter", fontSize: 11, marginBottom: 3 } },
+                React.createElement("span", { style: { color: "#8A8776" } }, n.date, ":"),
+                " ",
+                n.note,
+                n.performedBy ? ` (${n.performedBy})` : ""))),
+            React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 4 } },
+                React.createElement("input", { value: vetNoteText, onChange: (e) => setVetNoteText(e.target.value), placeholder: "Genel veteriner notu...", style: { ...inputStyle, flex: 1, fontSize: 11.5, padding: "7px 9px" } }),
+                React.createElement("button", { onClick: addVetNote, style: { ...btnGhost, borderColor: COLORS.line, color: COLORS.pineDeep, padding: "6px 10px", fontSize: 11 } }, "Ekle")),
             React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 11.5, margin: "12px 0 4px" } }, "Tedavi Ge\u00E7mi\u015Fi"),
             (animal.treatments || []).map((t, i) => (React.createElement("div", { key: i, style: { fontFamily: "Inter", fontSize: 11, marginBottom: 3 } },
                 React.createElement("span", { style: { color: "#8A8776" } },
@@ -22272,6 +22327,7 @@ function YemStokTab({ me, feedStock, refreshAll }) {
     const [amount, setAmount] = useState("");
     const [dailyUse, setDailyUse] = useState("");
     const [depot, setDepot] = useState("");
+    const [costPerTon, setCostPerTon] = useState("");
     const [saving, setSaving] = useState(false);
     const [orderTargetId, setOrderTargetId] = useState(null);
     const [orderDate, setOrderDate] = useState("");
@@ -22280,13 +22336,14 @@ function YemStokTab({ me, feedStock, refreshAll }) {
             return;
         setSaving(true);
         const all = await loadShared("farmFeedStock", []);
-        all.push({ id: uid(), ownerName: me.name, feedName: feedName.trim(), amountTons: Number(amount), dailyConsumptionTons: dailyUse ? Number(dailyUse) : 0, depot: depot.trim(), orders: [], updatedAt: Date.now() });
+        all.push({ id: uid(), ownerName: me.name, feedName: feedName.trim(), amountTons: Number(amount), dailyConsumptionTons: dailyUse ? Number(dailyUse) : 0, depot: depot.trim(), costPerTon: costPerTon ? Number(costPerTon) : null, orders: [], updatedAt: Date.now() });
         await saveShared("farmFeedStock", all);
         await refreshAll();
         setFeedName("");
         setAmount("");
         setDailyUse("");
         setDepot("");
+        setCostPerTon("");
         setShowAdd(false);
         setSaving(false);
     };
@@ -22295,12 +22352,13 @@ function YemStokTab({ me, feedStock, refreshAll }) {
         await saveShared("farmFeedStock", all.filter(f => f.id !== id));
         await refreshAll();
     };
-    const updateAmount = async (id, newAmount) => {
+    const updateAmount = async (id, delta) => {
         const all = await loadShared("farmFeedStock", []);
         const idx = all.findIndex(f => f.id === id);
         if (idx > -1) {
-            all[idx].amountTons = newAmount;
+            all[idx].amountTons = Math.max(0, all[idx].amountTons + delta);
             all[idx].updatedAt = Date.now();
+            all[idx].movements = [...(all[idx].movements || []), { date: new Date().toISOString().slice(0, 10), delta, note: delta > 0 ? "Giriş" : "Çıkış" }];
             await saveShared("farmFeedStock", all);
         }
         await refreshAll();
@@ -22344,13 +22402,25 @@ function YemStokTab({ me, feedStock, refreshAll }) {
                         f.dailyConsumptionTons > 0 && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776" } },
                             "G\u00FCnl\u00FCk t\u00FCketim: ",
                             f.dailyConsumptionTons,
-                            " ton")),
+                            " ton"),
+                        f.costPerTon && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776" } },
+                            "Stok de\u011Feri: ",
+                            TL(f.amountTons * f.costPerTon),
+                            ` (${TL(f.costPerTon)}/ton)`)),
                     React.createElement("button", { onClick: () => removeFeed(f.id), style: { background: "none", border: "none", color: COLORS.red, fontFamily: "Inter", fontSize: 10.5, cursor: "pointer" } }, "Sil")),
                 daysLeft !== null && (React.createElement("div", { style: { marginTop: 6 } },
                     React.createElement(Badge, { tone: daysLeft <= 10 ? "ochre" : "pine" }, daysLeft <= 0 ? "Tükendi" : `Yaklaşık ${daysLeft} gün sonra yem bitebilir`))),
                 React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" } },
-                    React.createElement("button", { onClick: () => updateAmount(f.id, Math.max(0, f.amountTons - 1)), style: { ...btnGhost, borderColor: COLORS.line, color: "#5A574C", padding: "5px 10px", fontSize: 11 } }, "\u22121 ton"),
-                    React.createElement("button", { onClick: () => updateAmount(f.id, f.amountTons + 1), style: { ...btnGhost, borderColor: COLORS.line, color: "#5A574C", padding: "5px 10px", fontSize: 11 } }, "+1 ton")),
+                    React.createElement("button", { onClick: () => updateAmount(f.id, -1), style: { ...btnGhost, borderColor: COLORS.line, color: "#5A574C", padding: "5px 10px", fontSize: 11 } }, "\u22121 ton"),
+                    React.createElement("button", { onClick: () => updateAmount(f.id, 1), style: { ...btnGhost, borderColor: COLORS.line, color: "#5A574C", padding: "5px 10px", fontSize: 11 } }, "+1 ton")),
+                (f.movements || []).length > 0 && React.createElement("div", { style: { marginTop: 6, fontFamily: "Inter", fontSize: 9.5, color: "#8A8776" } },
+                    "Son hareket: ",
+                    (f.movements || []).slice(-1)[0].note,
+                    " ",
+                    Math.abs((f.movements || []).slice(-1)[0].delta),
+                    " ton (",
+                    (f.movements || []).slice(-1)[0].date,
+                    ")"),
                 pendingOrder ? (React.createElement("div", { style: { marginTop: 8, background: COLORS.ochreSoft, borderRadius: 10, padding: 10 } },
                     React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#7A5A1E", marginBottom: 6 } },
                         "\uD83D\uDCE6 Sipari\u015F verildi \u2014 beklenen tarih: ",
@@ -22366,6 +22436,8 @@ function YemStokTab({ me, feedStock, refreshAll }) {
             React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 8 } },
                 React.createElement(FormField, { label: "Mevcut Miktar (ton)", value: amount, onChange: setAmount, type: "number", placeholder: "12" }),
                 React.createElement(FormField, { label: "G\u00FCnl\u00FCk T\u00FCketim (ton, ops.)", value: dailyUse, onChange: setDailyUse, type: "number", placeholder: "1.3" })),
+            React.createElement("div", { style: { marginTop: 8 } },
+                React.createElement(FormField, { label: "Ton Ba\u015F\u0131na Maliyet (TL, ops.)", value: costPerTon, onChange: setCostPerTon, type: "number", placeholder: "\u00D6rn. 8500" })),
             React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 8 } },
                 React.createElement("button", { onClick: addFeed, disabled: saving, style: btnPrimary }, saving ? "Ekleniyor..." : "Ekle"),
                 React.createElement("button", { onClick: () => setShowAdd(false), style: { ...btnGhost, borderColor: COLORS.line, color: "#8A8776" } }, "Vazge\u00E7")))) : (React.createElement("button", { onClick: () => setShowAdd(true), style: { ...btnGhost, width: "100%", justifyContent: "center", borderColor: COLORS.line, color: COLORS.pineDeep } }, "+ Yem Kayd\u0131 Ekle"))));
@@ -22382,10 +22454,32 @@ function CalisanlarTab({ me, employees, refreshAll }) {
     const [isKurumsal, setIsKurumsal] = useState(null);
     const [taskTargetId, setTaskTargetId] = useState(null);
     const [taskText, setTaskText] = useState("");
+    const [taskType, setTaskType] = useState("genel");
     const [shiftDrafts, setShiftDrafts] = useState({});
     const [leaveTargetId, setLeaveTargetId] = useState(null);
     const [leaveStart, setLeaveStart] = useState("");
     const [leaveEnd, setLeaveEnd] = useState("");
+    const [activityLogId, setActivityLogId] = useState(null);
+    const [activityLog, setActivityLog] = useState([]);
+    const [loadingLog, setLoadingLog] = useState(false);
+
+    const showActivityLog = async (emp) => {
+        if (activityLogId === emp.id) { setActivityLogId(null); return; }
+        setActivityLogId(emp.id);
+        setLoadingLog(true);
+        const animals = await loadShared("farmAnimals", []);
+        const mine = animals.filter(a => a.ownerName === me.name);
+        const entries = [];
+        mine.forEach(a => {
+            (a.vaccinations || []).forEach(v => { if ((v.performedBy || "").startsWith(emp.name)) entries.push({ date: v.date, text: `${a.tag}: Aşı — ${v.name}` }); });
+            (a.treatments || []).forEach(t => { if ((t.performedBy || "").startsWith(emp.name)) entries.push({ date: t.date, text: `${a.tag}: Tedavi — ${t.name}` }); });
+            (a.medications || []).forEach(m => { if ((m.performedBy || "").startsWith(emp.name)) entries.push({ date: m.date, text: `${a.tag}: İlaç — ${m.name}` }); });
+            (a.vetNotes || []).forEach(n => { if ((n.performedBy || "").startsWith(emp.name)) entries.push({ date: n.date, text: `${a.tag}: Not — ${n.note}` }); });
+        });
+        entries.sort((a, b) => new Date(b.date) - new Date(a.date));
+        setActivityLog(entries);
+        setLoadingLog(false);
+    };
     useEffect(() => {
         loadShared("members", []).then(all => {
             const owner = all.find(m => m.name === me.name);
@@ -22429,10 +22523,11 @@ function CalisanlarTab({ me, employees, refreshAll }) {
         const all = await loadShared("farmEmployees", []);
         const idx = all.findIndex(e => e.id === id);
         if (idx > -1) {
-            all[idx].tasks = [...(all[idx].tasks || []), { id: uid(), text: taskText.trim(), done: false, createdAt: Date.now() }];
+            all[idx].tasks = [...(all[idx].tasks || []), { id: uid(), text: taskText.trim(), type: taskType, done: false, createdAt: Date.now() }];
             await saveShared("farmEmployees", all);
         }
         setTaskText("");
+        setTaskType("genel");
         setTaskTargetId(null);
         await refreshAll();
     };
@@ -22541,11 +22636,19 @@ function CalisanlarTab({ me, employees, refreshAll }) {
                     (e.tasks || []).map(t => (React.createElement("label", { key: t.id, style: { display: "flex", alignItems: "center", gap: 6, fontFamily: "Inter", fontSize: 11, marginBottom: 3, textDecoration: t.done ? "line-through" : "none", color: t.done ? "#B7B4A6" : COLORS.ink } },
                         React.createElement("input", { type: "checkbox", checked: t.done, onChange: () => toggleTask(e.id, t.id) }),
                         " ",
+                        t.type === "temizlik" ? "\uD83E\uDDF9 " : t.type === "bakim" ? "\uD83D\uDD27 " : "",
                         t.text))),
-                    taskTargetId === e.id ? (React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 4 } },
-                        React.createElement("input", { value: taskText, onChange: (ev) => setTaskText(ev.target.value), placeholder: "G\u00F6rev tan\u0131m\u0131...", style: { ...inputStyle, flex: 1, fontSize: 11, padding: "6px 8px" } }),
-                        React.createElement("button", { onClick: () => assignTask(e.id), style: { ...btnGhost, borderColor: COLORS.line, color: COLORS.pineDeep, padding: "5px 9px", fontSize: 10.5 } }, "Ata"))) : (React.createElement("button", { onClick: () => setTaskTargetId(e.id), style: { background: "none", border: "none", color: COLORS.pineDeep, fontFamily: "Inter", fontSize: 10.5, cursor: "pointer", padding: 0, marginTop: 4 } }, "+ G\u00F6rev Ata"))),
-                React.createElement("button", { onClick: () => toggleActive(e.id), style: { ...btnGhost, borderColor: COLORS.line, color: e.active === false ? COLORS.pineDeep : "#8A8776", padding: "5px 10px", fontSize: 10.5, marginTop: 8 } }, e.active === false ? "Erişimi Yeniden Aç" : "Erişimi Geçici Kapat")));
+                    taskTargetId === e.id ? (React.createElement("div", null,
+                        React.createElement("div", { style: { display: "flex", gap: 4, marginBottom: 4 } }, [["genel", "Genel"], ["temizlik", "Temizlik"], ["bakim", "Bak\u0131m"]].map(([k, l]) => (React.createElement("button", { key: k, onClick: () => setTaskType(k), style: { flex: 1, padding: "4px", borderRadius: 6, border: `1px solid ${taskType === k ? COLORS.pineDeep : COLORS.line}`, background: taskType === k ? COLORS.pineDeep : COLORS.white, color: taskType === k ? COLORS.white : "#5A574C", fontFamily: "Inter", fontSize: 10, cursor: "pointer" } }, l)))),
+                        React.createElement("div", { style: { display: "flex", gap: 6 } },
+                            React.createElement("input", { value: taskText, onChange: (ev) => setTaskText(ev.target.value), placeholder: "G\u00F6rev tan\u0131m\u0131...", style: { ...inputStyle, flex: 1, fontSize: 11, padding: "6px 8px" } }),
+                            React.createElement("button", { onClick: () => assignTask(e.id), style: { ...btnGhost, borderColor: COLORS.line, color: COLORS.pineDeep, padding: "5px 9px", fontSize: 10.5 } }, "Ata")))) : (React.createElement("button", { onClick: () => setTaskTargetId(e.id), style: { background: "none", border: "none", color: COLORS.pineDeep, fontFamily: "Inter", fontSize: 10.5, cursor: "pointer", padding: 0, marginTop: 4 } }, "+ G\u00F6rev Ata"))),
+                React.createElement("button", { onClick: () => toggleActive(e.id), style: { ...btnGhost, borderColor: COLORS.line, color: e.active === false ? COLORS.pineDeep : "#8A8776", padding: "5px 10px", fontSize: 10.5, marginTop: 8 } }, e.active === false ? "Erişimi Yeniden Aç" : "Erişimi Geçici Kapat"),
+                React.createElement("button", { onClick: () => showActivityLog(e), style: { ...btnGhost, borderColor: COLORS.line, color: COLORS.pineDeep, padding: "5px 10px", fontSize: 10.5, marginTop: 6, marginLeft: 6 } }, "\u0130\u015Flem Ge\u00E7mi\u015Fi"),
+                activityLogId === e.id && React.createElement("div", { style: { marginTop: 8, paddingTop: 8, borderTop: `1px solid ${COLORS.line}` } },
+                    loadingLog ? React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776" } }, "Y\u00FCkleniyor...") : activityLog.length === 0 ? React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776" } }, "Bu \u00E7al\u0131\u015Fan\u0131n kayd\u0131 bulunan bir i\u015Flemi yok.") : activityLog.map((l, i) => (React.createElement("div", { key: i, style: { fontFamily: "Inter", fontSize: 10.5, marginBottom: 3 } },
+                        React.createElement("span", { style: { color: "#8A8776" } }, l.date, ": "),
+                        l.text))))));
         }),
         showAdd ? (React.createElement("div", { style: { background: COLORS.paper, borderRadius: 12, padding: 12 } },
             React.createElement(FormField, { label: "\u00C7al\u0131\u015Fan Ad\u0131", value: name, onChange: setName, placeholder: "Ad Soyad" }),
@@ -23767,6 +23870,7 @@ function MalzemeStokTab({ me, refreshAll }) {
         if (idx > -1) {
             all[idx].amount = Math.max(0, all[idx].amount + delta);
             all[idx].updatedAt = Date.now();
+            all[idx].movements = [...(all[idx].movements || []), { date: new Date().toISOString().slice(0, 10), delta, note: delta > 0 ? "Giriş" : "Çıkış" }];
             await saveShared("farmSupplyStock", all);
         }
         await refresh();
@@ -23816,6 +23920,16 @@ function MalzemeStokTab({ me, refreshAll }) {
                 React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 8 } },
                     React.createElement("button", { onClick: () => adjustAmount(i.id, -1), style: { ...btnGhost, borderColor: COLORS.line, color: "#5A574C", padding: "5px 10px", fontSize: 11 } }, "\u22121"),
                     React.createElement("button", { onClick: () => adjustAmount(i.id, 1), style: { ...btnGhost, borderColor: COLORS.line, color: "#5A574C", padding: "5px 10px", fontSize: 11 } }, "+1")),
+                (i.movements || []).length > 0 && React.createElement("div", { style: { marginTop: 6, fontFamily: "Inter", fontSize: 9.5, color: "#8A8776" } },
+                    "Son hareket: ",
+                    (i.movements || []).slice(-1)[0].note,
+                    " ",
+                    Math.abs((i.movements || []).slice(-1)[0].delta),
+                    " ",
+                    i.unit,
+                    " (",
+                    (i.movements || []).slice(-1)[0].date,
+                    ")"),
                 pendingOrder ? (React.createElement("div", { style: { marginTop: 8, background: COLORS.ochreSoft, borderRadius: 10, padding: 10 } },
                     React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#7A5A1E", marginBottom: 6 } },
                         "\uD83D\uDCE6 Sipari\u015F verildi \u2014 beklenen tarih: ",
