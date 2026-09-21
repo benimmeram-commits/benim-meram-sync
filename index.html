@@ -17385,6 +17385,10 @@ function Eye({ size = 16, color = "currentColor" }) {
         React.createElement("path", { d: "M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z" }),
         React.createElement("circle", { cx: "12", cy: "12", r: "3" }));
 }
+function Expand({ size = 16, color = "currentColor" }) {
+    return React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: color, strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" },
+        React.createElement("path", { d: "M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3" }));
+}
 function IconMenu({ size = 20, color }) {
     return React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: color, strokeWidth: "2", strokeLinecap: "round" },
         React.createElement("path", { d: "M4 7h16M4 12h16M4 17h16" }));
@@ -17492,6 +17496,93 @@ const TURKEY_CITY_COORDS = {
 // Bilinen büyük vergi daireleri — RESMİ/EKSİKSİZ BİR KAYIT DEĞİLDİR, sadece
 // kayıt formunda öneri (autocomplete) olarak kullanılır. Kullanıcı serbestçe
 // başka bir isim yazabilir.
+// Not: Bu liste elden geldiğince eksiksiz tutulmaya çalışılmıştır ancak
+// idari sınır değişiklikleri nedeniyle %100 güncel/resmi olduğu garanti edilmez.
+const TURKEY_DISTRICTS = {
+  "Adana": ["Seyhan", "Yüreğir", "Çukurova", "Sarıçam", "Ceyhan", "Kozan", "İmamoğlu", "Karaisalı", "Karataş", "Pozantı", "Aladağ", "Feke", "Saimbeyli", "Tufanbeyli", "Yumurtalık"],
+  "Adıyaman": ["Merkez", "Kahta", "Besni", "Gölbaşı", "Gerger", "Çelikhan", "Samsat", "Sincik", "Tut"],
+  "Afyonkarahisar": ["Merkez", "Sandıklı", "Emirdağ", "Dinar", "Bolvadin", "Şuhut", "İhsaniye", "Sinanpaşa", "Çay", "Dazkırı", "Sultandağı", "Bayat", "İscehisar", "Başmakçı", "Evciler", "Hocalar", "Kızılören", "Çobanlar"],
+  "Ağrı": ["Merkez", "Doğubayazıt", "Patnos", "Diyadin", "Eleşkirt", "Taşlıçay", "Tutak", "Hamur"],
+  "Amasya": ["Merkez", "Merzifon", "Suluova", "Taşova", "Gümüşhacıköy", "Göynücek", "Hamamözü"],
+  "Ankara": ["Çankaya", "Keçiören", "Yenimahalle", "Mamak", "Etimesgut", "Sincan", "Altındağ", "Pursaklar", "Gölbaşı", "Polatlı", "Kahramankazan", "Elmadağ", "Beypazarı", "Nallıhan", "Çubuk", "Akyurt", "Ayaş", "Bala", "Evren", "Güdül", "Haymana", "Kalecik", "Kızılcahamam", "Şereflikoçhisar"],
+  "Antalya": ["Muratpaşa", "Kepez", "Konyaaltı", "Alanya", "Manavgat", "Serik", "Aksu", "Döşemealtı", "Kumluca", "Finike", "Kaş", "Demre", "Elmalı", "Korkuteli", "Gazipaşa", "Akseki", "Gündoğmuş", "İbradı"],
+  "Artvin": ["Merkez", "Hopa", "Borçka", "Arhavi", "Şavşat", "Yusufeli", "Ardanuç", "Murgul"],
+  "Aydın": ["Efeler", "Nazilli", "Söke", "Kuşadası", "Didim", "İncirliova", "Germencik", "Çine", "Koçarlı", "Karpuzlu", "Sultanhisar", "Bozdoğan", "Karacasu", "Buharkent", "Yenipazar", "Köşk"],
+  "Balıkesir": ["Altıeylül", "Karesi", "Bandırma", "Edremit", "Gönen", "Burhaniye", "Ayvalık", "Susurluk", "Bigadiç", "Erdek", "Sındırgı", "Dursunbey", "Havran", "İvrindi", "Manyas", "Savaştepe", "Kepsut", "Gömeç", "Marmara", "Balya"],
+  "Bilecik": ["Merkez", "Bozüyük", "Osmaneli", "Söğüt", "Gölpazarı", "Pazaryeri", "İnhisar", "Yenipazar"],
+  "Bingöl": ["Merkez", "Genç", "Solhan", "Karlıova", "Kiğı", "Adaklı", "Yayladere", "Yedisu"],
+  "Bitlis": ["Merkez", "Tatvan", "Ahlat", "Güroymak", "Hizan", "Mutki", "Adilcevaz"],
+  "Bolu": ["Merkez", "Gerede", "Mudurnu", "Göynük", "Mengen", "Seben", "Kıbrıscık", "Dörtdivan", "Yeniçağa"],
+  "Burdur": ["Merkez", "Bucak", "Gölhisar", "Yeşilova", "Ağlasun", "Çeltikçi", "Karamanlı", "Tefenni", "Altınyayla", "Çavdır", "Kemer"],
+  "Bursa": ["Osmangazi", "Nilüfer", "Yıldırım", "İnegöl", "Gemlik", "Mudanya", "Gürsu", "Kestel", "Mustafakemalpaşa", "Karacabey", "Orhangazi", "İznik", "Yenişehir", "Orhaneli", "Keles", "Büyükorhan", "Harmancık"],
+  "Çanakkale": ["Merkez", "Biga", "Çan", "Gelibolu", "Ezine", "Ayvacık", "Bayramiç", "Lapseki", "Yenice", "Gökçeada", "Bozcaada", "Eceabat"],
+  "Çankırı": ["Merkez", "Çerkeş", "Ilgaz", "Orta", "Şabanözü", "Kurşunlu", "Kızılırmak", "Yapraklı", "Atkaracalar", "Bayramören", "Eldivan", "Korgun"],
+  "Çorum": ["Merkez", "Sungurlu", "Osmancık", "Alaca", "İskilip", "Kargı", "Bayat", "Mecitözü", "Ortaköy", "Uğurludağ", "Boğazkale", "Dodurga", "Laçin", "Oğuzlar"],
+  "Denizli": ["Pamukkale", "Merkezefendi", "Çivril", "Tavas", "Acıpayam", "Buldan", "Sarayköy", "Honaz", "Çal", "Kale", "Bekilli", "Baklan", "Serinhisar", "Güney", "Çameli", "Bozkurt", "Beyağaç", "Babadağ"],
+  "Diyarbakır": ["Bağlar", "Kayapınar", "Yenişehir", "Sur", "Ergani", "Bismil", "Silvan", "Çınar", "Dicle", "Çermik", "Kulp", "Lice", "Hani", "Eğil", "Hazro", "Kocaköy", "Çüngüş"],
+  "Edirne": ["Merkez", "Keşan", "Uzunköprü", "İpsala", "Havsa", "Meriç", "Süloğlu", "Enez", "Lalapaşa"],
+  "Elazığ": ["Merkez", "Kovancılar", "Karakoçan", "Palu", "Baskil", "Maden", "Sivrice", "Ağın", "Arıcak", "Alacakaya", "Keban"],
+  "Erzincan": ["Merkez", "Tercan", "Üzümlü", "Refahiye", "Çayırlı", "İliç", "Kemah", "Kemaliye", "Otlukbeli"],
+  "Erzurum": ["Yakutiye", "Palandöken", "Aziziye", "Horasan", "Oltu", "Pasinler", "Şenkaya", "Karayazı", "Hınıs", "Çat", "İspir", "Narman", "Tekman", "Tortum", "Uzundere", "Karaçoban", "Köprüköy", "Olur", "Pazaryolu", "Aşkale"],
+  "Eskişehir": ["Odunpazarı", "Tepebaşı", "Sivrihisar", "Çifteler", "Mahmudiye", "Alpu", "Beylikova", "İnönü", "Mihalıççık", "Seyitgazi", "Günyüzü", "Han", "Sarıcakaya", "Mihalgazi"],
+  "Gaziantep": ["Şahinbey", "Şehitkamil", "Nizip", "İslahiye", "Nurdağı", "Araban", "Oğuzeli", "Yavuzeli", "Karkamış"],
+  "Giresun": ["Merkez", "Bulancak", "Espiye", "Tirebolu", "Görele", "Şebinkarahisar", "Alucra", "Keşap", "Dereli", "Piraziz", "Eynesil", "Yağlıdere", "Doğankent", "Güce", "Çamoluk", "Çanakçı"],
+  "Gümüşhane": ["Merkez", "Kelkit", "Şiran", "Kürtün", "Torul", "Köse"],
+  "Hakkari": ["Merkez", "Yüksekova", "Şemdinli", "Çukurca"],
+  "Hatay": ["Antakya", "İskenderun", "Defne", "Samandağ", "Dörtyol", "Kırıkhan", "Reyhanlı", "Arsuz", "Erzin", "Belen", "Altınözü", "Payas", "Yayladağı", "Hassa", "Kumlu"],
+  "Isparta": ["Merkez", "Yalvaç", "Eğirdir", "Şarkikaraağaç", "Gelendost", "Keçiborlu", "Senirkent", "Uluborlu", "Sütçüler", "Aksu", "Atabey", "Gönen", "Yenişarbademli"],
+  "Mersin": ["Yenişehir", "Mezitli", "Toroslar", "Akdeniz", "Tarsus", "Erdemli", "Silifke", "Anamur", "Mut", "Gülnar", "Bozyazı", "Aydıncık", "Çamlıyayla"],
+  "İstanbul": ["Kadıköy", "Üsküdar", "Beşiktaş", "Şişli", "Bakırköy", "Bahçelievler", "Ataşehir", "Maltepe", "Kartal", "Pendik", "Tuzla", "Beykoz", "Sarıyer", "Zeytinburnu", "Fatih", "Eyüpsultan", "Gaziosmanpaşa", "Bağcılar", "Bayrampaşa", "Esenler", "Güngören", "Küçükçekmece", "Avcılar", "Beylikdüzü", "Esenyurt", "Büyükçekmece", "Çatalca", "Silivri", "Arnavutköy", "Başakşehir", "Sultangazi", "Sancaktepe", "Sultanbeyli", "Çekmeköy", "Ümraniye", "Şile", "Adalar"],
+  "İzmir": ["Konak", "Karşıyaka", "Bornova", "Buca", "Bayraklı", "Çiğli", "Gaziemir", "Balçova", "Narlıdere", "Karabağlar", "Torbalı", "Menemen", "Aliağa", "Ödemiş", "Tire", "Bergama", "Kemalpaşa", "Menderes", "Selçuk", "Urla", "Foça", "Dikili", "Kınık", "Kiraz", "Bayındır", "Beydağ", "Çeşme", "Karaburun", "Seferihisar"],
+  "Kars": ["Merkez", "Sarıkamış", "Kağızman", "Selim", "Digor", "Susuz", "Arpaçay", "Akyaka"],
+  "Kastamonu": ["Merkez", "Tosya", "Taşköprü", "İnebolu", "Cide", "Araç", "Devrekani", "Küre", "Azdavay", "Daday", "Hanönü", "Doğanyurt", "Şenpazar", "Pınarbaşı", "Abana", "Bozkurt", "Çatalzeytin", "Ağlı", "İhsangazi", "Seydiler"],
+  "Kayseri": ["Melikgazi", "Kocasinan", "Talas", "Develi", "Yahyalı", "İncesu", "Bünyan", "Pınarbaşı", "Sarıoğlan", "Sarız", "Felahiye", "Tomarza", "Yeşilhisar", "Akkışla", "Özvatan", "Hacılar"],
+  "Kırklareli": ["Merkez", "Lüleburgaz", "Babaeski", "Vize", "Pınarhisar", "Demirköy", "Pehlivanköy", "Kofçaz"],
+  "Kırşehir": ["Merkez", "Kaman", "Mucur", "Çiçekdağı", "Boztepe", "Akpınar", "Akçakent"],
+  "Kocaeli": ["İzmit", "Gebze", "Darıca", "Körfez", "Gölcük", "Derince", "Çayırova", "Kartepe", "Başiskele", "Karamürsel", "Kandıra", "Dilovası"],
+  "Konya": ["Selçuklu", "Meram", "Karatay", "Ereğli", "Akşehir", "Beyşehir", "Çumra", "Seydişehir", "Ilgın", "Cihanbeyli", "Kulu", "Karapınar", "Bozkır", "Doğanhisar", "Kadınhanı", "Sarayönü", "Yunak", "Hüyük", "Emirgazi", "Halkapınar", "Altınekin", "Derbent", "Güneysınır", "Hadim", "Taşkent", "Tuzlukçu", "Çeltik", "Ahırlı", "Akören", "Derebucak", "Yalıhüyük"],
+  "Kütahya": ["Merkez", "Tavşanlı", "Simav", "Gediz", "Emet", "Altıntaş", "Domaniç", "Hisarcık", "Şaphane", "Aslanapa", "Çavdarhisar", "Pazarlar"],
+  "Malatya": ["Battalgazi", "Yeşilyurt", "Doğanşehir", "Akçadağ", "Darende", "Hekimhan", "Pütürge", "Arapgir", "Kale", "Kuluncak", "Yazıhan", "Arguvan", "Doğanyol"],
+  "Manisa": ["Şehzadeler", "Yunusemre", "Akhisar", "Turgutlu", "Salihli", "Soma", "Alaşehir", "Saruhanlı", "Kırkağaç", "Demirci", "Gördes", "Kula", "Sarıgöl", "Ahmetli", "Selendi", "Köprübaşı", "Golmarmara"],
+  "Kahramanmaraş": ["Onikişubat", "Dulkadiroğlu", "Elbistan", "Afşin", "Türkoğlu", "Pazarcık", "Göksun", "Andırın", "Çağlayancerit", "Ekinözü", "Nurhak"],
+  "Mardin": ["Artuklu", "Kızıltepe", "Midyat", "Nusaybin", "Derik", "Mazıdağı", "Ömerli", "Savur", "Dargeçit", "Yeşilli"],
+  "Muğla": ["Menteşe", "Bodrum", "Fethiye", "Marmaris", "Milas", "Ortaca", "Dalaman", "Datça", "Köyceğiz", "Ula", "Yatağan", "Seydikemer", "Kavaklıdere"],
+  "Muş": ["Merkez", "Bulanık", "Malazgirt", "Varto", "Korkut", "Hasköy", "Hacıbayram"],
+  "Nevşehir": ["Merkez", "Ürgüp", "Avanos", "Derinkuyu", "Gülşehir", "Hacıbektaş", "Acıgöl", "Kozaklı"],
+  "Niğde": ["Merkez", "Bor", "Çiftlik", "Ulukışla", "Altunhisar", "Çamardı"],
+  "Ordu": ["Altınordu", "Ünye", "Fatsa", "Perşembe", "Kumru", "Korgan", "Akkuş", "Aybastı", "Gölköy", "Mesudiye", "Gülyalı", "Gürgentepe", "İkizce", "Çamaş", "Çatalpınar", "Çaybaşı", "Kabadüz", "Kabataş", "Ulubey"],
+  "Rize": ["Merkez", "Çayeli", "Ardeşen", "Pazar", "Fındıklı", "Güneysu", "Kalkandere", "İyidere", "Derepazarı", "Çamlıhemşin", "İkizdere", "Hemşin"],
+  "Sakarya": ["Adapazarı", "Serdivan", "Erenler", "Arifiye", "Akyazı", "Hendek", "Karasu", "Geyve", "Ferizli", "Söğütlü", "Pamukova", "Kaynarca", "Taraklı", "Kocaali", "Karapürçek", "Sapanca"],
+  "Samsun": ["İlkadım", "Atakum", "Canik", "Bafra", "Çarşamba", "Terme", "Vezirköprü", "Havza", "Kavak", "Alaçam", "Salıpazarı", "Asarcık", "Ayvacık", "Tekkeköy", "Ondokuzmayıs", "Ladik", "Yakakent"],
+  "Siirt": ["Merkez", "Kurtalan", "Baykan", "Pervari", "Şirvan", "Eruh", "Tillo"],
+  "Sinop": ["Merkez", "Boyabat", "Ayancık", "Gerze", "Durağan", "Türkeli", "Erfelek", "Dikmen", "Saraydüzü"],
+  "Sivas": ["Merkez", "Şarkışla", "Suşehri", "Yıldızeli", "Zara", "Gemerek", "Kangal", "Gürün", "Divriği", "İmranlı", "Koyulhisar", "Hafik", "Akıncılar", "Altınyayla", "Doğanşar", "Gölova", "Ulaş"],
+  "Tekirdağ": ["Süleymanpaşa", "Çorlu", "Çerkezköy", "Malkara", "Muratlı", "Saray", "Marmaraereğlisi", "Hayrabolu", "Kapaklı", "Şarköy"],
+  "Tokat": ["Merkez", "Erbaa", "Turhal", "Zile", "Niksar", "Reşadiye", "Almus", "Artova", "Başçiftlik", "Pazar", "Sulusaray", "Yeşilyurt"],
+  "Trabzon": ["Ortahisar", "Akçaabat", "Yomra", "Of", "Vakfıkebir", "Araklı", "Sürmene", "Maçka", "Arsin", "Beşikdüzü", "Düzköy", "Tonya", "Çarşıbaşı", "Şalpazarı", "Hayrat", "Köprübaşı", "Çaykara", "Dernekpazarı"],
+  "Tunceli": ["Merkez", "Pertek", "Çemişgezek", "Hozat", "Ovacık", "Mazgirt", "Pülümür", "Nazımiye"],
+  "Şanlıurfa": ["Haliliye", "Eyyübiye", "Karaköprü", "Siverek", "Viranşehir", "Akçakale", "Suruç", "Birecik", "Ceylanpınar", "Bozova", "Halfeti", "Hilvan", "Harran"],
+  "Uşak": ["Merkez", "Banaz", "Eşme", "Sivaslı", "Ulubey", "Karahallı"],
+  "Van": ["İpekyolu", "Edremit", "Tuşba", "Erciş", "Özalp", "Muradiye", "Gürpınar", "Çaldıran", "Başkale", "Gevaş", "Saray", "Bahçesaray", "Çatak", "Katak"],
+  "Yozgat": ["Merkez", "Sorgun", "Akdağmadeni", "Boğazlıyan", "Çayıralan", "Şefaatli", "Yerköy", "Çekerek", "Sarıkaya", "Kadışehri", "Aydıncık", "Saraykent", "Yenifakılı", "Çandır"],
+  "Zonguldak": ["Merkez", "Ereğli", "Çaycuma", "Devrek", "Alaplı", "Kilimli", "Kozlu", "Gökçebey"],
+  "Aksaray": ["Merkez", "Ortaköy", "Eskil", "Ağaçören", "Gülağaç", "Güzelyurt", "Sarıyahşi"],
+  "Bayburt": ["Merkez", "Demirözü", "Aydıntepe"],
+  "Karaman": ["Merkez", "Ermenek", "Sarıveliler", "Ayrancı", "Başyayla", "Kazımkarabekir"],
+  "Kırıkkale": ["Merkez", "Keskin", "Delice", "Sulakyurt", "Bahşili", "Balışeyh", "Çelebi", "Karakeçili", "Yahşihan"],
+  "Batman": ["Merkez", "Kozluk", "Sason", "Beşiri", "Gercüş", "Hasankeyf"],
+  "Şırnak": ["Merkez", "Cizre", "Silopi", "İdil", "Uludere", "Beytüşşebap", "Güçlükonak"],
+  "Bartın": ["Merkez", "Ulus", "Amasra", "Kurucaşile"],
+  "Ardahan": ["Merkez", "Göle", "Çıldır", "Posof", "Hanak", "Damal"],
+  "Iğdır": ["Merkez", "Tuzluca", "Aralık", "Karakoyunlu"],
+  "Yalova": ["Merkez", "Çınarcık", "Altınova", "Termal", "Çiftlikköy", "Armutlu"],
+  "Karabük": ["Merkez", "Safranbolu", "Eskipazar", "Yenice", "Ovacık", "Eflani"],
+  "Kilis": ["Merkez", "Musabeyli", "Elbeyli", "Polateli"],
+  "Osmaniye": ["Merkez", "Kadirli", "Düziçi", "Bahçe", "Toprakkale", "Sumbas", "Hasanbeyli"],
+  "Düzce": ["Merkez", "Akçakoca", "Kaynaşlı", "Gölyaka", "Yığılca", "Cumayeri", "Gümüşova", "Çilimli"],
+};
+
+
 const VERGI_DAIRELERI_ORNEK = {
     "İstanbul": ["Boğaziçi Kurumlar Vergi Dairesi", "Beyoğlu Vergi Dairesi", "Kadıköy Vergi Dairesi", "Üsküdar Vergi Dairesi", "Şişli Vergi Dairesi", "Bakırköy Vergi Dairesi"],
     "Ankara": ["Çankaya Vergi Dairesi", "Ulus Vergi Dairesi", "Dikmen Vergi Dairesi", "Keçiören Vergi Dairesi"],
@@ -18290,6 +18381,26 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [viewedProfileName, setViewedProfileName] = useState(null);
     const openProfile = (name) => { setViewedProfileName(name); setScreen("publicProfile"); };
+
+    // Ana 5 sekme arasında (Ana Sayfa/Reels/İlan Ver/Sohbet/Profil) sağa/sola
+    // kaydırarak geçiş — sadece bu 5 ana ekrandayken aktif.
+    useEffect(() => {
+        const MAIN_TABS = ["home", "reels", "create", "chatHub", "profile"];
+        let startX = null;
+        const onStart = (e) => { if (MAIN_TABS.includes(screen)) startX = e.touches[0].clientX; };
+        const onEnd = (e) => {
+            if (startX === null || !MAIN_TABS.includes(screen)) return;
+            const dx = e.changedTouches[0].clientX - startX;
+            startX = null;
+            if (Math.abs(dx) < 60) return;
+            const idx = MAIN_TABS.indexOf(screen);
+            if (dx < 0 && idx < MAIN_TABS.length - 1) setScreen(MAIN_TABS[idx + 1]);
+            else if (dx > 0 && idx > 0) setScreen(MAIN_TABS[idx - 1]);
+        };
+        window.addEventListener("touchstart", onStart, { passive: true });
+        window.addEventListener("touchend", onEnd, { passive: true });
+        return () => { window.removeEventListener("touchstart", onStart); window.removeEventListener("touchend", onEnd); };
+    }, [screen]);
     const runSeed = async () => {
         setSeedState({ loading: true, error: null, fallback: false });
         const result = await seedSampleListings(refreshAll);
@@ -18299,7 +18410,13 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
         .filter(l => l.mainCategory === tab)
         .filter(l => subTab === "tumu" || l.subCategory === subTab)
         .filter(l => breedTab === "tumu" || l.breed === breedTab)
-        .filter(l => l.status !== "kaldirildi");
+        .filter(l => l.status !== "kaldirildi")
+        .slice()
+        .sort((a, b) => {
+            // Aynı şehir/bölgedeki ilanlar öne çıkar (kullanıcının konumuna göre).
+            const score = (l) => (me && me.city && l.sellerCity === me.city ? 2 : me && me.region && l.sellerRegion === me.region ? 1 : 0);
+            return score(b) - score(a);
+        });
     const open = (item) => {
         setSelected(item);
         setScreen("detail");
@@ -18353,7 +18470,7 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
                         "Hata: ",
                         seedState.error)),
                     seedState.fallback && (React.createElement("div", { style: { color: COLORS.ochre, fontSize: 10.5, marginTop: 6, maxWidth: 260, marginLeft: "auto", marginRight: "auto" } }, "Not: kal\u0131c\u0131 depolama \u015Fu an bu ortamda \u00E7al\u0131\u015Fm\u0131yor, veriler bu oturum i\u00E7in ge\u00E7ici olarak tutuluyor (sayfa tamamen yenilenirse silinir)."))))) : (React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 } }, filtered.map(item => React.createElement(ListingCard, { key: item.id, item: item, reviews: reviews, favorites: favorites, toggleFavorite: toggleFavorite, onOpen: open }))))))),
-        screen === "detail" && selected && (React.createElement(DetailScreen, { item: listings.find(l => l.id === selected.id) || selected, me: me, requireAuth: requireAuth, offers: offers, reviews: reviews, favorites: favorites, toggleFavorite: toggleFavorite, favoritesLog: favoritesLog, onOpenChat: openChat, onOpenProfile: openProfile, refreshAll: refreshAll, onBack: () => setScreen("home") })),
+        screen === "detail" && selected && (React.createElement(DetailScreen, { item: listings.find(l => l.id === selected.id) || selected, me: me, requireAuth: requireAuth, offers: offers, reviews: reviews, favorites: favorites, toggleFavorite: toggleFavorite, favoritesLog: favoritesLog, members: members, onOpenChat: openChat, onOpenProfile: openProfile, refreshAll: refreshAll, onBack: () => setScreen("home") })),
         screen === "create" && React.createElement(CreateScreen, { me: me, members: members, customSubcategories: customSubcategories, refreshAll: refreshAll, onDone: () => setScreen("home") }),
         screen === "requests" && (React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "16px 18px 100px" } },
             React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 19, marginBottom: 12 } }, "Al\u0131m Talepleri"),
@@ -18492,7 +18609,7 @@ function SearchScreen({ listings, reviews, favorites, toggleFavorite, onOpen, on
                 React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 } }, results.map(item => React.createElement(ListingCard, { key: item.id, item: item, reviews: reviews, favorites: favorites, toggleFavorite: toggleFavorite, onOpen: onOpen }))))))));
 }
 // ---------- REELS (kaydırmalı keşif) ----------
-function ReelItem({ item, isFav, toggleFavorite, likeCount, isLiked, onToggleLike, onShare, requireAuth, onOpen }) {
+function ReelItem({ item, isFav, toggleFavorite, likeCount, favCount, isLiked, onToggleLike, onShare, requireAuth, onOpen }) {
     const mediaList = item.mediaUrls || [];
     const [activeIdx, setActiveIdx] = useState(0);
     const media = mediaList[activeIdx];
@@ -18533,8 +18650,9 @@ function ReelItem({ item, isFav, toggleFavorite, likeCount, isLiked, onToggleLik
         React.createElement("button", { onClick: (e) => { e.stopPropagation(); onToggleLike(item.id); }, style: { position: "absolute", right: 13, bottom: 248, width: 44, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, background: "transparent", border: "none", cursor: "pointer", zIndex: 3 } },
             React.createElement(Heart, { size: 30, fill: isLiked ? "#FF3040" : "none", color: isLiked ? "#FF3040" : COLORS.white, strokeWidth: 1.9, style: { filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.55))" } }),
             React.createElement("span", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 11, color: COLORS.white, filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.55))" } }, likeCount)),
-        React.createElement("button", { onClick: (e) => { e.stopPropagation(); toggleFavorite(item.id); }, style: { position: "absolute", right: 13, bottom: 188, width: 44, height: 44, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", zIndex: 3 } },
-            React.createElement(IconBookmark, { size: 27, color: COLORS.white, filled: isFav, style: { filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.55))" } })),
+        React.createElement("button", { onClick: (e) => { e.stopPropagation(); toggleFavorite(item.id); }, style: { position: "absolute", right: 13, bottom: 188, width: 44, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, background: "transparent", border: "none", cursor: "pointer", zIndex: 3 } },
+            React.createElement(IconBookmark, { size: 27, color: COLORS.white, filled: isFav, style: { filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.55))" } }),
+            React.createElement("span", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 11, color: COLORS.white, filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.55))" } }, favCount)),
         React.createElement("button", { onClick: (e) => { e.stopPropagation(); onShare(item); }, style: { position: "absolute", right: 13, bottom: 128, width: 44, height: 44, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", zIndex: 3 } },
             React.createElement(Send, { size: 26, color: COLORS.white, style: { filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.55))" } })),
         React.createElement("div", { style: { position: "relative", padding: "0 16px 22px", width: "100%", zIndex: 2 } },
@@ -18600,11 +18718,11 @@ function ReelsScreen({ listings, favorites, toggleFavorite, likes, favoritesLog,
             items.length === 0 && (React.createElement("div", { style: { height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: COLORS.white, fontFamily: "Inter", fontSize: 13 } }, "Hen\u00FCz ilan yok.")),
             items.map(item => {
                 const itemLikes = likes.filter(l => l.listingId === item.id);
-                return (React.createElement(ReelItem, { key: item.id, item: item, isFav: favorites.includes(item.id), toggleFavorite: toggleFavorite, likeCount: itemLikes.length, isLiked: !!(me && itemLikes.some(l => l.userName === me.name)), onToggleLike: toggleLike, onShare: share, requireAuth: requireAuth, onOpen: onOpen }));
+                return (React.createElement(ReelItem, { key: item.id, item: item, isFav: favorites.includes(item.id), toggleFavorite: toggleFavorite, likeCount: itemLikes.length, favCount: favoritesLog.filter(f => f.listingId === item.id).length, isLiked: !!(me && itemLikes.some(l => l.userName === me.name)), onToggleLike: toggleLike, onShare: share, requireAuth: requireAuth, onOpen: onOpen }));
             }))));
 }
 // ---------- DETAIL + TEKLİF ----------
-function DetailScreen({ item, me, requireAuth, offers, reviews, favorites, toggleFavorite, favoritesLog, onOpenChat, onOpenProfile, refreshAll, onBack }) {
+function DetailScreen({ item, me, requireAuth, offers, reviews, favorites, toggleFavorite, favoritesLog, members, onOpenChat, onOpenProfile, refreshAll, onBack }) {
     const isOwner = me && item.sellerName === me.name;
     const myOffer = me ? offers.find(o => o.listingId === item.id && o.buyerName === me.name) : null;
     const listingOffers = offers.filter(o => o.listingId === item.id);
@@ -18613,10 +18731,14 @@ function DetailScreen({ item, me, requireAuth, offers, reviews, favorites, toggl
     const [saving, setSaving] = useState(false);
     const rating = sellerRating(reviews, item.sellerName);
     const myReview = me ? reviews.find(r => r.listingId === item.id && r.buyerName === me.name) : null;
+    const dealDone = myOffer && myOffer.status === "kabul"; // Değerlendirme, sadece satış (teklif) onaylandığında açılır.
     const isFav = favorites.includes(item.id);
     const [activeMediaIndex, setActiveMediaIndex] = useState(0);
+    const [fullscreenOpen, setFullscreenOpen] = useState(false);
+    const [locationModalOpen, setLocationModalOpen] = useState(false);
     const mediaList = item.mediaUrls || [];
     const activeMedia = mediaList[activeMediaIndex];
+    const sellerMember = (members || []).find(m => m.name === item.sellerName);
     const sendOffer = async () => {
         setSaving(true);
         const all = await loadShared("offers", []);
@@ -18637,11 +18759,15 @@ function DetailScreen({ item, me, requireAuth, offers, reviews, favorites, toggl
         typeof item.nakliye === "boolean" ? ["Nakliye", item.nakliye ? "Var" : "Yok"] : null,
     ].filter(Boolean);
     return (React.createElement("div", { style: { flex: 1, overflowY: "auto", paddingBottom: 20 } },
-        React.createElement("div", { style: { background: activeMedia ? "#000" : "#DFF0E4", height: 190, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 84, position: "relative" } },
-            React.createElement("button", { onClick: onBack, style: { position: "absolute", top: 14, left: 14, background: "rgba(255,255,255,0.85)", border: "none", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", zIndex: 2 } },
+        fullscreenOpen && React.createElement(FullscreenMediaViewer, { mediaList: mediaList, startIndex: activeMediaIndex, onClose: () => setFullscreenOpen(false) }),
+        locationModalOpen && React.createElement(LocationViewModal, { il: item.animalIl, ilce: item.animalIlce, lat: item.animalLat, lng: item.animalLng, onClose: () => setLocationModalOpen(false) }),
+        React.createElement("div", { onClick: () => mediaList.length > 0 && setFullscreenOpen(true), style: { background: activeMedia ? "#000" : "#DFF0E4", height: 190, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 84, position: "relative", cursor: mediaList.length > 0 ? "pointer" : "default" } },
+            React.createElement("button", { onClick: (e) => { e.stopPropagation(); onBack(); }, style: { position: "absolute", top: 14, left: 14, background: "rgba(255,255,255,0.85)", border: "none", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", zIndex: 2 } },
                 React.createElement(ChevronLeft, { size: 18 })),
             activeMedia ? (activeMedia.type === "image" ? React.createElement("img", { src: activeMedia.dataUrl, style: { width: "100%", height: "100%", objectFit: "cover" } }) : React.createElement(VideoPlayer, { src: activeMedia.dataUrl, style: {} })) : (React.createElement("span", null, EMOJI[item.subCategory] || "🐾")),
-            mediaList.length > 1 && (React.createElement("div", { style: { position: "absolute", bottom: 8, left: 0, right: 0, display: "flex", gap: 5, justifyContent: "center" } }, mediaList.map((m, i) => (React.createElement("button", { key: i, onClick: () => setActiveMediaIndex(i), style: { width: 22, height: 22, borderRadius: 6, border: i === activeMediaIndex ? `2px solid ${COLORS.white}` : "1px solid rgba(255,255,255,0.6)", overflow: "hidden", padding: 0, cursor: "pointer", background: "#000" } }, m.type === "image" ? React.createElement("img", { src: m.dataUrl, style: { width: "100%", height: "100%", objectFit: "cover" } }) : React.createElement("div", { style: { width: "100%", height: "100%", background: "#333" } }))))))),
+            mediaList.length > 0 && (React.createElement("div", { style: { position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.5)", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 } },
+                React.createElement(Expand, { size: 14, color: "#fff" }))),
+            mediaList.length > 1 && (React.createElement("div", { style: { position: "absolute", bottom: 8, left: 0, right: 0, display: "flex", gap: 5, justifyContent: "center" } }, mediaList.map((m, i) => (React.createElement("button", { key: i, onClick: (e) => { e.stopPropagation(); setActiveMediaIndex(i); }, style: { width: 22, height: 22, borderRadius: 6, border: i === activeMediaIndex ? `2px solid ${COLORS.white}` : "1px solid rgba(255,255,255,0.6)", overflow: "hidden", padding: 0, cursor: "pointer", background: "#000" } }, m.type === "image" ? React.createElement("img", { src: m.dataUrl, style: { width: "100%", height: "100%", objectFit: "cover" } }) : React.createElement("div", { style: { width: "100%", height: "100%", background: "#333" } }))))))),
         React.createElement("div", { style: { padding: "16px 18px" } },
             React.createElement("div", { style: { display: "flex", alignItems: "flex-start", justifyContent: "space-between" } },
                 React.createElement("div", null,
@@ -18668,11 +18794,17 @@ function DetailScreen({ item, me, requireAuth, offers, reviews, favorites, toggl
             React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 } }, infoRows.map(([k, v]) => (React.createElement("div", { key: k, style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: "8px 10px" } },
                 React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776" } }, k),
                 React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5, color: COLORS.ink } }, v))))),
-            React.createElement(LocationMap, { il: item.animalIl, ilce: item.animalIlce }),
-            item.description && (React.createElement("div", { style: { marginBottom: 14, marginTop: 14 } },
+            item.animalIl && (React.createElement("button", { onClick: () => setLocationModalOpen(true), style: { width: "100%", display: "flex", alignItems: "center", gap: 10, background: "#DFE8E1", border: "none", borderRadius: 12, padding: 12, marginBottom: 14, cursor: "pointer", textAlign: "left" } },
+                React.createElement("div", { style: { width: 36, height: 36, borderRadius: "50%", background: COLORS.pineDeep, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 } },
+                    React.createElement(MapPin, { size: 16, color: "#fff" })),
+                React.createElement("div", { style: { flex: 1 } },
+                    React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5, color: COLORS.ink } }, item.animalIlce ? `${item.animalIl} / ${item.animalIlce}` : item.animalIl),
+                    React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10, color: "#5A574C" } }, "Konumu uygulama i\u00E7inde g\u00F6r")),
+                React.createElement(ChevronRight, { size: 16, color: "#5A574C" }))),
+            item.description && (React.createElement("div", { style: { marginBottom: 14 } },
                 React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12, color: "#5A574C", marginBottom: 4 } }, "A\u00E7\u0131klama"),
                 React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12.5, color: COLORS.ink, lineHeight: 1.5, background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: "10px 12px" } }, item.description))),
-            React.createElement("div", { onClick: () => onOpenProfile && onOpenProfile(item.sellerName), style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 16, padding: "10px 12px", background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, cursor: onOpenProfile ? "pointer" : "default" } },
+            React.createElement("div", { onClick: () => onOpenProfile && onOpenProfile(item.sellerName), style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 12, padding: "10px 12px", background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, cursor: onOpenProfile ? "pointer" : "default" } },
                 React.createElement("div", { style: { width: 32, height: 32, borderRadius: "50%", background: COLORS.ochreSoft, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Fraunces", fontWeight: 600, color: "#7A5A1E" } }, item.sellerName[0]),
                 React.createElement("div", { style: { flex: 1 } },
                     React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", gap: 5 } },
@@ -18718,10 +18850,11 @@ function DetailScreen({ item, me, requireAuth, offers, reviews, favorites, toggl
                         React.createElement(MessageCircle, { size: 13, style: { marginRight: 5 } }),
                         item.sellerName,
                         " ile mesajla\u015F"))),
-                React.createElement("div", { style: { marginTop: 10 } }, myReview ? (React.createElement("div", { style: { background: COLORS.paper, borderRadius: 12, padding: 12, fontFamily: "Inter", fontSize: 12 } },
+                React.createElement(AppointmentAndCallCard, { item: item, me: me, sellerPhone: sellerMember ? sellerMember.phone : null }),
+                dealDone && (React.createElement("div", { style: { marginTop: 10 } }, myReview ? (React.createElement("div", { style: { background: COLORS.paper, borderRadius: 12, padding: 12, fontFamily: "Inter", fontSize: 12 } },
                     "De\u011Ferlendirmeniz: ",
                     React.createElement(StarRow, { value: myReview.stars, size: 13 }),
-                    myReview.comment && React.createElement("div", { style: { color: "#5A574C", marginTop: 4 } }, myReview.comment))) : (React.createElement(ReviewForm, { listingId: item.id, sellerName: item.sellerName, buyerName: me.name, refreshAll: refreshAll }))))))));
+                    myReview.comment && React.createElement("div", { style: { color: "#5A574C", marginTop: 4 } }, myReview.comment))) : (React.createElement(ReviewForm, { listingId: item.id, sellerName: item.sellerName, buyerName: me.name, refreshAll: refreshAll })))))))));
 }
 function ReviewForm({ listingId, sellerName, buyerName, refreshAll }) {
     const [stars, setStars] = useState(5);
@@ -18823,6 +18956,8 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
     const [animalIlce, setAnimalIlce] = useState(me.ilce || "");
     const [animalLat, setAnimalLat] = useState(null);
     const [animalLng, setAnimalLng] = useState(null);
+    const [gpsBusy, setGpsBusy] = useState(false);
+    const [gpsError, setGpsError] = useState("");
     const [media, setMedia] = useState([]);
     const [mediaError, setMediaError] = useState("");
     const [mediaBusy, setMediaBusy] = useState(false);
@@ -18831,7 +18966,6 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
     const [saving, setSaving] = useState(false);
     const [err, setErr] = useState("");
     const [wizardStep, setWizardStep] = useState(0);
-    const touchStartX = React.useRef(null);
     const handleFiles = async (e) => {
         const files = Array.from(e.target.files || []);
         setMediaError("");
@@ -18871,6 +19005,21 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
         e.target.value = "";
     };
     const removeMedia = (idx) => setMedia(prev => prev.filter((_, i) => i !== idx));
+    const findGps = () => {
+        if (!navigator.geolocation) {
+            setGpsError("Cihazınız konum servisini desteklemiyor.");
+            return;
+        }
+        setGpsBusy(true);
+        setGpsError("");
+        navigator.geolocation.getCurrentPosition((pos) => {
+            const { latitude, longitude } = pos.coords;
+            setAnimalLat(latitude);
+            setAnimalLng(longitude);
+            setAnimalIl(nearestCity(latitude, longitude));
+            setGpsBusy(false);
+        }, () => { setGpsError("Konum alınamadı — tarayıcı izni reddedilmiş olabilir. İl/ilçeyi elle seçebilirsiniz."); setGpsBusy(false); }, { enableHighAccuracy: true, timeout: 8000 });
+    };
     const submitListing = async () => {
         if (!isApprovedSeller) {
             setErr("Belgeniz onaylanmadan ilan veremezsiniz.");
@@ -18937,8 +19086,8 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
     };
     const subCategoryOptions = [...ALT_KATEGORI[mainCategory], ...((customSubcategories && customSubcategories[mainCategory]) || [])];
     const breedOptions = BREED_OPTIONS[mainCategory] || [];
+    const districtOptions = TURKEY_DISTRICTS[animalIl] || [];
     // ---------- SAHİBİNDEN TARZI SORU-CEVAP SİHİRBAZI ----------
-    // "auto": seçim yapılınca otomatik bir sonraki soruya geçer (İleri butonu gizlenir).
     const WIZARD = [
         { key: "kategori", q: "Ne satıyorsunuz?", valid: () => !!mainCategory, auto: true },
         { key: "altkategori", q: "Hangi tür?", valid: () => !!subCategory, auto: true },
@@ -18958,21 +19107,6 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
     const goBack = () => { if (wizardStep > 0)
         setWizardStep(s => s - 1); };
     const pickAndAdvance = (setter, value) => { setter(value); setTimeout(goNext, 180); };
-    const onTouchStart = (e) => { touchStartX.current = e.touches[0].clientX; };
-    const onTouchEnd = (e) => {
-        if (touchStartX.current === null)
-            return;
-        const dx = e.changedTouches[0].clientX - touchStartX.current;
-        touchStartX.current = null;
-        if (Math.abs(dx) < 55)
-            return;
-        if (dx < 0) {
-            if (WIZARD[wizardStep].valid())
-                goNext();
-        }
-        else
-            goBack();
-    };
     const bigChoice = (label, active, onClick) => (React.createElement("button", { key: label, onClick: onClick, style: { width: "100%", textAlign: "left", padding: "14px 16px", borderRadius: 12, border: `1.5px solid ${active ? COLORS.pineDeep : COLORS.line}`, background: active ? COLORS.pineDeep : COLORS.white, color: active ? COLORS.white : COLORS.ink, fontFamily: "Inter", fontWeight: 600, fontSize: 14, cursor: "pointer", marginBottom: 8 } }, label));
     const renderWizardStep = () => {
         const key = WIZARD[wizardStep].key;
@@ -18995,16 +19129,23 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
                     React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10, color: "#8A8776", marginTop: 6 } }, "Sistem, ayn\u0131 k\u00FCpe numaras\u0131n\u0131n platformda ba\u015Fka bir ilanda kullan\u0131l\u0131p kullan\u0131lmad\u0131\u011F\u0131n\u0131 kontrol eder.")));
             case "konum":
                 return (React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } },
+                    React.createElement("button", { onClick: findGps, disabled: gpsBusy, style: { ...btnPrimary, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 } },
+                        React.createElement(MapPin, { size: 14, color: COLORS.white }),
+                        gpsBusy ? "Konum bulunuyor..." : "GPS ile Konumumu Bul"),
+                    gpsError && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11 } }, gpsError),
+                    animalLat && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: COLORS.pineDeep } }, "\u2713 Konum bulundu, en yak\u0131n il otomatik se\u00E7ildi."),
                     React.createElement(MapPicker, { lat: animalLat, lng: animalLng, onPick: (lat, lng) => { setAnimalLat(lat); setAnimalLng(lng); setAnimalIl(nearestCity(lat, lng)); } }),
                     React.createElement("div", { style: { display: "flex", gap: 8 } },
                         React.createElement("div", { style: { flex: 1 } },
                             React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "\u0130l"),
-                            React.createElement("select", { value: animalIl, onChange: (e) => setAnimalIl(e.target.value), style: { ...inputStyle, marginTop: 4 } },
+                            React.createElement("select", { value: animalIl, onChange: (e) => { setAnimalIl(e.target.value); setAnimalIlce(""); }, style: { ...inputStyle, marginTop: 4 } },
                                 React.createElement("option", { value: "" }, "Se\u00E7in"),
                                 TURKISH_CITIES.map(c => React.createElement("option", { key: c, value: c }, c)))),
                         React.createElement("div", { style: { flex: 1 } },
-                            React.createElement(FormField, { label: "\u0130l\u00E7e", value: animalIlce, onChange: setAnimalIlce, placeholder: "\u0130l\u00E7e" }))),
-                    React.createElement("div", { style: { fontFamily: "Inter", fontSize: 9.5, color: "#8A8776" } }, "Haritada i\u015Faretlerseniz il alan\u0131 otomatik doldurulur; il\u00E7eyi elle yazman\u0131z gerekir.")));
+                            React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "\u0130l\u00E7e"),
+                            React.createElement("select", { value: animalIlce, onChange: (e) => setAnimalIlce(e.target.value), disabled: !animalIl, style: { ...inputStyle, marginTop: 4 } },
+                                React.createElement("option", { value: "" }, "Se\u00E7in"),
+                                districtOptions.map(d => React.createElement("option", { key: d, value: d }, d)))))));
             case "nakliye":
                 return (React.createElement("div", { style: { display: "flex", gap: 8 } }, [["var", "Nakliye Var"], ["yok", "Nakliye Yok"]].map(([k, l]) => (React.createElement("button", { key: k, onClick: () => pickAndAdvance(setNakliye, k), style: { flex: 1, padding: "16px", borderRadius: 12, border: `1.5px solid ${nakliye === k ? COLORS.pineDeep : COLORS.line}`, background: nakliye === k ? COLORS.pineDeep : COLORS.white, color: nakliye === k ? COLORS.white : COLORS.ink, fontFamily: "Inter", fontWeight: 700, fontSize: 13.5, cursor: "pointer" } }, l)))));
             case "fiyat":
@@ -19060,21 +19201,13 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
             React.createElement("button", { onClick: () => setCreateType("ilan"), style: { flex: 1, padding: "10px", borderRadius: 10, border: "none", cursor: "pointer", fontFamily: "Inter", fontWeight: 600, fontSize: 12.5, background: createType === "ilan" ? COLORS.pineDeep : COLORS.white, color: createType === "ilan" ? COLORS.white : "#5A574C" } }, "Sat\u0131l\u0131k \u0130lan\u0131"),
             React.createElement("button", { onClick: () => setCreateType("talep"), style: { flex: 1, padding: "10px", borderRadius: 10, border: "none", cursor: "pointer", fontFamily: "Inter", fontWeight: 600, fontSize: 12.5, background: createType === "talep" ? COLORS.pineDeep : COLORS.white, color: createType === "talep" ? COLORS.white : "#5A574C" } }, "\"Hayvan Ar\u0131yorum\""))),
         createType === "ilan" ? (React.createElement("div", null,
-            React.createElement("div", { style: { display: "flex", gap: 4, marginBottom: 14 } }, WIZARD.map((s, i) => (React.createElement("div", { key: s.key, onClick: () => i < wizardStep && setWizardStep(i), style: { flex: 1, height: 4, borderRadius: 3, cursor: i < wizardStep ? "pointer" : "default", background: i <= wizardStep ? COLORS.pineDeep : COLORS.line } })))),
-            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776", marginBottom: 6 } },
-                "Ad\u0131m ",
-                wizardStep + 1,
-                "/",
-                total),
-            React.createElement("div", { onTouchStart: onTouchStart, onTouchEnd: onTouchEnd, style: { minHeight: 260 } },
-                React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 18, color: COLORS.ink, marginBottom: 14 } }, WIZARD[wizardStep].q),
-                renderWizardStep()),
+            React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 18, color: COLORS.ink, marginBottom: 14 } }, WIZARD[wizardStep].q),
+            React.createElement("div", { style: { minHeight: 260 } }, renderWizardStep()),
             wizardStep < total - 1 && (React.createElement(React.Fragment, null,
                 err && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11.5, marginTop: 10 } }, err),
                 React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 18 } },
                     wizardStep > 0 && React.createElement("button", { onClick: goBack, style: { ...btnGhost, borderColor: COLORS.line, color: "#5A574C", flex: 1, justifyContent: "center" } }, "\u2190 Geri"),
-                    !currentAuto && React.createElement("button", { onClick: goNext, disabled: !WIZARD[wizardStep].valid(), style: { ...btnPrimary, flex: 2, opacity: WIZARD[wizardStep].valid() ? 1 : 0.5 } }, "\u0130leri \u2192")),
-                React.createElement("div", { style: { fontFamily: "Inter", fontSize: 9.5, color: "#B7B4A6", marginTop: 8, textAlign: "center" } }, currentAuto ? "Seçince otomatik ilerler — sağa/sola da kaydırabilirsiniz" : "Sağa/sola kaydırarak da geçebilirsiniz"))),
+                    !currentAuto && React.createElement("button", { onClick: goNext, disabled: !WIZARD[wizardStep].valid(), style: { ...btnPrimary, flex: 2, opacity: WIZARD[wizardStep].valid() ? 1 : 0.5 } }, "\u0130leri \u2192")))),
             wizardStep === total - 1 && wizardStep > 0 && (React.createElement("button", { onClick: goBack, style: { ...btnGhost, borderColor: COLORS.line, color: "#5A574C", marginTop: 10 } }, "\u2190 Geri")))) : (React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } },
             React.createElement("div", null,
                 React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "Ana Kategori"),
@@ -19284,6 +19417,7 @@ function SellerListingRow({ listing, refreshAll }) {
     const [age, setAge] = useState(listing.age);
     const [description, setDescription] = useState(listing.description || "");
     const [busy, setBusy] = useState(false);
+    const [fullscreenOpen, setFullscreenOpen] = useState(false);
     const save = async () => {
         setBusy(true);
         const all = await loadShared("listings", []);
@@ -19303,10 +19437,12 @@ function SellerListingRow({ listing, refreshAll }) {
         await refreshAll();
         setBusy(false);
     };
-    const thumbImage = (listing.mediaUrls || []).find(m => m.type === "image");
+    const mediaList = listing.mediaUrls || [];
+    const thumbImage = mediaList.find(m => m.type === "image");
     return (React.createElement("div", { style: { padding: "8px 0", borderBottom: `1px solid ${COLORS.line}` } },
+        fullscreenOpen && React.createElement(FullscreenMediaViewer, { mediaList: mediaList, startIndex: 0, onClose: () => setFullscreenOpen(false) }),
         React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } },
-            thumbImage ? (React.createElement("img", { src: thumbImage.dataUrl, style: { width: 40, height: 40, objectFit: "cover", borderRadius: 8, flexShrink: 0, border: `1px solid ${COLORS.line}` } })) : (React.createElement("div", { style: { width: 40, height: 40, borderRadius: 8, flexShrink: 0, background: "#DFF0E4", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 } }, EMOJI[listing.subCategory] || "🐾")),
+            thumbImage ? (React.createElement("img", { onClick: () => mediaList.length > 0 && setFullscreenOpen(true), src: thumbImage.dataUrl, style: { width: 40, height: 40, objectFit: "cover", borderRadius: 8, flexShrink: 0, border: `1px solid ${COLORS.line}`, cursor: "pointer" } })) : (React.createElement("div", { style: { width: 40, height: 40, borderRadius: 8, flexShrink: 0, background: "#DFF0E4", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 } }, EMOJI[listing.subCategory] || "🐾")),
             React.createElement("div", { style: { flex: 1, display: "flex", justifyContent: "space-between", alignItems: "center", fontFamily: "Inter", fontSize: 12.5 } },
                 React.createElement("span", null,
                     listing.breed,
@@ -21146,7 +21282,7 @@ function nearestCity(lat, lng) {
     return best;
 }
 
-function MapPicker({ lat, lng, onPick }) {
+function MapPicker({ lat, lng, onPick, interactive = true }) {
     const mapRef = React.useRef(null);
     const mapInstance = React.useRef(null);
     const markerRef = React.useRef(null);
@@ -21155,28 +21291,32 @@ function MapPicker({ lat, lng, onPick }) {
         if (!window.L || !mapRef.current || mapInstance.current)
             return;
         const startLat = lat || 39.0, startLng = lng || 35.0;
-        const map = window.L.map(mapRef.current, { attributionControl: false }).setView([startLat, startLng], lat ? 11 : 6);
+        const map = window.L.map(mapRef.current, { attributionControl: false, dragging: interactive, zoomControl: interactive, scrollWheelZoom: interactive }).setView([startLat, startLng], lat ? 11 : 6);
         window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 17 }).addTo(map);
         if (lat && lng)
             markerRef.current = window.L.marker([lat, lng]).addTo(map);
-        map.on("click", (e) => {
-            const { lat: clat, lng: clng } = e.latlng;
-            if (markerRef.current)
-                markerRef.current.setLatLng([clat, clng]);
-            else
-                markerRef.current = window.L.marker([clat, clng]).addTo(map);
-            onPick(clat, clng);
-        });
+        if (interactive) {
+            map.on("click", (e) => {
+                const { lat: clat, lng: clng } = e.latlng;
+                if (markerRef.current)
+                    markerRef.current.setLatLng([clat, clng]);
+                else
+                    markerRef.current = window.L.marker([clat, clng]).addTo(map);
+                onPick(clat, clng);
+            });
+        }
         mapInstance.current = map;
         setTimeout(() => map.invalidateSize(), 150);
         return () => { map.remove(); mapInstance.current = null; };
     }, []);
     if (!leafletReady) {
-        return (React.createElement("div", { style: { background: COLORS.paper, border: `1px dashed ${COLORS.line}`, borderRadius: 12, padding: 16, textAlign: "center", fontFamily: "Inter", fontSize: 11.5, color: "#8A8776" } }, "Harita y\u00FCklenemedi (internet ba\u011Flant\u0131s\u0131 gerekir) \u2014 a\u015Fa\u011F\u0131dan il/il\u00E7enizi elle se\u00E7ebilirsiniz."));
+        return (React.createElement("div", { style: { background: COLORS.paper, border: `1px dashed ${COLORS.line}`, borderRadius: 12, padding: 16, textAlign: "center", fontFamily: "Inter", fontSize: 11.5, color: "#8A8776" } },
+            "Harita y\u00FCklenemedi (internet ba\u011Flant\u0131s\u0131 gerekir)",
+            interactive ? " — aşağıdan il/ilçenizi elle seçebilirsiniz." : "."));
     }
     return (React.createElement("div", null,
         React.createElement("div", { ref: mapRef, style: { width: "100%", height: 220, borderRadius: 12, overflow: "hidden", border: `1px solid ${COLORS.line}` } }),
-        React.createElement("div", { style: { fontFamily: "Inter", fontSize: 9.5, color: "#8A8776", marginTop: 5 } }, "Hayvan\u0131n bulundu\u011Fu tam noktaya dokunun.")));
+        interactive && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 9.5, color: "#8A8776", marginTop: 5 } }, "Hayvan\u0131n bulundu\u011Fu tam noktaya dokunun.")));
 }
 
 function AccountTypeSwitch({ me, setMe }) {
@@ -21261,6 +21401,83 @@ function MenuRow({ icon: Icon, label, value, onClick }) {
         React.createElement("span", { style: { flex: 1, fontFamily: "Inter", fontWeight: 500, fontSize: 13, color: COLORS.ink } }, label),
         value && React.createElement("span", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776" } }, value),
         React.createElement(ChevronRight, { size: 15, color: "#B7B4A6" })));
+}
+
+function FullscreenMediaViewer({ mediaList, startIndex, onClose }) {
+    const [idx, setIdx] = useState(startIndex || 0);
+    const media = mediaList[idx];
+    if (!media)
+        return null;
+    return (React.createElement("div", { style: { position: "fixed", inset: 0, background: "#000", zIndex: 999, display: "flex", flexDirection: "column" }, onClick: onClose },
+        React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: 14 } },
+            React.createElement("span", { style: { color: "#fff", fontFamily: "Inter", fontSize: 12 } },
+                idx + 1,
+                "/",
+                mediaList.length),
+            React.createElement("button", { onClick: onClose, style: { background: "rgba(255,255,255,0.15)", border: "none", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" } },
+                React.createElement(X, { size: 16, color: "#fff" }))),
+        React.createElement("div", { style: { flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }, onClick: (e) => e.stopPropagation() }, media.type === "image" ? (React.createElement("img", { src: media.dataUrl, style: { maxWidth: "100%", maxHeight: "100%", objectFit: "contain" } })) : (React.createElement("video", { src: media.dataUrl, controls: true, autoPlay: true, style: { maxWidth: "100%", maxHeight: "100%" } }))),
+        mediaList.length > 1 && (React.createElement("div", { style: { display: "flex", gap: 6, justifyContent: "center", padding: 14 }, onClick: (e) => e.stopPropagation() }, mediaList.map((m, i) => (React.createElement("button", { key: i, onClick: () => setIdx(i), style: { width: 34, height: 34, borderRadius: 6, overflow: "hidden", border: i === idx ? "2px solid #fff" : "1px solid rgba(255,255,255,0.4)", padding: 0, cursor: "pointer", background: "#111" } }, m.type === "image" ? React.createElement("img", { src: m.dataUrl, style: { width: "100%", height: "100%", objectFit: "cover" } }) : React.createElement("div", { style: { width: "100%", height: "100%", background: "#333" } }))))))));
+}
+
+function LocationViewModal({ il, ilce, lat, lng, onClose }) {
+    const coords = (lat && lng) ? [lat, lng] : TURKEY_CITY_COORDS[il];
+    return (React.createElement("div", { style: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }, onClick: onClose },
+        React.createElement("div", { style: { background: COLORS.white, borderRadius: 16, padding: 14, width: "100%", maxWidth: 360 }, onClick: (e) => e.stopPropagation() },
+            React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 } },
+                React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 13.5 } }, ilce ? `${il} / ${ilce}` : il),
+                React.createElement("button", { onClick: onClose, style: { background: "none", border: "none", cursor: "pointer" } },
+                    React.createElement(X, { size: 16, color: "#8A8776" }))),
+            coords ? (React.createElement(MapPicker, { lat: coords[0], lng: coords[1], onPick: () => { }, interactive: false })) : (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Konum bilgisi bulunamad\u0131.")))));
+}
+
+function AppointmentAndCallCard({ item, me, sellerPhone }) {
+    const [mode, setMode] = useState(null); // null | 'randevu'
+    const [date, setDate] = useState("");
+    const [note, setNote] = useState("");
+    const [sending, setSending] = useState(false);
+    const [sent, setSent] = useState(false);
+    const sendMessage = async (text) => {
+        setSending(true);
+        const cid = convId(item.id, me.name, item.sellerName);
+        const all = await loadShared("messages", []);
+        all.push({ id: uid(), conversationId: cid, sender: me.name, text, createdAt: Date.now() });
+        await saveShared("messages", all);
+        setSending(false);
+        return cid;
+    };
+    const sendRandevu = async () => {
+        if (!date.trim())
+            return;
+        await sendMessage(`📅 Randevu talebi: hayvanı canlı görmek için "${date.trim()}" tarihini/saatini teklif ediyorum.${note.trim() ? " Not: " + note.trim() : ""}`);
+        setSent(true);
+        setMode(null);
+        setDate("");
+        setNote("");
+        setTimeout(() => setSent(false), 3500);
+    };
+    const requestVideoCall = async () => {
+        await sendMessage("📹 Görüntülü arama isteği gönderildi — hayvanı canlı görmek istiyorum, müsait olduğunuzda arayabilir miyim?");
+        setSent(true);
+        setTimeout(() => setSent(false), 3500);
+    };
+    return (React.createElement("div", { style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 12, marginTop: 10 } },
+        React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 12, color: COLORS.ink, marginBottom: 8 } }, "Hayvan\u0131 Canl\u0131 G\u00F6rmek \u0130ster misiniz?"),
+        sent && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: COLORS.pineDeep, marginBottom: 8 } }, "\u2713 \u0130ste\u011Finiz sat\u0131c\u0131ya mesaj olarak iletildi."),
+        mode === "randevu" ? (React.createElement("div", null,
+            React.createElement(FormField, { label: "Tercih etti\u011Finiz tarih/saat", value: date, onChange: setDate, placeholder: "\u00D6rn. 25 Eyl\u00FCl Per\u015Fembe, \u00F6\u011Fleden sonra" }),
+            React.createElement("div", { style: { marginTop: 6 } },
+                React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11, color: "#5A574C", fontWeight: 600 } }, "Not (opsiyonel)"),
+                React.createElement("textarea", { value: note, onChange: (e) => setNote(e.target.value), rows: 2, style: { ...inputStyle, marginTop: 3, resize: "vertical" } })),
+            React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 8 } },
+                React.createElement("button", { onClick: sendRandevu, disabled: sending || !date.trim(), style: btnPrimary }, sending ? "Gönderiliyor..." : "Randevu Talebini Gönder"),
+                React.createElement("button", { onClick: () => setMode(null), style: { ...btnGhost, borderColor: COLORS.line, color: "#8A8776" } }, "Vazge\u00E7")))) : (React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap" } },
+            React.createElement("button", { onClick: () => setMode("randevu"), style: { ...btnGhost, borderColor: COLORS.line, color: COLORS.pineDeep, flex: 1 } }, "\uD83D\uDCC5 Randevu Al"),
+            React.createElement("button", { onClick: requestVideoCall, disabled: sending, style: { ...btnGhost, borderColor: COLORS.line, color: COLORS.pineDeep, flex: 1 } }, "\uD83D\uDCF9 G\u00F6r\u00FCnt\u00FCl\u00FC Arama \u0130ste"))),
+        sellerPhone && (React.createElement("a", { href: `tel:${sellerPhone}`, style: { display: "block", textAlign: "center", marginTop: 8, fontFamily: "Inter", fontSize: 11, color: "#8A8776", textDecoration: "underline" } },
+            "veya do\u011Frudan telefonla aray\u0131n: ",
+            sellerPhone)),
+        React.createElement("div", { style: { fontFamily: "Inter", fontSize: 9, color: "#B7B4A6", marginTop: 6 } }, "Not: uygulama i\u00E7i ger\u00E7ek zamanl\u0131 g\u00F6r\u00FCnt\u00FCl\u00FC arama bu ortamda desteklenmiyor \u2014 istek sat\u0131c\u0131ya mesaj olarak iletilir, aramay\u0131 kendi telefonunuzdan (WhatsApp/FaceTime vb.) yapman\u0131z gerekir.")));
 }
 
 </script>
