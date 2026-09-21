@@ -22857,6 +22857,7 @@ function VetScreen({ me, onBack }) {
     const [tab, setTab] = useState("anasayfa");
     const [myVetLinks, setMyVetLinks] = useState([]);
     const [allAnimalsByFarm, setAllAnimalsByFarm] = useState({});
+    const [visits, setVisits] = useState([]);
     const [loaded, setLoaded] = useState(false);
     const [selectedFarm, setSelectedFarm] = useState(null);
     const load = async () => {
@@ -22867,14 +22868,13 @@ function VetScreen({ me, onBack }) {
         const byFarm = {};
         mine.forEach(v => { byFarm[v.ownerName] = allAnimals.filter(a => a.ownerName === v.ownerName); });
         setAllAnimalsByFarm(byFarm);
+        const allVisits = await loadShared("vetVisits", []);
+        setVisits(allVisits.filter(v => v.vetName === me.name && v.status === "planlandi"));
         setLoaded(true);
     };
     useEffect(() => { load(); }, []);
-    const allAnimals = Object.values(allAnimalsByFarm).flat();
-    const totalAnimals = allAnimals.length;
-    const upcomingChecks = allAnimals.filter(a => { const d = daysUntil(a.nextCheckup); return d !== null && d >= 0 && d <= 7; }).length;
-    const overdueChecks = allAnimals.filter(a => { const d = daysUntil(a.nextCheckup); return d !== null && d < 0; }).length;
-    const pregnancies = allAnimals.filter(a => a.pregnant).length;
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayVisits = visits.filter(v => v.date === todayStr);
     const TABS = [["anasayfa", "Ana Sayfa"], ["ciftlikler", "Çiftliklerim"], ["paketler", "Paketlerim"], ["takvim", "Takvim"], ["gelir", "Gelirim"], ["bildirim", "Bildirimler"], ["rapor", "Raporlar"]];
     const swipeStartX = React.useRef(null);
     const onSwipeStart = (e) => { swipeStartX.current = e.touches[0].clientX; };
@@ -22897,17 +22897,7 @@ function VetScreen({ me, onBack }) {
                 React.createElement(ChevronLeft, { color: COLORS.white, size: 20 })),
             React.createElement("span", { style: { fontSize: 17 } }, "\uD83E\uDE7A"),
             React.createElement("div", { style: { color: COLORS.white, fontFamily: "Fraunces", fontWeight: 700, fontSize: 16 } }, "Veteriner Paneli")),
-        React.createElement("div", { onTouchStart: onSwipeStart, onTouchEnd: onSwipeEnd, style: { flex: 1, overflowY: "auto", padding: "14px 16px 16px" } }, !loaded ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Y\u00FCkleniyor...")) : tab === "anasayfa" ? (React.createElement("div", null,
-            React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 17, marginBottom: 2 } },
-                "Merhaba, ",
-                me.name),
-            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776", marginBottom: 14 } },
-                myVetLinks.length,
-                " \u00E7iftlikle ba\u011Fl\u0131s\u0131n\u0131z"),
-            React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 } }, [["🐄", `${totalAnimals} hayvan`], ["💉", `${upcomingChecks} yaklaşan kontrol`], ["🔴", `${overdueChecks} geciken`], ["🤰", `${pregnancies} gebe hayvan`]].map(([icon, label], i) => (React.createElement("div", { key: i, style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 12 } },
-                React.createElement("div", { style: { fontSize: 18, marginBottom: 3 } }, icon),
-                React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12, color: COLORS.ink } }, label))))),
-            myVetLinks.length === 0 && React.createElement(VetConnectForm, { me: me, refreshAll: load }))) : tab === "ciftlikler" ? (selectedFarm ? (React.createElement(VetFarmAnimalsView, { farmOwnerName: selectedFarm, onBack: () => setSelectedFarm(null) })) : (React.createElement("div", null, myVetLinks.length === 0 ? (React.createElement(VetConnectForm, { me: me, refreshAll: load })) : (React.createElement(React.Fragment, null,
+        React.createElement("div", { onTouchStart: onSwipeStart, onTouchEnd: onSwipeEnd, style: { flex: 1, overflowY: "auto", padding: "14px 16px 16px" } }, !loaded ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Y\u00FCkleniyor...")) : tab === "anasayfa" ? (React.createElement(VetHomeTab, { me: me, myVetLinks: myVetLinks, allAnimalsByFarm: allAnimalsByFarm, todayVisits: todayVisits, upcomingVisitsCount: visits.length, setTab: setTab })) : tab === "ciftlikler" ? (selectedFarm ? (React.createElement(VetFarmAnimalsView, { farmOwnerName: selectedFarm, onBack: () => setSelectedFarm(null) })) : (React.createElement("div", null, myVetLinks.length === 0 ? (React.createElement(VetConnectForm, { me: me, refreshAll: load })) : (React.createElement(React.Fragment, null,
             myVetLinks.map(v => (React.createElement("button", { key: v.id, onClick: () => setSelectedFarm(v.ownerName), style: { width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 14, marginBottom: 8, cursor: "pointer", textAlign: "left" } },
                 React.createElement("div", null,
                     React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 13.5 } },
@@ -23323,6 +23313,45 @@ function AddAnimalWizard({ me, barns, onDone, onCancel }) {
             step > 0 && React.createElement("button", { onClick: goBack, style: { ...btnGhost, borderColor: COLORS.line, color: "#5A574C" } }, "\u2190 Geri"),
             !STEPS[step].auto && React.createElement("button", { onClick: goNext, style: { ...btnPrimary, flex: 1 } }, canSkip ? "İleri / Atla" : "İleri"))),
         React.createElement("button", { onClick: onCancel, style: { background: "none", border: "none", color: "#8A8776", fontFamily: "Inter", fontSize: 11, cursor: "pointer", marginTop: 10, padding: 0 } }, "Vazge\u00E7")));
+}
+
+function VetHomeTab({ me, myVetLinks, allAnimalsByFarm, todayVisits, upcomingVisitsCount, setTab }) {
+    const allAnimals = Object.values(allAnimalsByFarm).flat();
+    const totalAnimals = allAnimals.length;
+    const upcomingChecks = allAnimals.filter(a => { const d = daysUntil(a.nextCheckup); return d !== null && d >= 0 && d <= 7; }).length;
+    const overdueChecks = allAnimals.filter(a => { const d = daysUntil(a.nextCheckup); return d !== null && d < 0; }).length;
+    const pregnancies = allAnimals.filter(a => a.pregnant).length;
+    return (React.createElement("div", null,
+        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, marginBottom: 14 } },
+            React.createElement("div", { style: { width: 44, height: 44, borderRadius: "50%", background: COLORS.ochreSoft, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Fraunces", fontWeight: 700, fontSize: 18, color: "#7A5A1E", flexShrink: 0 } }, me.name[0]),
+            React.createElement("div", null,
+                React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 16 } },
+                    "Merhaba, ",
+                    me.name),
+                React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776" } },
+                    "Veteriner Hekim \u00B7 ",
+                    myVetLinks.length,
+                    " \u00E7iftlikle ba\u011Fl\u0131s\u0131n\u0131z"))),
+        React.createElement("button", { onClick: () => setTab("takvim"), style: { width: "100%", textAlign: "left", background: `linear-gradient(135deg, ${COLORS.pine}, ${COLORS.pineDeep})`, border: "none", borderRadius: 16, padding: 16, marginBottom: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" } },
+            React.createElement("div", null,
+                React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#CFE3D6" } }, "Bug\u00FCnk\u00FC Ziyaretler"),
+                React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 15, color: COLORS.white, marginTop: 2 } }, todayVisits.length > 0 ? todayVisits.map(v => v.farmOwnerName).join(", ") : "Bugün için planlı ziyaret yok")),
+            React.createElement("div", { style: { width: 40, height: 40, borderRadius: "50%", background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "IBM Plex Mono", fontWeight: 700, fontSize: 16, color: COLORS.white, flexShrink: 0 } }, todayVisits.length)),
+        React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 } }, [["🐄", `${totalAnimals} hayvan`], ["💉", `${upcomingChecks} yaklaşan kontrol`], ["🔴", `${overdueChecks} geciken`], ["🤰", `${pregnancies} gebe hayvan`]].map(([icon, label], i) => (React.createElement("div", { key: i, style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 12 } },
+            React.createElement("div", { style: { fontSize: 18, marginBottom: 3 } }, icon),
+            React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12, color: COLORS.ink } }, label))))),
+        React.createElement("div", { style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 14, overflow: "hidden", marginBottom: 14 } }, [
+            ["📅", "Yaklaşan İşler", `${upcomingVisitsCount} ziyaret planlandı`, "takvim"],
+            ["🐄", "Tüm Hayvan Kayıtları", `${totalAnimals} kayıt · ${myVetLinks.length} çiftlik`, "ciftlikler"],
+            ["🔔", "Bildirimler", "Geciken ve yaklaşan kontroller", "bildirim"],
+            ["💰", "Gelirim", "Bu ayki kazancınız", "gelir"],
+        ].map(([icon, title, sub, tabKey], i, arr) => (React.createElement("button", { key: tabKey, onClick: () => setTab(tabKey), style: { width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: "none", border: "none", borderBottom: i < arr.length - 1 ? `1px solid ${COLORS.line}` : "none", cursor: "pointer", textAlign: "left" } },
+            React.createElement("span", { style: { fontSize: 17 } }, icon),
+            React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+                React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5, color: COLORS.ink } }, title),
+                React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776" } }, sub)),
+            React.createElement(ChevronRight, { size: 15, color: "#B7B4A6" }))))),
+        myVetLinks.length === 0 && React.createElement(VetConnectForm, { me: me, refreshAll: () => { } })));
 }
 
 </script>
