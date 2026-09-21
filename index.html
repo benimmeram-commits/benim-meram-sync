@@ -22380,13 +22380,17 @@ function FarmManagementScreen({ me, ownerName, allowedTabs, refreshAll, onBack }
     const swipeStartX = React.useRef(null);
     const onSwipeStart = (e) => { swipeStartX.current = e.touches[0].clientX; };
     const onSwipeEnd = (e) => {
-        if (swipeStartX.current === null) return;
+        if (swipeStartX.current === null)
+            return;
         const dx = e.changedTouches[0].clientX - swipeStartX.current;
         swipeStartX.current = null;
-        if (Math.abs(dx) < 50) return;
+        if (Math.abs(dx) < 50)
+            return;
         const idx = TABS.findIndex(([k]) => k === activeTab);
-        if (dx < 0 && idx < TABS.length - 1) setTab(TABS[idx + 1][0]);
-        else if (dx > 0 && idx > 0) setTab(TABS[idx - 1][0]);
+        if (dx < 0 && idx < TABS.length - 1)
+            setTab(TABS[idx + 1][0]);
+        else if (dx > 0 && idx > 0)
+            setTab(TABS[idx - 1][0]);
     };
     return (React.createElement("div", { style: { flex: 1, display: "flex", flexDirection: "column" } },
         React.createElement("div", { style: { background: COLORS.pine, padding: "14px 14px 10px", display: "flex", alignItems: "center", gap: 10 } },
@@ -22395,8 +22399,7 @@ function FarmManagementScreen({ me, ownerName, allowedTabs, refreshAll, onBack }
             React.createElement(IconBarn, { color: COLORS.white, size: 18 }),
             React.createElement("div", { style: { color: COLORS.white, fontFamily: "Fraunces", fontWeight: 700, fontSize: 16 } }, "\u00C7iftlik Y\u00F6netimi")),
         TABS.length === 0 ? (React.createElement("div", { style: { padding: 20, fontFamily: "Inter", fontSize: 12.5, color: "#8A8776" } }, "Bu b\u00F6l\u00FCmlere eri\u015Fim yetkiniz bulunmuyor. \u0130\u015Fletme sahibinizle ileti\u015Fime ge\u00E7in.")) : (React.createElement(React.Fragment, null,
-            React.createElement("div", { style: { display: "flex", gap: 5, padding: "10px 12px 0", overflowX: "auto" } }, TABS.map(([k, l]) => (React.createElement("button", { key: k, onClick: () => setTab(k), style: { flexShrink: 0, padding: "7px 11px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "Inter", fontWeight: 600, fontSize: 11, background: activeTab === k ? COLORS.pineDeep : COLORS.paper, color: activeTab === k ? COLORS.white : "#5A574C", whiteSpace: "nowrap" } }, l)))),
-            React.createElement("div", { onTouchStart: onSwipeStart, onTouchEnd: onSwipeEnd, style: { flex: 1, overflowY: "auto", padding: "14px 16px 90px" } }, !loaded ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Y\u00FCkleniyor...")) : (React.createElement(React.Fragment, null,
+            React.createElement("div", { onTouchStart: onSwipeStart, onTouchEnd: onSwipeEnd, style: { flex: 1, overflowY: "auto", padding: "14px 16px 16px" } }, !loaded ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Y\u00FCkleniyor...")) : (React.createElement(React.Fragment, null,
                 activeTab === "genel" && React.createElement(GenelBakisTab, { ownerName: effectiveOwner, animals: animals, feedStock: feedStock, employees: employees, setTab: setTab }),
                 activeTab === "ahir" && React.createElement(AhirYonetimiTab, { me: scopedMe, animals: animals, barns: barns, refreshAll: refresh }),
                 activeTab === "bolme" && React.createElement(AhirlarBolmelerTab, { me: scopedMe, barns: barns, animals: animals, refreshAll: refresh }),
@@ -22407,7 +22410,8 @@ function FarmManagementScreen({ me, ownerName, allowedTabs, refreshAll, onBack }
                 activeTab === "calisan" && React.createElement(CalisanlarTab, { me: scopedMe, employees: employees, refreshAll: refresh }),
                 activeTab === "veteriner" && React.createElement(VeterinerlerTab, { me: scopedMe, refreshAll: refresh }),
                 activeTab === "bildirim" && React.createElement(BildirimMerkeziTab, { animals: animals, feedStock: feedStock, employees: employees }),
-                activeTab === "rapor" && React.createElement(RaporlarTab, { animals: animals, feedStock: feedStock, finance: finance }))))))));
+                activeTab === "rapor" && React.createElement(RaporlarTab, { animals: animals, feedStock: feedStock, finance: finance })))),
+            React.createElement("div", { style: { display: "flex", gap: 5, padding: "8px 12px", overflowX: "auto", borderTop: `1px solid ${COLORS.line}`, background: COLORS.white, flexShrink: 0 } }, TABS.map(([k, l]) => (React.createElement("button", { key: k, onClick: () => setTab(k), style: { flexShrink: 0, padding: "7px 11px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "Inter", fontWeight: 600, fontSize: 11, background: activeTab === k ? COLORS.pineDeep : COLORS.paper, color: activeTab === k ? COLORS.white : "#5A574C", whiteSpace: "nowrap" } }, l))))))));
 }
 
 function EmployeeLoginScreen({ onLogin, onCancel }) {
@@ -22875,13 +22879,17 @@ function VetScreen({ me, onBack }) {
     const swipeStartX = React.useRef(null);
     const onSwipeStart = (e) => { swipeStartX.current = e.touches[0].clientX; };
     const onSwipeEnd = (e) => {
-        if (swipeStartX.current === null || selectedFarm) return;
+        if (swipeStartX.current === null || selectedFarm)
+            return;
         const dx = e.changedTouches[0].clientX - swipeStartX.current;
         swipeStartX.current = null;
-        if (Math.abs(dx) < 50) return;
+        if (Math.abs(dx) < 50)
+            return;
         const idx = TABS.findIndex(([k]) => k === tab);
-        if (dx < 0 && idx < TABS.length - 1) setTab(TABS[idx + 1][0]);
-        else if (dx > 0 && idx > 0) setTab(TABS[idx - 1][0]);
+        if (dx < 0 && idx < TABS.length - 1)
+            setTab(TABS[idx + 1][0]);
+        else if (dx > 0 && idx > 0)
+            setTab(TABS[idx - 1][0]);
     };
     return (React.createElement("div", { style: { flex: 1, display: "flex", flexDirection: "column" } },
         React.createElement("div", { style: { background: COLORS.pine, padding: "14px 14px 10px", display: "flex", alignItems: "center", gap: 10 } },
@@ -22889,8 +22897,7 @@ function VetScreen({ me, onBack }) {
                 React.createElement(ChevronLeft, { color: COLORS.white, size: 20 })),
             React.createElement("span", { style: { fontSize: 17 } }, "\uD83E\uDE7A"),
             React.createElement("div", { style: { color: COLORS.white, fontFamily: "Fraunces", fontWeight: 700, fontSize: 16 } }, "Veteriner Paneli")),
-        React.createElement("div", { style: { display: "flex", gap: 5, padding: "10px 12px 0", overflowX: "auto" } }, TABS.map(([k, l]) => (React.createElement("button", { key: k, onClick: () => { setTab(k); setSelectedFarm(null); }, style: { flexShrink: 0, padding: "7px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "Inter", fontWeight: 600, fontSize: 11.5, background: tab === k ? COLORS.pineDeep : COLORS.paper, color: tab === k ? COLORS.white : "#5A574C", whiteSpace: "nowrap" } }, l)))),
-        React.createElement("div", { onTouchStart: onSwipeStart, onTouchEnd: onSwipeEnd, style: { flex: 1, overflowY: "auto", padding: "14px 16px 90px" } }, !loaded ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Y\u00FCkleniyor...")) : tab === "anasayfa" ? (React.createElement("div", null,
+        React.createElement("div", { onTouchStart: onSwipeStart, onTouchEnd: onSwipeEnd, style: { flex: 1, overflowY: "auto", padding: "14px 16px 16px" } }, !loaded ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Y\u00FCkleniyor...")) : tab === "anasayfa" ? (React.createElement("div", null,
             React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 17, marginBottom: 2 } },
                 "Merhaba, ",
                 me.name),
@@ -22911,7 +22918,8 @@ function VetScreen({ me, onBack }) {
                         " hayvan")),
                 React.createElement(ChevronRight, { size: 16, color: "#8A8776" })))),
             React.createElement("div", { style: { marginTop: 14 } },
-                React.createElement(VetConnectForm, { me: me, refreshAll: load }))))))) : tab === "paketler" ? (React.createElement(VetPaketlerTab, { me: me })) : tab === "takvim" ? (React.createElement(VetTakvimTab, { me: me, myVetLinks: myVetLinks })) : tab === "gelir" ? (React.createElement(VetGelirTab, { me: me })) : tab === "bildirim" ? (React.createElement(VetBildirimlerTab, { allAnimalsByFarm: allAnimalsByFarm })) : tab === "rapor" ? (React.createElement(VetRaporlarTab, { myVetLinks: myVetLinks, allAnimalsByFarm: allAnimalsByFarm })) : null)));
+                React.createElement(VetConnectForm, { me: me, refreshAll: load }))))))) : tab === "paketler" ? (React.createElement(VetPaketlerTab, { me: me })) : tab === "takvim" ? (React.createElement(VetTakvimTab, { me: me, myVetLinks: myVetLinks })) : tab === "gelir" ? (React.createElement(VetGelirTab, { me: me })) : tab === "bildirim" ? (React.createElement(VetBildirimlerTab, { allAnimalsByFarm: allAnimalsByFarm })) : tab === "rapor" ? (React.createElement(VetRaporlarTab, { myVetLinks: myVetLinks, allAnimalsByFarm: allAnimalsByFarm })) : null),
+        React.createElement("div", { style: { display: "flex", gap: 5, padding: "8px 12px", overflowX: "auto", borderTop: `1px solid ${COLORS.line}`, background: COLORS.white, flexShrink: 0 } }, TABS.map(([k, l]) => (React.createElement("button", { key: k, onClick: () => { setTab(k); setSelectedFarm(null); }, style: { flexShrink: 0, padding: "7px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "Inter", fontWeight: 600, fontSize: 11.5, background: tab === k ? COLORS.pineDeep : COLORS.paper, color: tab === k ? COLORS.white : "#5A574C", whiteSpace: "nowrap" } }, l))))));
 }
 
 function VetPaketlerTab({ me }) {
