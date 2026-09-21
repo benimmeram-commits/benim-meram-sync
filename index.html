@@ -18447,7 +18447,7 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
     }))) : [];
     return (React.createElement(React.Fragment, null,
         React.createElement(CallManager, { me: me, pendingCallRequest: pendingCallRequest, onRequestConsumed: () => setPendingCallRequest(null) }),
-        screen !== "detail" && screen !== "chat" && screen !== "regionChat" && screen !== "reels" && screen !== "search" && screen !== "publicProfile" && screen !== "profileSub" && screen !== "farm" && (React.createElement("div", { style: { background: COLORS.pine, padding: "14px 14px 10px", display: "flex", alignItems: "center", gap: 10 } },
+        screen !== "detail" && screen !== "chat" && screen !== "regionChat" && screen !== "reels" && screen !== "search" && screen !== "publicProfile" && screen !== "profileSub" && screen !== "farm" && screen !== "vet" && (React.createElement("div", { style: { background: COLORS.pine, padding: "14px 14px 10px", display: "flex", alignItems: "center", gap: 10 } },
             React.createElement("button", { onClick: () => setDrawer(true), style: { background: "none", border: "none", cursor: "pointer" } },
                 React.createElement(IconMenu, { color: COLORS.white, size: 20 })),
             React.createElement(Logo, { size: 30, color: COLORS.white }),
@@ -18546,6 +18546,7 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
         screen === "profile" && React.createElement(ProfileScreen, { me: me, setMe: setMe, listings: listings, members: members, favorites: favorites, pricing: pricing, offers: offers, reviews: reviews, setScreen: setScreen, onOpenSection: (s) => { setProfileSubSection(s); setScreen("profileSub"); }, refreshAll: refreshAll }),
         screen === "profileSub" && React.createElement(ProfileSubScreen, { section: profileSubSection, me: me, setMe: setMe, refreshAll: refreshAll, onBack: () => setScreen("profile") }),
         screen === "farm" && me && React.createElement(FarmManagementScreen, { me: me, refreshAll: refreshAll, onBack: () => setScreen("profile") }),
+        screen === "vet" && me && React.createElement(VetScreen, { me: me, onBack: () => setScreen("profile") }),
         drawer && (React.createElement("div", { style: { position: "absolute", inset: 0, background: "rgba(20,48,31,0.4)", zIndex: 10 }, onClick: () => setDrawer(false) },
             React.createElement("div", { onClick: (e) => e.stopPropagation(), style: { width: 280, height: "100%", background: COLORS.white, padding: 18, overflowY: "auto" } },
                 React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 } },
@@ -18579,7 +18580,7 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
                                     color: tab === mainKey && subTab === sub && breedTab === breed ? COLORS.white : "#8A8776",
                                 } }, breed)))))));
                     })))))))),
-        screen !== "detail" && screen !== "chat" && screen !== "regionChat" && screen !== "search" && screen !== "reels" && screen !== "publicProfile" && screen !== "profileSub" && screen !== "farm" && (React.createElement("div", { style: { display: "flex", borderTop: `1px solid ${COLORS.line}`, background: COLORS.white, padding: "10px 0 14px" } }, [["home", NavIconHome, "Ana Sayfa"], ["reels", NavIconFilm, "Aktif"], ["create", NavIconPlus, "İlan Ver"], ["chatHub", NavIconChat, "Sohbet"], ["profile", NavIconUser, "Profil"]].map(([s, Icon, l]) => {
+        screen !== "detail" && screen !== "chat" && screen !== "regionChat" && screen !== "search" && screen !== "reels" && screen !== "publicProfile" && screen !== "profileSub" && screen !== "farm" && screen !== "vet" && (React.createElement("div", { style: { display: "flex", borderTop: `1px solid ${COLORS.line}`, background: COLORS.white, padding: "10px 0 14px" } }, [["home", NavIconHome, "Ana Sayfa"], ["reels", NavIconFilm, "Aktif"], ["create", NavIconPlus, "İlan Ver"], ["chatHub", NavIconChat, "Sohbet"], ["profile", NavIconUser, "Profil"]].map(([s, Icon, l]) => {
             const active = s === "chatHub" ? ["chatHub", "chat", "regionChat"].includes(screen) : screen === s;
             return (React.createElement("button", { key: s, onClick: () => (s === "home" || s === "reels" ? setScreen(s) : goToProtected(s)), style: { flex: 1, background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, cursor: "pointer" } },
                 React.createElement(Icon, { size: s === "create" ? 25 : 19, color: active ? COLORS.pineDeep : "#B7B4A6" }),
@@ -19816,6 +19817,8 @@ function ProfileScreen({ me, setMe, listings, members, favorites, pricing, offer
         me.profileType === "kurumsal" ? (React.createElement(KurumsalBilgilerCard, { me: me, setMe: setMe, myMember: myMember })) : (React.createElement(BireyselBilgilerCard, { me: me, myMember: myMember })),
         me.profileType !== "alici" && React.createElement(MenuGroup, { title: "\u00C7ift\u00E7i Tarafı" },
             React.createElement(MenuRow, { icon: IconBarn, label: "\u00C7iftlik Y\u00F6netimi", value: "Genel Bak\u0131\u015F", onClick: () => setScreen("farm") })),
+        React.createElement(MenuGroup, { title: "Veteriner" },
+            React.createElement(MenuRow, { icon: ShieldCheck, label: "Veteriner Paneli", value: "\u00C7iftliklere ba\u011Flan", onClick: () => setScreen("vet") })),
         React.createElement(MenuGroup, { title: "\u0130lan Y\u00F6netimi" },
             React.createElement(MenuRow, { icon: Flag, label: "\u0130lanlar\u0131m", value: `${myListings.length}`, onClick: () => { var _a; return (_a = document.getElementById("ilan-yonetimi-listesi")) === null || _a === void 0 ? void 0 : _a.scrollIntoView({ behavior: "smooth" }); } })),
         React.createElement(MenuGroup, { title: "Favorilerim" },
@@ -20654,7 +20657,8 @@ const RAW_DATA_KEYS = [
     "pricing", "adminAccounts", "adminLoginLogs", "auditLog", "reports",
     "customBreeds", "customSubcategories", "announcement",
     "notificationSettings", "passwordPolicy", "ipRestrictions", "emailChangeRequests", "calls", "callSignals", "appointments",
-    "farmAnimals", "farmFeedStock", "farmEmployees", "farmFinance", "farmBarns",
+    "farmAnimals", "farmFeedStock", "farmEmployees", "farmFinance", "farmBarns", "farmVets",
+    "vetPackages", "vetSubscriptions", "vetVisits", "vetServiceLog",
 ];
 function RawDataKeyEditor({ dataKey, session, refreshAll }) {
     const [open, setOpen] = useState(false);
@@ -22350,7 +22354,7 @@ function FarmManagementScreen({ me, ownerName, allowedTabs, refreshAll, onBack }
         await refreshAll(); };
     const ALL_TABS = [
         ["genel", "Genel Bakış"], ["ahir", "Ahır Yönetimi"], ["bolme", "Ahırlar & Bölmeler"], ["asi", "Aşı Takvimi"], ["dogum", "Doğum Takvimi"],
-        ["yem", "Yem Stoku"], ["gelirgider", "Gelir & Gider"], ["calisan", "Çalışanlar"],
+        ["yem", "Yem Stoku"], ["gelirgider", "Gelir & Gider"], ["calisan", "Çalışanlar"], ["veteriner", "Veterinerler"],
         ["bildirim", "Bildirimler"], ["rapor", "Raporlar"],
     ];
     const TABS = allowedTabs ? ALL_TABS.filter(([k]) => allowedTabs.includes(k)) : ALL_TABS;
@@ -22372,6 +22376,7 @@ function FarmManagementScreen({ me, ownerName, allowedTabs, refreshAll, onBack }
                 activeTab === "yem" && React.createElement(YemStokTab, { me: scopedMe, feedStock: feedStock, refreshAll: refresh }),
                 activeTab === "gelirgider" && React.createElement(GelirGiderTab, { me: scopedMe, entries: finance, refreshAll: refresh }),
                 activeTab === "calisan" && React.createElement(CalisanlarTab, { me: scopedMe, employees: employees, refreshAll: refresh }),
+                activeTab === "veteriner" && React.createElement(VeterinerlerTab, { me: scopedMe, refreshAll: refresh }),
                 activeTab === "bildirim" && React.createElement(BildirimMerkeziTab, { animals: animals, feedStock: feedStock, employees: employees }),
                 activeTab === "rapor" && React.createElement(RaporlarTab, { animals: animals, feedStock: feedStock, finance: finance }))))))));
 }
@@ -22446,6 +22451,7 @@ function GenelBakisTab({ ownerName, animals, feedStock, employees, setTab }) {
     const breedingCount = animals.reduce((sum, a) => sum + (a.breedingNotes || []).length, 0);
     const totalFeedTons = feedStock.reduce((sum, f) => sum + (f.amountTons || 0), 0);
     const employeeCount = employees.length;
+    const openTasks = employees.reduce((sum, e) => sum + (e.tasks || []).filter(t => !t.done).length, 0);
     const todayItems = [];
     animals.forEach(a => {
         const d = daysUntil(a.nextCheckup);
@@ -22464,18 +22470,37 @@ function GenelBakisTab({ ownerName, animals, feedStock, employees, setTab }) {
                 todayItems.push(`${f.feedName} — yaklaşık ${daysLeft} gün sonra bitebilir`);
         }
     });
-    return (React.createElement("div", null,
-        React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 17, color: COLORS.ink, marginBottom: 2 } },
-            ownerName,
-            " \u00C7iftli\u011Fi"),
-        React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776", marginBottom: 14 } }, "\u00C7iftli\u011Finizin genel \u00F6zeti"),
-        React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 } }, [["🐄", `${totalAnimals} hayvan`, "ahir"], ["💉", `${upcomingVaccines} yaklaşan kontrol`, "asi"], ["🤰", `${pregnancies} gebe hayvan`, "dogum"], ["❤️", `${breedingCount} üreme kaydı`, "dogum"], ["🌾", `${totalFeedTons} ton yem`, "yem"], ["👷", `${employeeCount} çalışan`, "calisan"]].map(([icon, label, tabKey], i) => (React.createElement("button", { key: i, onClick: () => setTab(tabKey), style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 12, textAlign: "left", cursor: "pointer" } },
-            React.createElement("div", { style: { fontSize: 18, marginBottom: 3 } }, icon),
-            React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12, color: COLORS.ink } }, label))))),
-        React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 12.5, color: COLORS.ink, marginBottom: 8, display: "flex", alignItems: "center", gap: 5 } },
-            React.createElement("span", { style: { width: 8, height: 8, borderRadius: "50%", background: todayItems.length > 0 ? COLORS.red : "#B7B4A6", display: "inline-block" } }),
-            " Bug\u00FCn Yap\u0131lacaklar"),
-        todayItems.length === 0 ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "\u015Eu an acil bir i\u015Finiz g\u00F6r\u00FCnm\u00FCyor.")) : (todayItems.map((t, i) => (React.createElement("div", { key: i, style: { background: COLORS.ochreSoft, borderRadius: 10, padding: "9px 12px", marginBottom: 6, fontFamily: "Inter", fontSize: 12, color: "#7A5A1E" } }, t))))));
+    const CARDS = [
+        ["🐄", "Ahır & Hayvanlar", `${totalAnimals} hayvan`, "ahir"],
+        ["🏚️", "Ahırlar & Bölmeler", "Düzenle", "bolme"],
+        ["💉", "Sağlık & Aşı", `${upcomingVaccines} yaklaşan`, "asi"],
+        ["🤰", "Doğum Takvimi", `${pregnancies} gebe`, "dogum"],
+        ["🌾", "Yem & Stok", `${totalFeedTons} ton`, "yem"],
+        ["💰", "Gelir & Gider", "Görüntüle", "gelirgider"],
+        ["👷", "Çalışanlar", `${employeeCount} kişi`, "calisan"],
+        ["🔔", "Bildirimler", `${todayItems.length} uyarı`, "bildirim"],
+    ];
+    return (React.createElement("div", { style: { margin: "-14px -16px 0" } },
+        React.createElement("div", { style: { background: `linear-gradient(155deg, ${COLORS.pine}, ${COLORS.pineDeep} 65%)`, padding: "22px 16px 40px", position: "relative", overflow: "hidden" } },
+            React.createElement("div", { style: { position: "absolute", right: -20, top: -20, fontSize: 110, opacity: 0.12 } }, "\uD83C\uDF3E"),
+            React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 20, color: COLORS.white, position: "relative" } },
+                ownerName,
+                " \u00C7iftli\u011Fi"),
+            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#CFE3D6", marginTop: 2, position: "relative" } }, "\u00C7iftli\u011Finizin genel \u00F6zeti"),
+            employees.length > 0 && (React.createElement("div", { style: { display: "flex", marginTop: 14, position: "relative" } },
+                employees.slice(0, 5).map((e, i) => (React.createElement("div", { key: e.id, title: e.name, style: { width: 30, height: 30, borderRadius: "50%", background: COLORS.ochreSoft, border: `2px solid ${COLORS.pineDeep}`, marginLeft: i === 0 ? 0 : -10, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Fraunces", fontWeight: 700, fontSize: 12, color: "#7A5A1E" } }, e.name[0]))),
+                employeeCount > 5 && React.createElement("div", { style: { width: 30, height: 30, borderRadius: "50%", background: "rgba(255,255,255,0.25)", border: `2px solid ${COLORS.pineDeep}`, marginLeft: -10, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Inter", fontWeight: 700, fontSize: 10, color: COLORS.white } },
+                    "+",
+                    employeeCount - 5)))),
+        React.createElement("div", { style: { padding: "0 16px 14px", marginTop: -24, position: "relative" } },
+            React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 } }, CARDS.map(([icon, title, stat, tabKey], i) => (React.createElement("button", { key: i, onClick: () => setTab(tabKey), style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: 14, textAlign: "left", cursor: "pointer", boxShadow: "0 4px 14px rgba(30,64,48,0.08)" } },
+                React.createElement("div", { style: { fontSize: 20, marginBottom: 6 } }, icon),
+                React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 12.5, color: COLORS.ink } }, title),
+                React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776", marginTop: 2 } }, stat))))),
+            React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 12.5, color: COLORS.ink, marginBottom: 8, display: "flex", alignItems: "center", gap: 5 } },
+                React.createElement("span", { style: { width: 8, height: 8, borderRadius: "50%", background: todayItems.length > 0 ? COLORS.red : "#B7B4A6", display: "inline-block" } }),
+                " Bug\u00FCn Yap\u0131lacaklar"),
+            todayItems.length === 0 ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "\u015Eu an acil bir i\u015Finiz g\u00F6r\u00FCnm\u00FCyor.")) : (todayItems.map((t, i) => (React.createElement("div", { key: i, style: { background: COLORS.ochreSoft, borderRadius: 10, padding: "9px 12px", marginBottom: 6, fontFamily: "Inter", fontSize: 12, color: "#7A5A1E" } }, t)))))));
 }
 
 function GelirGiderTab({ me, entries, refreshAll }) {
@@ -22680,6 +22705,502 @@ function AhirlarBolmelerTab({ me, barns, animals, refreshAll }) {
             React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 8 } },
                 React.createElement("button", { onClick: addBarn, style: btnPrimary }, "Ekle"),
                 React.createElement("button", { onClick: () => setShowAddBarn(false), style: { ...btnGhost, borderColor: COLORS.line, color: "#8A8776" } }, "Vazge\u00E7")))) : (React.createElement("button", { onClick: () => setShowAddBarn(true), style: { ...btnGhost, width: "100%", justifyContent: "center", borderColor: COLORS.line, color: COLORS.pineDeep } }, "+ Ah\u0131r Ekle"))));
+}
+
+function VeterinerlerTab({ me, refreshAll }) {
+    const [vets, setVets] = useState([]);
+    const [loaded, setLoaded] = useState(false);
+    const load = async () => {
+        const all = await loadShared("farmVets", []);
+        setVets(all.filter(v => v.ownerName === me.name));
+        setLoaded(true);
+    };
+    useEffect(() => { load(); }, []);
+    const generateInvite = async () => {
+        const code = String(Math.floor(100000 + Math.random() * 900000));
+        const all = await loadShared("farmVets", []);
+        all.push({ id: uid(), ownerName: me.name, vetName: null, vetPhone: null, accessCode: code, active: true, createdAt: Date.now() });
+        await saveShared("farmVets", all);
+        await load();
+        await refreshAll();
+    };
+    const removeVet = async (id) => {
+        const all = await loadShared("farmVets", []);
+        await saveShared("farmVets", all.filter(v => v.id !== id));
+        await load();
+        await refreshAll();
+    };
+    if (!loaded)
+        return React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Y\u00FCkleniyor...");
+    const connected = vets.filter(v => v.vetName);
+    const pending = vets.filter(v => !v.vetName);
+    return (React.createElement("div", null,
+        React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#8A8776", marginBottom: 10 } }, "Veterinerinize bir davet kodu verin \u2014 kendi hesab\u0131ndan \"Veteriner Paneli\"nden bu kodla \u00E7iftli\u011Finize ba\u011Flanabilir ve hayvanlar\u0131n\u0131za sa\u011Fl\u0131k notu/a\u015F\u0131 kayd\u0131 ekleyebilir."),
+        connected.length === 0 && pending.length === 0 && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776", marginBottom: 10 } }, "Hen\u00FCz veteriner eklenmemi\u015F."),
+        connected.map(v => (React.createElement("div", { key: v.id, style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 12, marginBottom: 8 } },
+            React.createElement("div", { style: { display: "flex", justifyContent: "space-between" } },
+                React.createElement("div", null,
+                    React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 13 } }, v.vetName),
+                    React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776" } }, v.vetPhone)),
+                React.createElement(Badge, { tone: "pine" }, "Ba\u011Fl\u0131")),
+            React.createElement(VetPackageSubscribeCard, { me: me, vetName: v.vetName }),
+            React.createElement("button", { onClick: () => removeVet(v.id), style: { background: "none", border: "none", color: COLORS.red, fontFamily: "Inter", fontSize: 10.5, cursor: "pointer", marginTop: 6, padding: 0 } }, "Ba\u011Flant\u0131y\u0131 Kald\u0131r")))),
+        pending.map(v => (React.createElement("div", { key: v.id, style: { background: COLORS.ochreSoft, borderRadius: 12, padding: 12, marginBottom: 8 } },
+            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#7A5A1E", marginBottom: 4 } }, "Bekleyen davet kodu \u2014 veterinerinize iletin:"),
+            React.createElement("div", { style: { fontFamily: "IBM Plex Mono", fontSize: 16, fontWeight: 700, color: "#7A5A1E" } }, v.accessCode),
+            React.createElement("button", { onClick: () => removeVet(v.id), style: { background: "none", border: "none", color: "#7A5A1E", fontFamily: "Inter", fontSize: 10.5, cursor: "pointer", marginTop: 6, padding: 0, textDecoration: "underline" } }, "\u0130ptal Et")))),
+        React.createElement("button", { onClick: generateInvite, style: { ...btnGhost, width: "100%", justifyContent: "center", borderColor: COLORS.line, color: COLORS.pineDeep } }, "+ Veteriner Davet Kodu Olu\u015Ftur")));
+}
+
+function VetConnectForm({ me, refreshAll }) {
+    const [code, setCode] = useState("");
+    const [err, setErr] = useState("");
+    const [saving, setSaving] = useState(false);
+    const connect = async () => {
+        if (!code.trim())
+            return;
+        setSaving(true);
+        setErr("");
+        const all = await loadShared("farmVets", []);
+        const idx = all.findIndex(v => v.accessCode === code.trim() && !v.vetName);
+        if (idx === -1) {
+            setErr("Kod geçersiz veya zaten kullanılmış.");
+            setSaving(false);
+            return;
+        }
+        all[idx].vetName = me.name;
+        all[idx].vetPhone = me.phone || null;
+        await saveShared("farmVets", all);
+        await refreshAll();
+        setCode("");
+        setSaving(false);
+    };
+    return (React.createElement("div", { style: { background: COLORS.paper, borderRadius: 12, padding: 14 } },
+        React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 12.5, marginBottom: 6 } }, "Bir \u00C7iftli\u011Fe Ba\u011Flan"),
+        React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776", marginBottom: 8 } }, "\u00C7iftlik sahibinin size verdi\u011Fi 6 haneli davet kodunu girin."),
+        React.createElement("div", { style: { display: "flex", gap: 6 } },
+            React.createElement("input", { value: code, onChange: (e) => setCode(e.target.value), placeholder: "6 haneli kod", style: { ...inputStyle, flex: 1 } }),
+            React.createElement("button", { onClick: connect, disabled: saving, style: { ...btnPrimary, padding: "10px 16px" } }, saving ? "..." : "Bağlan")),
+        err && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11, marginTop: 6 } }, err)));
+}
+
+function VetFarmAnimalsView({ farmOwnerName, onBack }) {
+    const [animals, setAnimals] = useState([]);
+    const [barns, setBarns] = useState([]);
+    const [expandedId, setExpandedId] = useState(null);
+    const [loaded, setLoaded] = useState(false);
+    const load = async () => {
+        const [a, b] = await Promise.all([loadShared("farmAnimals", []), loadShared("farmBarns", [])]);
+        setAnimals(a.filter(x => x.ownerName === farmOwnerName));
+        setBarns(b.filter(x => x.ownerName === farmOwnerName));
+        setLoaded(true);
+    };
+    useEffect(() => { load(); }, []);
+    return (React.createElement("div", null,
+        React.createElement("button", { onClick: onBack, style: { background: "none", border: "none", color: COLORS.pineDeep, fontFamily: "Inter", fontSize: 12, cursor: "pointer", padding: 0, marginBottom: 10 } }, "\u2190 \u00C7iftliklerime d\u00F6n"),
+        React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 15, marginBottom: 10 } },
+            farmOwnerName,
+            " \u00C7iftli\u011Fi \u2014 Hayvanlar"),
+        !loaded ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Y\u00FCkleniyor...")) : animals.length === 0 ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Bu \u00E7iftlikte kay\u0131tl\u0131 hayvan yok.")) : (animals.map(a => {
+            const checkupDays = daysUntil(a.nextCheckup);
+            const isOpen = expandedId === a.id;
+            return (React.createElement("div", { key: a.id, style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 12, marginBottom: 8 } },
+                React.createElement("div", { onClick: () => setExpandedId(isOpen ? null : a.id), style: { display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" } },
+                    React.createElement("div", null,
+                        React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 13 } },
+                            a.tag,
+                            a.breed ? ` · ${a.breed}` : ""),
+                        React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776" } }, a.barn ? `${a.barn}${a.stallName ? " / " + a.stallName : ""}` : "Bölme atanmamış")),
+                    React.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center" } },
+                        checkupDays !== null && checkupDays <= 7 && checkupDays >= 0 && React.createElement(Badge, { tone: "ochre" },
+                            "Kontrol ",
+                            checkupDays === 0 ? "bugün" : `${checkupDays}g`),
+                        React.createElement(ChevronRight, { size: 16, color: "#8A8776", style: { transform: isOpen ? "rotate(90deg)" : "none" } }))),
+                isOpen && React.createElement(AnimalDetailEditor, { animal: a, barns: barns, refreshAll: load })));
+        }))));
+}
+
+function VetScreen({ me, onBack }) {
+    const [tab, setTab] = useState("anasayfa");
+    const [myVetLinks, setMyVetLinks] = useState([]);
+    const [allAnimalsByFarm, setAllAnimalsByFarm] = useState({});
+    const [loaded, setLoaded] = useState(false);
+    const [selectedFarm, setSelectedFarm] = useState(null);
+    const load = async () => {
+        const links = await loadShared("farmVets", []);
+        const mine = links.filter(v => v.vetName === me.name);
+        setMyVetLinks(mine);
+        const allAnimals = await loadShared("farmAnimals", []);
+        const byFarm = {};
+        mine.forEach(v => { byFarm[v.ownerName] = allAnimals.filter(a => a.ownerName === v.ownerName); });
+        setAllAnimalsByFarm(byFarm);
+        setLoaded(true);
+    };
+    useEffect(() => { load(); }, []);
+    const allAnimals = Object.values(allAnimalsByFarm).flat();
+    const totalAnimals = allAnimals.length;
+    const upcomingChecks = allAnimals.filter(a => { const d = daysUntil(a.nextCheckup); return d !== null && d >= 0 && d <= 7; }).length;
+    const overdueChecks = allAnimals.filter(a => { const d = daysUntil(a.nextCheckup); return d !== null && d < 0; }).length;
+    const pregnancies = allAnimals.filter(a => a.pregnant).length;
+    const TABS = [["anasayfa", "Ana Sayfa"], ["ciftlikler", "Çiftliklerim"], ["paketler", "Paketlerim"], ["takvim", "Takvim"], ["gelir", "Gelirim"], ["bildirim", "Bildirimler"], ["rapor", "Raporlar"]];
+    return (React.createElement("div", { style: { flex: 1, display: "flex", flexDirection: "column" } },
+        React.createElement("div", { style: { background: COLORS.pine, padding: "14px 14px 10px", display: "flex", alignItems: "center", gap: 10 } },
+            React.createElement("button", { onClick: onBack, style: { background: "none", border: "none", cursor: "pointer" } },
+                React.createElement(ChevronLeft, { color: COLORS.white, size: 20 })),
+            React.createElement("span", { style: { fontSize: 17 } }, "\uD83E\uDE7A"),
+            React.createElement("div", { style: { color: COLORS.white, fontFamily: "Fraunces", fontWeight: 700, fontSize: 16 } }, "Veteriner Paneli")),
+        React.createElement("div", { style: { display: "flex", gap: 5, padding: "10px 12px 0", overflowX: "auto" } }, TABS.map(([k, l]) => (React.createElement("button", { key: k, onClick: () => { setTab(k); setSelectedFarm(null); }, style: { flexShrink: 0, padding: "7px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "Inter", fontWeight: 600, fontSize: 11.5, background: tab === k ? COLORS.pineDeep : COLORS.paper, color: tab === k ? COLORS.white : "#5A574C", whiteSpace: "nowrap" } }, l)))),
+        React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "14px 16px 90px" } }, !loaded ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Y\u00FCkleniyor...")) : tab === "anasayfa" ? (React.createElement("div", null,
+            React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 17, marginBottom: 2 } },
+                "Merhaba, ",
+                me.name),
+            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776", marginBottom: 14 } },
+                myVetLinks.length,
+                " \u00E7iftlikle ba\u011Fl\u0131s\u0131n\u0131z"),
+            React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 } }, [["🐄", `${totalAnimals} hayvan`], ["💉", `${upcomingChecks} yaklaşan kontrol`], ["🔴", `${overdueChecks} geciken`], ["🤰", `${pregnancies} gebe hayvan`]].map(([icon, label], i) => (React.createElement("div", { key: i, style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 12 } },
+                React.createElement("div", { style: { fontSize: 18, marginBottom: 3 } }, icon),
+                React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12, color: COLORS.ink } }, label))))),
+            myVetLinks.length === 0 && React.createElement(VetConnectForm, { me: me, refreshAll: load }))) : tab === "ciftlikler" ? (selectedFarm ? (React.createElement(VetFarmAnimalsView, { farmOwnerName: selectedFarm, onBack: () => setSelectedFarm(null) })) : (React.createElement("div", null, myVetLinks.length === 0 ? (React.createElement(VetConnectForm, { me: me, refreshAll: load })) : (React.createElement(React.Fragment, null,
+            myVetLinks.map(v => (React.createElement("button", { key: v.id, onClick: () => setSelectedFarm(v.ownerName), style: { width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 14, marginBottom: 8, cursor: "pointer", textAlign: "left" } },
+                React.createElement("div", null,
+                    React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 13.5 } },
+                        v.ownerName,
+                        " \u00C7iftli\u011Fi"),
+                    React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776" } },
+                        (allAnimalsByFarm[v.ownerName] || []).length,
+                        " hayvan")),
+                React.createElement(ChevronRight, { size: 16, color: "#8A8776" })))),
+            React.createElement("div", { style: { marginTop: 14 } },
+                React.createElement(VetConnectForm, { me: me, refreshAll: load }))))))) : tab === "paketler" ? (React.createElement(VetPaketlerTab, { me: me })) : tab === "takvim" ? (React.createElement(VetTakvimTab, { me: me, myVetLinks: myVetLinks })) : tab === "gelir" ? (React.createElement(VetGelirTab, { me: me })) : tab === "bildirim" ? (React.createElement(VetBildirimlerTab, { allAnimalsByFarm: allAnimalsByFarm })) : tab === "rapor" ? (React.createElement(VetRaporlarTab, { myVetLinks: myVetLinks, allAnimalsByFarm: allAnimalsByFarm })) : null)));
+}
+
+function VetPaketlerTab({ me }) {
+    const [packages, setPackages] = useState([]);
+    const [subs, setSubs] = useState([]);
+    const [showAdd, setShowAdd] = useState(false);
+    const [title, setTitle] = useState("");
+    const [price, setPrice] = useState("");
+    const [features, setFeatures] = useState("");
+    const [saving, setSaving] = useState(false);
+    const [loaded, setLoaded] = useState(false);
+    const load = async () => {
+        const [p, s] = await Promise.all([loadShared("vetPackages", []), loadShared("vetSubscriptions", [])]);
+        setPackages(p.filter(x => x.vetName === me.name));
+        setSubs(s.filter(x => x.vetName === me.name && x.status === "active"));
+        setLoaded(true);
+    };
+    useEffect(() => { load(); }, []);
+    const addPackage = async () => {
+        if (!title.trim() || !price)
+            return;
+        setSaving(true);
+        const all = await loadShared("vetPackages", []);
+        all.push({ id: uid(), vetName: me.name, title: title.trim(), price: Number(price), features: features.split("\n").map(f => f.trim()).filter(Boolean), createdAt: Date.now() });
+        await saveShared("vetPackages", all);
+        await load();
+        setTitle("");
+        setPrice("");
+        setFeatures("");
+        setShowAdd(false);
+        setSaving(false);
+    };
+    const removePackage = async (id) => {
+        const all = await loadShared("vetPackages", []);
+        await saveShared("vetPackages", all.filter(p => p.id !== id));
+        await load();
+    };
+    const subCountFor = (packageId) => subs.filter(s => s.packageId === packageId).length;
+    if (!loaded)
+        return React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Y\u00FCkleniyor...");
+    return (React.createElement("div", null,
+        React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#8A8776", marginBottom: 10 } }, "\u00C7iftliklere sunaca\u011F\u0131n\u0131z ayl\u0131k hizmet paketlerini burada tan\u0131mlay\u0131n. Ba\u011Fl\u0131 \u00E7iftlikler bu paketleri g\u00F6r\u00FCp abone olabilir."),
+        React.createElement("div", { style: { fontFamily: "Inter", fontSize: 9.5, color: COLORS.ochre, marginBottom: 10 } }, "\u26A0 \u00D6deme sim\u00FClasyonu \u2014 ger\u00E7ek kart i\u015Flemi yap\u0131lmaz."),
+        packages.length === 0 && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776", marginBottom: 10 } }, "Hen\u00FCz paket olu\u015Fturmad\u0131n\u0131z."),
+        packages.map(p => (React.createElement("div", { key: p.id, style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 12, marginBottom: 8 } },
+            React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" } },
+                React.createElement("div", null,
+                    React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 13 } }, p.title),
+                    React.createElement("div", { style: { fontFamily: "IBM Plex Mono", fontWeight: 700, fontSize: 14, color: COLORS.pineDeep, marginTop: 2 } },
+                        TL(p.price),
+                        " / ay")),
+                React.createElement("button", { onClick: () => removePackage(p.id), style: { background: "none", border: "none", color: COLORS.red, fontFamily: "Inter", fontSize: 10.5, cursor: "pointer" } }, "Sil")),
+            p.features.length > 0 && (React.createElement("ul", { style: { margin: "8px 0 0", paddingLeft: 18, fontFamily: "Inter", fontSize: 11, color: "#5A574C" } }, p.features.map((f, i) => React.createElement("li", { key: i }, f)))),
+            React.createElement("div", { style: { marginTop: 8 } },
+                React.createElement(Badge, { tone: "pine" },
+                    subCountFor(p.id),
+                    " abone \u00E7iftlik"))))),
+        showAdd ? (React.createElement("div", { style: { background: COLORS.paper, borderRadius: 12, padding: 12 } },
+            React.createElement(FormField, { label: "Paket Ad\u0131", value: title, onChange: setTitle, placeholder: "\u00D6rn. Ayl\u0131k \u00C7iftlik Takip Paketi" }),
+            React.createElement("div", { style: { marginTop: 8 } },
+                React.createElement(FormField, { label: "Ayl\u0131k Fiyat (TL)", value: price, onChange: setPrice, type: "number", placeholder: "5000" })),
+            React.createElement("div", { style: { marginTop: 8 } },
+                React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11, color: "#5A574C", fontWeight: 600 } }, "\u00D6zellikler (her sat\u0131ra bir tane)"),
+                React.createElement("textarea", { value: features, onChange: (e) => setFeatures(e.target.value), rows: 4, placeholder: "2 çiftlik ziyareti\nGebelik kontrolleri\nSağlık planı", style: { ...inputStyle, marginTop: 3, resize: "vertical" } })),
+            React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 10 } },
+                React.createElement("button", { onClick: addPackage, disabled: saving, style: btnPrimary }, saving ? "Ekleniyor..." : "Paketi Oluştur"),
+                React.createElement("button", { onClick: () => setShowAdd(false), style: { ...btnGhost, borderColor: COLORS.line, color: "#8A8776" } }, "Vazge\u00E7")))) : (React.createElement("button", { onClick: () => setShowAdd(true), style: { ...btnGhost, width: "100%", justifyContent: "center", borderColor: COLORS.line, color: COLORS.pineDeep } }, "+ Paket Olu\u015Ftur"))));
+}
+
+function VetPackageSubscribeCard({ me, vetName }) {
+    const [packages, setPackages] = useState([]);
+    const [mySub, setMySub] = useState(null);
+    const [paying, setPaying] = useState(null);
+    const [loaded, setLoaded] = useState(false);
+    const load = async () => {
+        const [p, s] = await Promise.all([loadShared("vetPackages", []), loadShared("vetSubscriptions", [])]);
+        setPackages(p.filter(x => x.vetName === vetName));
+        setMySub(s.find(x => x.vetName === vetName && x.farmOwnerName === me.name && x.status === "active") || null);
+        setLoaded(true);
+    };
+    useEffect(() => { load(); }, []);
+    const subscribe = async (pkg) => {
+        setPaying(pkg.id);
+        await new Promise(r => setTimeout(r, 700)); // ödeme simülasyonu
+        const all = await loadShared("vetSubscriptions", []);
+        all.push({ id: uid(), vetName, farmOwnerName: me.name, packageId: pkg.id, packageTitle: pkg.title, price: pkg.price, status: "active", startedAt: Date.now() });
+        await saveShared("vetSubscriptions", all);
+        await load();
+        setPaying(null);
+    };
+    const cancelSub = async () => {
+        if (!mySub)
+            return;
+        const all = await loadShared("vetSubscriptions", []);
+        const idx = all.findIndex(s => s.id === mySub.id);
+        if (idx > -1) {
+            all[idx].status = "iptal";
+            await saveShared("vetSubscriptions", all);
+        }
+        await load();
+    };
+    if (!loaded || packages.length === 0)
+        return null;
+    return (React.createElement("div", { style: { marginTop: 10 } },
+        React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 11.5, color: "#5A574C", marginBottom: 6 } }, "Veterinerin Hizmet Paketleri"),
+        packages.map(p => (React.createElement("div", { key: p.id, style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: 10, marginBottom: 6 } },
+            React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
+                React.createElement("div", null,
+                    React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 12 } }, p.title),
+                    React.createElement("div", { style: { fontFamily: "IBM Plex Mono", fontSize: 12.5, color: COLORS.pineDeep } },
+                        TL(p.price),
+                        " / ay")),
+                mySub && mySub.packageId === p.id ? (React.createElement("button", { onClick: cancelSub, style: { ...btnGhost, borderColor: COLORS.line, color: COLORS.red, padding: "6px 10px", fontSize: 10.5 } }, "Aboneli\u011Fi \u0130ptal Et")) : (React.createElement("button", { onClick: () => subscribe(p), disabled: !!mySub || paying === p.id, style: { ...btnPrimary, padding: "6px 12px", fontSize: 11, opacity: mySub ? 0.5 : 1 } }, paying === p.id ? "..." : "Abone Ol"))))))));
+}
+
+function VetGelirTab({ me }) {
+    const [subs, setSubs] = useState([]);
+    const [serviceLog, setServiceLog] = useState([]);
+    const [showAdd, setShowAdd] = useState(false);
+    const [farmName, setFarmName] = useState("");
+    const [serviceType, setServiceType] = useState("Aşı Uygulaması");
+    const [amount, setAmount] = useState("");
+    const [saving, setSaving] = useState(false);
+    const [loaded, setLoaded] = useState(false);
+    const PLATFORM_COMMISSION = 0.10;
+    const load = async () => {
+        const [s, l] = await Promise.all([loadShared("vetSubscriptions", []), loadShared("vetServiceLog", [])]);
+        setSubs(s.filter(x => x.vetName === me.name && x.status === "active"));
+        setServiceLog(l.filter(x => x.vetName === me.name));
+        setLoaded(true);
+    };
+    useEffect(() => { load(); }, []);
+    const addService = async () => {
+        if (!farmName.trim() || !amount)
+            return;
+        setSaving(true);
+        const all = await loadShared("vetServiceLog", []);
+        all.push({ id: uid(), vetName: me.name, farmOwnerName: farmName.trim(), type: serviceType, amount: Number(amount), date: new Date().toISOString().slice(0, 10), createdAt: Date.now() });
+        await saveShared("vetServiceLog", all);
+        await load();
+        setFarmName("");
+        setAmount("");
+        setShowAdd(false);
+        setSaving(false);
+    };
+    if (!loaded)
+        return React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Y\u00FCkleniyor...");
+    const now = new Date();
+    const thisMonthServices = serviceLog.filter(s => { const d = new Date(s.date); return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear(); });
+    const subscriptionIncome = subs.reduce((sum, s) => sum + s.price, 0);
+    const serviceIncome = thisMonthServices.reduce((sum, s) => sum + s.amount, 0);
+    const grossIncome = subscriptionIncome + serviceIncome;
+    const commission = Math.round(grossIncome * PLATFORM_COMMISSION);
+    const netIncome = grossIncome - commission;
+    return (React.createElement("div", null,
+        React.createElement("div", { style: { fontFamily: "Inter", fontSize: 9.5, color: COLORS.ochre, marginBottom: 10 } }, "\u26A0 \u00D6deme sim\u00FClasyonu \u2014 ger\u00E7ek kart i\u015Flemi yap\u0131lmaz."),
+        React.createElement("div", { style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 14, marginBottom: 14 } },
+            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776" } }, "Bu Ay Net Kazan\u00E7"),
+            React.createElement("div", { style: { fontFamily: "IBM Plex Mono", fontWeight: 700, fontSize: 22, color: COLORS.pineDeep, margin: "4px 0" } }, TL(netIncome)),
+            React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 4, marginTop: 8, paddingTop: 8, borderTop: `1px solid ${COLORS.line}` } }, [["Abonelik geliri", TL(subscriptionIncome)], ["Hizmet/işlem geliri", TL(serviceIncome)], [`Platform komisyonu (%${PLATFORM_COMMISSION * 100})`, `-${TL(commission)}`]].map(([k, v]) => (React.createElement("div", { key: k, style: { display: "flex", justifyContent: "space-between", fontFamily: "Inter", fontSize: 11.5 } },
+                React.createElement("span", { style: { color: "#8A8776" } }, k),
+                React.createElement("span", { style: { fontWeight: 600 } }, v)))))),
+        React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 12.5, marginBottom: 8 } },
+            "Aktif Abonelikler (",
+            subs.length,
+            ")"),
+        subs.length === 0 && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776", marginBottom: 10 } }, "Aktif abone \u00E7iftlik yok."),
+        subs.map(s => (React.createElement("div", { key: s.id, style: { display: "flex", justifyContent: "space-between", background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: "9px 12px", marginBottom: 6 } },
+            React.createElement("span", { style: { fontFamily: "Inter", fontSize: 12 } },
+                s.farmOwnerName,
+                " \u2014 ",
+                s.packageTitle),
+            React.createElement("span", { style: { fontFamily: "IBM Plex Mono", fontWeight: 700, fontSize: 12 } }, TL(s.price))))),
+        React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 12.5, margin: "14px 0 8px" } }, "Hizmet/\u0130\u015Flem Kay\u0131tlar\u0131"),
+        serviceLog.slice().reverse().slice(0, 10).map(s => (React.createElement("div", { key: s.id, style: { display: "flex", justifyContent: "space-between", background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: "9px 12px", marginBottom: 6 } },
+            React.createElement("div", null,
+                React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12 } },
+                    s.farmOwnerName,
+                    " \u2014 ",
+                    s.type),
+                React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10, color: "#8A8776" } }, s.date)),
+            React.createElement("span", { style: { fontFamily: "IBM Plex Mono", fontWeight: 700, fontSize: 12 } }, TL(s.amount))))),
+        showAdd ? (React.createElement("div", { style: { background: COLORS.paper, borderRadius: 12, padding: 12, marginTop: 6 } },
+            React.createElement(FormField, { label: "\u00C7iftlik Ad\u0131", value: farmName, onChange: setFarmName, placeholder: "\u00C7iftlik sahibinin ad\u0131" }),
+            React.createElement("div", { style: { marginTop: 8 } },
+                React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11, color: "#5A574C", fontWeight: 600 } }, "Hizmet T\u00FCr\u00FC"),
+                React.createElement("select", { value: serviceType, onChange: (e) => setServiceType(e.target.value), style: { ...inputStyle, marginTop: 3 } },
+                    React.createElement("option", null, "A\u015F\u0131 Uygulamas\u0131"),
+                    React.createElement("option", null, "Muayene"),
+                    React.createElement("option", null, "Tedavi"),
+                    React.createElement("option", null, "Gebelik Kontrol\u00FC"),
+                    React.createElement("option", null, "Di\u011Fer"))),
+            React.createElement("div", { style: { marginTop: 8 } },
+                React.createElement(FormField, { label: "Tutar (TL)", value: amount, onChange: setAmount, type: "number", placeholder: "500" })),
+            React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 8 } },
+                React.createElement("button", { onClick: addService, disabled: saving, style: btnPrimary }, saving ? "Kaydediliyor..." : "Kaydet"),
+                React.createElement("button", { onClick: () => setShowAdd(false), style: { ...btnGhost, borderColor: COLORS.line, color: "#8A8776" } }, "Vazge\u00E7")))) : (React.createElement("button", { onClick: () => setShowAdd(true), style: { ...btnGhost, width: "100%", justifyContent: "center", borderColor: COLORS.line, color: COLORS.pineDeep, marginTop: 6 } }, "+ Hizmet/\u0130\u015Flem \u00DCcreti Kaydet"))));
+}
+
+function VetTakvimTab({ me, myVetLinks }) {
+    const [visits, setVisits] = useState([]);
+    const [showAdd, setShowAdd] = useState(false);
+    const [farmName, setFarmName] = useState(myVetLinks[0] ? myVetLinks[0].ownerName : "");
+    const [date, setDate] = useState("");
+    const [time, setTime] = useState("");
+    const [note, setNote] = useState("");
+    const [saving, setSaving] = useState(false);
+    const [loaded, setLoaded] = useState(false);
+    const load = async () => {
+        const all = await loadShared("vetVisits", []);
+        setVisits(all.filter(v => v.vetName === me.name));
+        setLoaded(true);
+    };
+    useEffect(() => { load(); }, []);
+    const addVisit = async () => {
+        if (!farmName || !date)
+            return;
+        setSaving(true);
+        const all = await loadShared("vetVisits", []);
+        all.push({ id: uid(), vetName: me.name, farmOwnerName: farmName, date, time: time || null, note: note.trim(), status: "planlandi", createdAt: Date.now() });
+        await saveShared("vetVisits", all);
+        await load();
+        setDate("");
+        setTime("");
+        setNote("");
+        setShowAdd(false);
+        setSaving(false);
+    };
+    const markDone = async (id) => {
+        const all = await loadShared("vetVisits", []);
+        const idx = all.findIndex(v => v.id === id);
+        if (idx > -1) {
+            all[idx].status = "tamamlandi";
+            await saveShared("vetVisits", all);
+        }
+        await load();
+    };
+    const removeVisit = async (id) => {
+        const all = await loadShared("vetVisits", []);
+        await saveShared("vetVisits", all.filter(v => v.id !== id));
+        await load();
+    };
+    if (!loaded)
+        return React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Y\u00FCkleniyor...");
+    const upcoming = visits.filter(v => v.status === "planlandi").sort((a, b) => new Date(a.date) - new Date(b.date));
+    const past = visits.filter(v => v.status === "tamamlandi").sort((a, b) => new Date(b.date) - new Date(a.date));
+    return (React.createElement("div", null,
+        React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 12.5, marginBottom: 8 } }, "Yakla\u015Fan Ziyaretler"),
+        upcoming.length === 0 && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776", marginBottom: 10 } }, "Planlanm\u0131\u015F ziyaret yok."),
+        upcoming.map(v => (React.createElement("div", { key: v.id, style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 12, marginBottom: 8 } },
+            React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 13 } },
+                v.farmOwnerName,
+                " \u00C7iftli\u011Fi"),
+            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776" } },
+                v.date,
+                v.time ? `, ${v.time}` : ""),
+            v.note && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#5A574C", marginTop: 4 } }, v.note),
+            React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 8 } },
+                React.createElement("button", { onClick: () => markDone(v.id), style: { ...btnGhost, borderColor: COLORS.line, color: COLORS.pineDeep, padding: "5px 10px", fontSize: 10.5 } }, "Tamamland\u0131"),
+                React.createElement("button", { onClick: () => removeVisit(v.id), style: { ...btnGhost, borderColor: COLORS.line, color: COLORS.red, padding: "5px 10px", fontSize: 10.5 } }, "\u0130ptal"))))),
+        showAdd ? (React.createElement("div", { style: { background: COLORS.paper, borderRadius: 12, padding: 12 } },
+            React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11, color: "#5A574C", fontWeight: 600 } }, "\u00C7iftlik"),
+            React.createElement("select", { value: farmName, onChange: (e) => setFarmName(e.target.value), style: { ...inputStyle, marginTop: 3 } }, myVetLinks.map(v => React.createElement("option", { key: v.id, value: v.ownerName }, v.ownerName))),
+            React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 8 } },
+                React.createElement("div", { style: { flex: 1 } },
+                    React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11, color: "#5A574C", fontWeight: 600 } }, "Tarih"),
+                    React.createElement("input", { type: "date", value: date, onChange: (e) => setDate(e.target.value), style: { ...inputStyle, marginTop: 3 } })),
+                React.createElement("div", { style: { flex: 1 } },
+                    React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11, color: "#5A574C", fontWeight: 600 } }, "Saat"),
+                    React.createElement("input", { type: "time", value: time, onChange: (e) => setTime(e.target.value), style: { ...inputStyle, marginTop: 3 } }))),
+            React.createElement("div", { style: { marginTop: 8 } },
+                React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11, color: "#5A574C", fontWeight: 600 } }, "Not (opsiyonel)"),
+                React.createElement("textarea", { value: note, onChange: (e) => setNote(e.target.value), rows: 2, style: { ...inputStyle, marginTop: 3, resize: "vertical" } })),
+            React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 8 } },
+                React.createElement("button", { onClick: addVisit, disabled: saving, style: btnPrimary }, saving ? "Ekleniyor..." : "Ziyaret Ekle"),
+                React.createElement("button", { onClick: () => setShowAdd(false), style: { ...btnGhost, borderColor: COLORS.line, color: "#8A8776" } }, "Vazge\u00E7")))) : myVetLinks.length > 0 ? (React.createElement("button", { onClick: () => setShowAdd(true), style: { ...btnGhost, width: "100%", justifyContent: "center", borderColor: COLORS.line, color: COLORS.pineDeep } }, "+ Ziyaret Planla")) : (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#8A8776" } }, "Ziyaret planlamak i\u00E7in \u00F6nce bir \u00E7iftli\u011Fe ba\u011Flan\u0131n.")),
+        past.length > 0 && (React.createElement(React.Fragment, null,
+            React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 12.5, margin: "16px 0 8px" } }, "Ge\u00E7mi\u015F Ziyaretler"),
+            past.slice(0, 10).map(v => (React.createElement("div", { key: v.id, style: { display: "flex", justifyContent: "space-between", fontFamily: "Inter", fontSize: 11.5, padding: "6px 0", borderBottom: `1px solid ${COLORS.line}` } },
+                React.createElement("span", null, v.farmOwnerName),
+                React.createElement("span", { style: { color: "#8A8776" } }, v.date))))))));
+}
+
+function VetBildirimlerTab({ allAnimalsByFarm }) {
+    const notifs = [];
+    Object.entries(allAnimalsByFarm).forEach(([farm, animals]) => {
+        animals.forEach(a => {
+            const d = daysUntil(a.nextCheckup);
+            if (d !== null && d <= 7)
+                notifs.push({ level: d < 0 ? "red" : d <= 2 ? "red" : "yellow", text: `${farm}: ${a.tag} için kontrol ${d < 0 ? "gecikti" : d === 0 ? "bugün" : `${d} gün sonra`}.` });
+            if (a.pregnant && a.dueDate) {
+                const dd = daysUntil(a.dueDate);
+                if (dd !== null && dd >= 0 && dd <= 7)
+                    notifs.push({ level: dd <= 2 ? "red" : "yellow", text: `${farm}: ${a.tag}'ın doğumuna ${dd === 0 ? "bugün" : `${dd} gün`} kaldı.` });
+            }
+        });
+    });
+    const order = { red: 0, yellow: 1 };
+    notifs.sort((a, b) => order[a.level] - order[b.level]);
+    const colorFor = { red: { bg: "#F6E2DC", fg: "#8A3B2A", dot: COLORS.red }, yellow: { bg: COLORS.ochreSoft, fg: "#7A5A1E", dot: COLORS.ochre } };
+    return (React.createElement("div", null, notifs.length === 0 ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "\u015Eu an bildirim yok.")) : (notifs.map((n, i) => {
+        const c = colorFor[n.level];
+        return (React.createElement("div", { key: i, style: { display: "flex", alignItems: "center", gap: 8, background: c.bg, borderRadius: 10, padding: "10px 12px", marginBottom: 6 } },
+            React.createElement("span", { style: { width: 8, height: 8, borderRadius: "50%", background: c.dot, flexShrink: 0 } }),
+            React.createElement("span", { style: { fontFamily: "Inter", fontSize: 12, color: c.fg } }, n.text)));
+    }))));
+}
+
+function VetRaporlarTab({ myVetLinks, allAnimalsByFarm }) {
+    return (React.createElement("div", null,
+        React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 12.5, marginBottom: 8 } }, "\u00C7iftlik Baz\u0131nda \u00D6zet"),
+        myVetLinks.length === 0 && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Hen\u00FCz ba\u011Fl\u0131 \u00E7iftlik yok."),
+        myVetLinks.map(v => {
+            const animals = allAnimalsByFarm[v.ownerName] || [];
+            const upcoming = animals.filter(a => { const d = daysUntil(a.nextCheckup); return d !== null && d >= 0 && d <= 14; }).length;
+            const pregnant = animals.filter(a => a.pregnant).length;
+            return (React.createElement("div", { key: v.id, style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 12, marginBottom: 8 } },
+                React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 13 } }, v.ownerName),
+                React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 4, marginTop: 6, fontFamily: "Inter", fontSize: 11.5 } },
+                    React.createElement("div", { style: { display: "flex", justifyContent: "space-between" } },
+                        React.createElement("span", { style: { color: "#8A8776" } }, "Toplam hayvan"),
+                        React.createElement("span", { style: { fontWeight: 600 } }, animals.length)),
+                    React.createElement("div", { style: { display: "flex", justifyContent: "space-between" } },
+                        React.createElement("span", { style: { color: "#8A8776" } }, "Yakla\u015Fan kontrol (14 g\u00FCn)"),
+                        React.createElement("span", { style: { fontWeight: 600 } }, upcoming)),
+                    React.createElement("div", { style: { display: "flex", justifyContent: "space-between" } },
+                        React.createElement("span", { style: { color: "#8A8776" } }, "Gebe hayvan"),
+                        React.createElement("span", { style: { fontWeight: 600 } }, pregnant)))));
+        })));
 }
 
 </script>
