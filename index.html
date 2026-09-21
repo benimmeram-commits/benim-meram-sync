@@ -22371,9 +22371,9 @@ function FarmManagementScreen({ me, ownerName, allowedTabs, refreshAll, onBack }
     const refresh = async () => { await loadAll(); if (refreshAll)
         await refreshAll(); };
     const ALL_TABS = [
-        ["genel", "Genel Bakış"], ["ahir", "Ahır Yönetimi"], ["bolme", "Ahırlar & Bölmeler"], ["asi", "Aşı Takvimi"], ["dogum", "Doğum Takvimi"],
-        ["yem", "Yem Stoku"], ["gelirgider", "Gelir & Gider"], ["calisan", "Çalışanlar"], ["veteriner", "Veterinerler"],
-        ["bildirim", "Bildirimler"], ["rapor", "Raporlar"],
+        ["genel", "Genel", "🏠"], ["ahir", "Ahır", "🐄"], ["bolme", "Bölmeler", "🏚️"], ["asi", "Aşı", "💉"], ["dogum", "Doğum", "🤰"],
+        ["yem", "Yem", "🌾"], ["gelirgider", "Gelir", "💰"], ["calisan", "Çalışan", "👷"], ["veteriner", "Veteriner", "🩺"],
+        ["bildirim", "Bildirim", "🔔"], ["rapor", "Rapor", "📊"],
     ];
     const TABS = allowedTabs ? ALL_TABS.filter(([k]) => allowedTabs.includes(k)) : ALL_TABS;
     const activeTab = tab || (TABS[0] ? TABS[0][0] : null);
@@ -22411,7 +22411,9 @@ function FarmManagementScreen({ me, ownerName, allowedTabs, refreshAll, onBack }
                 activeTab === "veteriner" && React.createElement(VeterinerlerTab, { me: scopedMe, refreshAll: refresh }),
                 activeTab === "bildirim" && React.createElement(BildirimMerkeziTab, { animals: animals, feedStock: feedStock, employees: employees }),
                 activeTab === "rapor" && React.createElement(RaporlarTab, { animals: animals, feedStock: feedStock, finance: finance })))),
-            React.createElement("div", { style: { display: "flex", gap: 5, padding: "8px 12px", overflowX: "auto", borderTop: `1px solid ${COLORS.line}`, background: COLORS.white, flexShrink: 0 } }, TABS.map(([k, l]) => (React.createElement("button", { key: k, onClick: () => setTab(k), style: { flexShrink: 0, padding: "7px 11px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "Inter", fontWeight: 600, fontSize: 11, background: activeTab === k ? COLORS.pineDeep : COLORS.paper, color: activeTab === k ? COLORS.white : "#5A574C", whiteSpace: "nowrap" } }, l))))))));
+            React.createElement("div", { style: { display: "flex", padding: "8px 4px", overflowX: "auto", borderTop: `1px solid ${COLORS.line}`, background: COLORS.white, flexShrink: 0 } }, TABS.map(([k, l, icon]) => (React.createElement("button", { key: k, onClick: () => setTab(k), style: { flexShrink: 0, width: 58, background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "4px 0" } },
+            React.createElement("span", { style: { fontSize: 17, opacity: activeTab === k ? 1 : 0.55 } }, icon),
+            React.createElement("span", { style: { fontFamily: "Inter", fontSize: 8.5, fontWeight: 600, color: activeTab === k ? COLORS.pineDeep : "#B7B4A6", whiteSpace: "nowrap" } }, l)))))))));
 }
 
 function EmployeeLoginScreen({ onLogin, onCancel }) {
@@ -22875,7 +22877,7 @@ function VetScreen({ me, onBack }) {
     useEffect(() => { load(); }, []);
     const todayStr = new Date().toISOString().slice(0, 10);
     const todayVisits = visits.filter(v => v.date === todayStr);
-    const TABS = [["anasayfa", "Ana Sayfa"], ["ciftlikler", "Çiftliklerim"], ["paketler", "Paketlerim"], ["takvim", "Takvim"], ["gelir", "Gelirim"], ["bildirim", "Bildirimler"], ["rapor", "Raporlar"]];
+    const TABS = [["anasayfa", "Ana Sayfa", "🏠"], ["ciftlikler", "Çiftlikler", "🚜"], ["paketler", "Paketler", "📦"], ["takvim", "Takvim", "📅"], ["gelir", "Gelirim", "💰"], ["bildirim", "Bildirim", "🔔"], ["rapor", "Rapor", "📊"]];
     const swipeStartX = React.useRef(null);
     const onSwipeStart = (e) => { swipeStartX.current = e.touches[0].clientX; };
     const onSwipeEnd = (e) => {
@@ -22909,7 +22911,9 @@ function VetScreen({ me, onBack }) {
                 React.createElement(ChevronRight, { size: 16, color: "#8A8776" })))),
             React.createElement("div", { style: { marginTop: 14 } },
                 React.createElement(VetConnectForm, { me: me, refreshAll: load }))))))) : tab === "paketler" ? (React.createElement(VetPaketlerTab, { me: me })) : tab === "takvim" ? (React.createElement(VetTakvimTab, { me: me, myVetLinks: myVetLinks })) : tab === "gelir" ? (React.createElement(VetGelirTab, { me: me })) : tab === "bildirim" ? (React.createElement(VetBildirimlerTab, { allAnimalsByFarm: allAnimalsByFarm })) : tab === "rapor" ? (React.createElement(VetRaporlarTab, { myVetLinks: myVetLinks, allAnimalsByFarm: allAnimalsByFarm })) : null),
-        React.createElement("div", { style: { display: "flex", gap: 5, padding: "8px 12px", overflowX: "auto", borderTop: `1px solid ${COLORS.line}`, background: COLORS.white, flexShrink: 0 } }, TABS.map(([k, l]) => (React.createElement("button", { key: k, onClick: () => { setTab(k); setSelectedFarm(null); }, style: { flexShrink: 0, padding: "7px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "Inter", fontWeight: 600, fontSize: 11.5, background: tab === k ? COLORS.pineDeep : COLORS.paper, color: tab === k ? COLORS.white : "#5A574C", whiteSpace: "nowrap" } }, l))))));
+        React.createElement("div", { style: { display: "flex", padding: "8px 4px", overflowX: "auto", borderTop: `1px solid ${COLORS.line}`, background: COLORS.white, flexShrink: 0 } }, TABS.map(([k, l, icon]) => (React.createElement("button", { key: k, onClick: () => { setTab(k); setSelectedFarm(null); }, style: { flexShrink: 0, width: 58, background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "4px 0" } },
+            React.createElement("span", { style: { fontSize: 17, opacity: tab === k ? 1 : 0.55 } }, icon),
+            React.createElement("span", { style: { fontFamily: "Inter", fontSize: 8.5, fontWeight: 600, color: tab === k ? COLORS.pineDeep : "#B7B4A6", whiteSpace: "nowrap" } }, l)))))));
 }
 
 function VetPaketlerTab({ me }) {
