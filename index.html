@@ -17865,9 +17865,9 @@ function VideoPlayer({ src, style, autoPlay, loop, muted, onToggleMute, showMute
 function StarRow({ value, size = 12 }) {
     return (React.createElement("span", { style: { display: "inline-flex", gap: 1 } }, [1, 2, 3, 4, 5].map(n => (React.createElement(Star, { key: n, size: size, fill: n <= Math.round(value) ? COLORS.ochre : "none", color: COLORS.ochre })))));
 }
-function StarPicker({ value, onChange }) {
-    return (React.createElement("span", { style: { display: "inline-flex", gap: 3 } }, [1, 2, 3, 4, 5].map(n => (React.createElement("button", { key: n, onClick: () => onChange(n), style: { background: "none", border: "none", cursor: "pointer", padding: 2 } },
-        React.createElement(Star, { size: 22, fill: n <= value ? COLORS.ochre : "none", color: COLORS.ochre }))))));
+function StarPicker({ value, onChange, size = 22 }) {
+    return (React.createElement("span", { style: { display: "inline-flex", gap: 4 } }, [1, 2, 3, 4, 5].map(n => (React.createElement("button", { key: n, onClick: () => onChange(n), style: { background: "none", border: "none", cursor: "pointer", padding: 2 } },
+        React.createElement(Star, { size: size, fill: n <= value ? COLORS.ochre : "none", color: COLORS.ochre }))))));
 }
 function Badge({ children, tone = "ochre" }) {
     const map = { ochre: { bg: COLORS.ochreSoft, fg: "#7A5A1E" }, pine: { bg: "#DCEAE0", fg: COLORS.pineDeep }, gray: { bg: "#E7E4DA", fg: "#5A574C" } };
@@ -18392,25 +18392,8 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
     const openProfile = (name) => { setViewedProfileName(name); setScreen("publicProfile"); };
     const [pendingCallRequest, setPendingCallRequest] = useState(null);
 
-    // Ana 5 sekme arasında (Ana Sayfa/Reels/İlan Ver/Sohbet/Profil) sağa/sola
-    // kaydırarak geçiş — sadece bu 5 ana ekrandayken aktif.
-    useEffect(() => {
-        const MAIN_TABS = ["home", "reels", "create", "chatHub", "profile"];
-        let startX = null;
-        const onStart = (e) => { if (MAIN_TABS.includes(screen)) startX = e.touches[0].clientX; };
-        const onEnd = (e) => {
-            if (startX === null || !MAIN_TABS.includes(screen)) return;
-            const dx = e.changedTouches[0].clientX - startX;
-            startX = null;
-            if (Math.abs(dx) < 60) return;
-            const idx = MAIN_TABS.indexOf(screen);
-            if (dx < 0 && idx < MAIN_TABS.length - 1) setScreen(MAIN_TABS[idx + 1]);
-            else if (dx > 0 && idx > 0) setScreen(MAIN_TABS[idx - 1]);
-        };
-        window.addEventListener("touchstart", onStart, { passive: true });
-        window.addEventListener("touchend", onEnd, { passive: true });
-        return () => { window.removeEventListener("touchstart", onStart); window.removeEventListener("touchend", onEnd); };
-    }, [screen]);
+    // Not: Ana sekmeler arası kaydırma özelliği kaldırıldı — Reels'teki
+    // fotoğraf/video kaydırma hareketiyle çakışıp onu bozuyordu.
     const runSeed = async () => {
         setSeedState({ loading: true, error: null, fallback: false });
         const result = await seedSampleListings(refreshAll);
@@ -18472,7 +18455,8 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
                 React.createElement(Badge, { tone: "pine" }, tab === "buyukbas" ? "Büyükbaş" : "Küçükbaş"),
                 subTab !== "tumu" && React.createElement(Badge, { tone: "ochre" }, subTab),
                 breedTab !== "tumu" && React.createElement(Badge, { tone: "gray" }, breedTab),
-                React.createElement("button", { onClick: () => setDrawer(true), style: { fontFamily: "Inter", fontSize: 10.5, color: COLORS.pineDeep, background: "none", border: "none", textDecoration: "underline", cursor: "pointer" } }, "de\u011Fi\u015Ftir"))),
+                React.createElement("button", { onClick: () => setDrawer(true), style: { fontFamily: "Inter", fontSize: 10.5, color: COLORS.pineDeep, background: "none", border: "none", textDecoration: "underline", cursor: "pointer" } }, "de\u011Fi\u015Ftir"),
+                (subTab !== "tumu" || breedTab !== "tumu") && React.createElement("button", { onClick: () => { setSubTab("tumu"); setBreedTab("tumu"); }, style: { fontFamily: "Inter", fontSize: 10.5, color: COLORS.red, background: "none", border: "none", textDecoration: "underline", cursor: "pointer" } }, "filtreyi temizle"))),
             React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "10px 14px 90px" } }, filtered.length === 0 ? (React.createElement("div", { style: { textAlign: "center", marginTop: 40, color: "#8A8776", fontFamily: "Inter", fontSize: 12.5 } },
                 "Hen\u00FCz ilan yok.",
                 React.createElement("div", { style: { marginTop: 10 } },
@@ -18481,7 +18465,7 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
                         "Hata: ",
                         seedState.error)),
                     seedState.fallback && (React.createElement("div", { style: { color: COLORS.ochre, fontSize: 10.5, marginTop: 6, maxWidth: 260, marginLeft: "auto", marginRight: "auto" } }, "Not: kal\u0131c\u0131 depolama \u015Fu an bu ortamda \u00E7al\u0131\u015Fm\u0131yor, veriler bu oturum i\u00E7in ge\u00E7ici olarak tutuluyor (sayfa tamamen yenilenirse silinir)."))))) : (React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 } }, filtered.map(item => React.createElement(ListingCard, { key: item.id, item: item, reviews: reviews, favorites: favorites, toggleFavorite: toggleFavorite, onOpen: open }))))))),
-        screen === "detail" && selected && (React.createElement(DetailScreen, { item: listings.find(l => l.id === selected.id) || selected, me: me, requireAuth: requireAuth, offers: offers, reviews: reviews, favorites: favorites, toggleFavorite: toggleFavorite, favoritesLog: favoritesLog, members: members, onOpenChat: openChat, onOpenProfile: openProfile, refreshAll: refreshAll, onBack: () => setScreen("home") })),
+        screen === "detail" && selected && (React.createElement(DetailScreen, { item: listings.find(l => l.id === selected.id) || selected, me: me, requireAuth: requireAuth, offers: offers, reviews: reviews, favorites: favorites, toggleFavorite: toggleFavorite, favoritesLog: favoritesLog, members: members, onOpenChat: openChat, onOpenProfile: openProfile, onStartCall: (otherName, type, conversationId) => setPendingCallRequest({ otherName, type, conversationId, nonce: Date.now() }), refreshAll: refreshAll, onBack: () => setScreen("home") })),
         screen === "create" && React.createElement(CreateScreen, { me: me, members: members, customSubcategories: customSubcategories, refreshAll: refreshAll, onDone: () => setScreen("home") }),
         screen === "requests" && (React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "16px 18px 100px" } },
             React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 19, marginBottom: 12 } }, "Al\u0131m Talepleri"),
@@ -18540,8 +18524,8 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
         screen === "favorites" && (React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "16px 18px 100px" } },
             React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 19, marginBottom: 12 } }, "Favorilerim"),
             listings.filter(l => favorites.includes(l.id)).length === 0 ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12.5, color: "#8A8776" } }, "Hen\u00FCz favori ilan\u0131n\u0131z yok \u2014 bir ilan kart\u0131ndaki kalp ikonuna dokunun.")) : (React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 } }, listings.filter(l => favorites.includes(l.id)).map(item => (React.createElement(ListingCard, { key: item.id, item: item, reviews: reviews, favorites: favorites, toggleFavorite: toggleFavorite, onOpen: open }))))))),
-        screen === "chatHub" && (React.createElement(ChatHub, { me: me, messages: messages, listings: listings, region: me.region, onOpenChat: openChat, onOpenRegion: (r) => { setChatRegion(r); setScreen("regionChat"); }, myConversationIds: myConversationIds })),
-        screen === "chat" && chatTarget && (React.createElement(ChatScreen, { key: chatTarget.conversationId, title: chatTarget.otherName, subtitle: chatTarget.listingLabel, conversationId: chatTarget.conversationId, me: me, messages: messages.filter(m => m.conversationId === chatTarget.conversationId), refreshAll: refreshAll, onBack: () => setScreen("chatHub"), onStartCall: (type) => setPendingCallRequest({ otherName: chatTarget.otherName, type, nonce: Date.now() }) })),
+        screen === "chatHub" && (React.createElement(ChatHub, { me: me, messages: messages, listings: listings, region: me.region, onOpenChat: openChat, onOpenRegion: (r) => { setChatRegion(r); setScreen("regionChat"); }, onOpenProfile: openProfile, myConversationIds: myConversationIds })),
+        screen === "chat" && chatTarget && (React.createElement(ChatScreen, { key: chatTarget.conversationId, title: chatTarget.otherName, subtitle: chatTarget.listingLabel, conversationId: chatTarget.conversationId, me: me, messages: messages.filter(m => m.conversationId === chatTarget.conversationId), refreshAll: refreshAll, onBack: () => setScreen("chatHub"), onStartCall: (type) => setPendingCallRequest({ otherName: chatTarget.otherName, type, conversationId: chatTarget.conversationId, nonce: Date.now() }), onOpenProfile: openProfile })),
         screen === "regionChat" && chatRegion && (React.createElement(ChatScreen, { key: chatRegion, title: chatRegion, subtitle: "B\u00F6lge Sohbeti \u2014 herkese a\u00E7\u0131k", conversationId: regionChatKey(chatRegion), me: me, messages: messages.filter(m => m.conversationId === regionChatKey(chatRegion)), refreshAll: refreshAll, onBack: () => setScreen("chatHub"), isGroup: true })),
         screen === "profile" && React.createElement(ProfileScreen, { me: me, setMe: setMe, listings: listings, members: members, favorites: favorites, pricing: pricing, offers: offers, reviews: reviews, setScreen: setScreen, refreshAll: refreshAll }),
         drawer && (React.createElement("div", { style: { position: "absolute", inset: 0, background: "rgba(20,48,31,0.4)", zIndex: 10 }, onClick: () => setDrawer(false) },
@@ -18733,7 +18717,7 @@ function ReelsScreen({ listings, favorites, toggleFavorite, likes, favoritesLog,
             }))));
 }
 // ---------- DETAIL + TEKLİF ----------
-function DetailScreen({ item, me, requireAuth, offers, reviews, favorites, toggleFavorite, favoritesLog, members, onOpenChat, onOpenProfile, refreshAll, onBack }) {
+function DetailScreen({ item, me, requireAuth, offers, reviews, favorites, toggleFavorite, favoritesLog, members, onOpenChat, onOpenProfile, onStartCall, refreshAll, onBack }) {
     const isOwner = me && item.sellerName === me.name;
     const myOffer = me ? offers.find(o => o.listingId === item.id && o.buyerName === me.name) : null;
     const listingOffers = offers.filter(o => o.listingId === item.id);
@@ -18861,7 +18845,7 @@ function DetailScreen({ item, me, requireAuth, offers, reviews, favorites, toggl
                         React.createElement(MessageCircle, { size: 13, style: { marginRight: 5 } }),
                         item.sellerName,
                         " ile mesajla\u015F"))),
-                React.createElement(AppointmentAndCallCard, { item: item, me: me, sellerPhone: sellerMember ? sellerMember.phone : null }),
+                React.createElement(AppointmentAndCallCard, { item: item, me: me, sellerPhone: sellerMember ? sellerMember.phone : null, onStartCall: onStartCall && me ? (type) => onStartCall(item.sellerName, type, convId(item.id, me.name, item.sellerName)) : null }),
                 dealDone && (React.createElement("div", { style: { marginTop: 10 } }, myReview ? (React.createElement("div", { style: { background: COLORS.paper, borderRadius: 12, padding: 12, fontFamily: "Inter", fontSize: 12 } },
                     "De\u011Ferlendirmeniz: ",
                     React.createElement(StarRow, { value: myReview.stars, size: 13 }),
@@ -18870,20 +18854,49 @@ function DetailScreen({ item, me, requireAuth, offers, reviews, favorites, toggl
 function ReviewForm({ listingId, sellerName, buyerName, refreshAll }) {
     const [stars, setStars] = useState(5);
     const [comment, setComment] = useState("");
+    const [photos, setPhotos] = useState([]);
+    const [photoBusy, setPhotoBusy] = useState(false);
     const [saving, setSaving] = useState(false);
+    const addPhoto = async (e) => {
+        const file = (e.target.files || [])[0];
+        if (!file || !file.type.startsWith("image/") || photos.length >= 3)
+            return;
+        setPhotoBusy(true);
+        try {
+            const dataUrl = await resizeImageFile(file, 700);
+            setPhotos(prev => [...prev, dataUrl]);
+        }
+        catch { /* sessizce geç */ }
+        setPhotoBusy(false);
+        e.target.value = "";
+    };
+    const removePhoto = (i) => setPhotos(prev => prev.filter((_, idx) => idx !== i));
     const submit = async () => {
         setSaving(true);
         const all = await loadShared("reviews", []);
-        all.push({ id: uid(), listingId, sellerName, buyerName, stars, comment: comment.trim(), createdAt: Date.now() });
+        all.push({ id: uid(), listingId, sellerName, buyerName, stars, comment: comment.trim(), photos, createdAt: Date.now() });
         await saveShared("reviews", all);
         await refreshAll();
         setSaving(false);
     };
-    return (React.createElement("div", { style: { background: COLORS.paper, borderRadius: 12, padding: 12 } },
-        React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5, marginBottom: 8 } }, "Sat\u0131c\u0131y\u0131 de\u011Ferlendir"),
-        React.createElement(StarPicker, { value: stars, onChange: setStars }),
-        React.createElement("textarea", { value: comment, onChange: (e) => setComment(e.target.value), placeholder: "Yorumunuz (opsiyonel)", rows: 2, style: { ...inputStyle, marginTop: 8, resize: "vertical", fontFamily: "Inter" } }),
-        React.createElement("button", { onClick: submit, disabled: saving, style: { ...btnPrimary, marginTop: 8 } }, saving ? "Gönderiliyor..." : "Değerlendirmeyi Gönder")));
+    return (React.createElement("div", { style: { background: COLORS.paper, borderRadius: 12, padding: 14 } },
+        React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 13, marginBottom: 10 } }, "Sat\u0131c\u0131y\u0131 De\u011Ferlendiriniz"),
+        React.createElement("div", { style: { display: "flex", justifyContent: "center", marginBottom: 14 } },
+            React.createElement(StarPicker, { value: stars, onChange: setStars, size: 34 })),
+        React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12, marginBottom: 6 } }, "Yorum Yap"),
+        React.createElement("textarea", { value: comment, onChange: (e) => setComment(e.target.value), placeholder: "Deneyiminizi di\u011Fer kullan\u0131c\u0131larla payla\u015F\u0131n (opsiyonel)...", rows: 3, style: { ...inputStyle, resize: "vertical", fontFamily: "Inter" } }),
+        React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12, margin: "10px 0 6px" } },
+            "Foto\u011Fraf Ekle (",
+            photos.length,
+            "/3)"),
+        React.createElement("div", { style: { display: "flex", gap: 8 } },
+            photos.map((p, i) => (React.createElement("div", { key: i, style: { position: "relative", width: 56, height: 56, borderRadius: 8, overflow: "hidden", border: `1px solid ${COLORS.line}` } },
+                React.createElement("img", { src: p, style: { width: "100%", height: "100%", objectFit: "cover" } }),
+                React.createElement("button", { onClick: () => removePhoto(i), style: { position: "absolute", top: 1, right: 1, background: "rgba(0,0,0,0.65)", color: "#fff", border: "none", borderRadius: "50%", width: 15, height: 15, fontSize: 9, cursor: "pointer", lineHeight: 1 } }, "\u2715")))),
+            photos.length < 3 && (React.createElement("label", { style: { width: 56, height: 56, borderRadius: 8, border: `1.5px dashed ${COLORS.line}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 } },
+                React.createElement("input", { type: "file", accept: "image/*", onChange: addPhoto, style: { display: "none" }, disabled: photoBusy }),
+                React.createElement("span", { style: { fontSize: 18, color: "#8A8776" } }, "\uD83D\uDCF7")))),
+        React.createElement("button", { onClick: submit, disabled: saving, style: { ...btnPrimary, marginTop: 12, width: "100%" } }, saving ? "Gönderiliyor..." : "Değerlendirmeyi Gönder")));
 }
 function OfferStatusView({ offer, refreshAll }) {
     const map = {
@@ -19237,7 +19250,7 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
 const PROFILE_TYPE_LABELS = { kurumsal: "Kurumsal", bireysel: "Bireysel", alici: "Sadece Alıcı" };
 const MAX_MONTHLY_LISTINGS_BIREYSEL = 5; // bireysel satıcılar için aylık ilan sınırı
 // ---------- SOHBET MERKEZİ ----------
-function ChatHub({ me, messages, listings, region, onOpenChat, onOpenRegion, myConversationIds }) {
+function ChatHub({ me, messages, listings, region, onOpenChat, onOpenRegion, onOpenProfile, myConversationIds }) {
     const [tab, setTab] = useState("mesajlar");
     const threads = myConversationIds.map(cid => {
         const parts = convParts(cid);
@@ -19254,7 +19267,7 @@ function ChatHub({ me, messages, listings, region, onOpenChat, onOpenRegion, myC
             React.createElement("button", { onClick: () => setTab("mesajlar"), style: { flex: 1, padding: "9px", borderRadius: 10, border: "none", cursor: "pointer", fontFamily: "Inter", fontWeight: 600, fontSize: 12, background: tab === "mesajlar" ? COLORS.pineDeep : COLORS.white, color: tab === "mesajlar" ? COLORS.white : "#5A574C" } }, "Mesajlar\u0131m"),
             React.createElement("button", { onClick: () => setTab("bolge"), style: { flex: 1, padding: "9px", borderRadius: 10, border: "none", cursor: "pointer", fontFamily: "Inter", fontWeight: 600, fontSize: 12, background: tab === "bolge" ? COLORS.pineDeep : COLORS.white, color: tab === "bolge" ? COLORS.white : "#5A574C" } }, "B\u00F6lge Sohbetleri")),
         tab === "mesajlar" ? (threads.length === 0 ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12.5, color: "#8A8776" } }, "Hen\u00FCz mesaj\u0131n\u0131z yok \u2014 bir ilan sayfas\u0131ndan \"mesajla\u015F\" diyerek ba\u015Flay\u0131n.")) : (threads.map(t => (React.createElement("button", { key: t.cid, onClick: () => onOpenChat(t.cid, t.otherName, t.listingLabel), style: { display: "flex", alignItems: "center", gap: 10, width: "100%", background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 12, marginBottom: 8, cursor: "pointer", textAlign: "left" } },
-            React.createElement("div", { style: { width: 36, height: 36, borderRadius: "50%", background: COLORS.ochreSoft, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Fraunces", fontWeight: 600, color: "#7A5A1E", flexShrink: 0 } }, t.otherName[0]),
+            React.createElement("button", { onClick: (e) => { e.stopPropagation(); onOpenProfile && onOpenProfile(t.otherName); }, style: { width: 36, height: 36, borderRadius: "50%", background: COLORS.ochreSoft, border: "none", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Fraunces", fontWeight: 600, color: "#7A5A1E", flexShrink: 0, cursor: "pointer" } }, t.otherName[0]),
             React.createElement("div", { style: { flex: 1, minWidth: 0 } },
                 React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 13 } }, t.otherName),
                 React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776" } }, t.listingLabel),
@@ -19279,7 +19292,7 @@ function ChatHub({ me, messages, listings, region, onOpenChat, onOpenRegion, myC
             })))));
 }
 // ---------- SOHBET EKRANI (özel veya bölge — ikisi de aynı yapıyı kullanır) ----------
-function ChatScreen({ title, subtitle, conversationId, me, messages, refreshAll, onBack, isGroup, onStartCall }) {
+function ChatScreen({ title, subtitle, conversationId, me, messages, refreshAll, onBack, isGroup, onStartCall, onOpenProfile }) {
     const [text, setText] = useState("");
     const [sending, setSending] = useState(false);
     const [showReport, setShowReport] = useState(false);
@@ -19315,8 +19328,8 @@ function ChatScreen({ title, subtitle, conversationId, me, messages, refreshAll,
         React.createElement("div", { style: { background: COLORS.pine, padding: "14px 14px 10px", display: "flex", alignItems: "center", gap: 10 } },
             React.createElement("button", { onClick: onBack, style: { background: "none", border: "none", cursor: "pointer" } },
                 React.createElement(ChevronLeft, { color: COLORS.white, size: 20 })),
-            React.createElement("div", { style: { width: 30, height: 30, borderRadius: "50%", background: isGroup ? COLORS.pineDeep : COLORS.ochreSoft, border: isGroup ? `1px solid rgba(255,255,255,0.3)` : "none", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 } }, isGroup ? React.createElement(Globe2, { size: 14, color: COLORS.white }) : React.createElement("span", { style: { fontFamily: "Fraunces", fontWeight: 600, color: "#7A5A1E", fontSize: 13 } }, title[0])),
-            React.createElement("div", { style: { flex: 1 } },
+            React.createElement("button", { onClick: () => !isGroup && onOpenProfile && onOpenProfile(title), style: { width: 30, height: 30, borderRadius: "50%", background: isGroup ? COLORS.pineDeep : COLORS.ochreSoft, border: isGroup ? `1px solid rgba(255,255,255,0.3)` : "none", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: isGroup ? "default" : "pointer", padding: 0 } }, isGroup ? React.createElement(Globe2, { size: 14, color: COLORS.white }) : React.createElement("span", { style: { fontFamily: "Fraunces", fontWeight: 600, color: "#7A5A1E", fontSize: 13 } }, title[0])),
+            React.createElement("button", { onClick: () => !isGroup && onOpenProfile && onOpenProfile(title), style: { flex: 1, background: "none", border: "none", textAlign: "left", cursor: isGroup ? "default" : "pointer", padding: 0 } },
                 React.createElement("div", { style: { color: COLORS.white, fontFamily: "Inter", fontWeight: 600, fontSize: 13.5 } }, title),
                 React.createElement("div", { style: { color: "#D8E6DC", fontFamily: "Inter", fontSize: 10.5 } }, subtitle)),
             !isGroup && onStartCall && (React.createElement(React.Fragment, null,
@@ -19325,7 +19338,7 @@ function ChatScreen({ title, subtitle, conversationId, me, messages, refreshAll,
                 React.createElement("button", { onClick: () => onStartCall("video"), style: { background: "none", border: "none", cursor: "pointer" }, title: "G\u00F6r\u00FCnt\u00FCl\u00FC Ara" },
                     React.createElement(IconVideoCam, { size: 18, color: "#D8E6DC" })))),
             !isGroup && (React.createElement("button", { onClick: () => setShowReport(v => !v), style: { background: "none", border: "none", cursor: "pointer" }, title: "\u015Eikayet Et" },
-                React.createElement(Flag, { size: 16, color: "#D8E6DC" })))),
+                React.createElement(Flag, { size: 16, color: "rgba(255,255,255,0.45)" })))),
         showReport && (React.createElement("div", { style: { background: COLORS.ochreSoft, padding: 12, display: "flex", flexDirection: "column", gap: 8 } },
             React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11.5, fontWeight: 600, color: "#7A5A1E" } },
                 title,
@@ -19661,7 +19674,6 @@ function AvatarUpload({ me, setMe }) {
 }
 function StatMini({ label, value, icon: Icon }) {
     return (React.createElement("div", { style: { flex: 1, background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: "10px 8px", textAlign: "center" } },
-        Icon && React.createElement(Icon, { size: 14, color: COLORS.pineDeep, style: { marginBottom: 3 } }),
         React.createElement("div", { style: { fontFamily: "IBM Plex Mono", fontWeight: 700, fontSize: 16, color: COLORS.ink } }, value),
         React.createElement("div", { style: { fontFamily: "Inter", fontSize: 9.5, color: "#8A8776", marginTop: 1 } }, label)));
 }
@@ -19853,11 +19865,14 @@ function ProfileScreen({ me, setMe, listings, members, favorites, pricing, offer
                 React.createElement(AccountTypeSwitch, { me: me, setMe: setMe }))) : (React.createElement(MenuRow, { icon: Repeat, label: "Hesap T\u00FCr\u00FCn\u00FC De\u011Fi\u015Ftir", value: PROFILE_TYPE_LABELS[me.profileType], onClick: () => toggleSection("hesapturu") })),
             accountSection === "bildirim" ? (React.createElement("div", { style: { padding: "12px 14px", borderBottom: `1px solid ${COLORS.line}` } },
                 React.createElement(NotificationPrefsCard, { me: me, setMe: setMe }))) : (React.createElement(MenuRow, { icon: Bell, label: "Bildirim Tercihlerim", onClick: () => toggleSection("bildirim") })),
-            accountSection === "destek" ? (React.createElement("div", { style: { padding: "12px 14px" } },
-                React.createElement(SupportRequestCard, { me: me }))) : (React.createElement("button", { onClick: () => toggleSection("destek"), style: { width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "13px 14px", background: "none", border: "none", cursor: "pointer", textAlign: "left" } },
+            accountSection === "destek" ? (React.createElement("div", { style: { padding: "12px 14px", borderBottom: `1px solid ${COLORS.line}` } },
+                React.createElement(SupportRequestCard, { me: me }))) : (React.createElement("button", { onClick: () => toggleSection("destek"), style: { width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "13px 14px", background: "none", border: "none", borderBottom: `1px solid ${COLORS.line}`, cursor: "pointer", textAlign: "left" } },
                 React.createElement(LifeBuoy, { size: 16, color: COLORS.pineDeep }),
                 React.createElement("span", { style: { flex: 1, fontFamily: "Inter", fontWeight: 500, fontSize: 13, color: COLORS.ink } }, "Destek / Anla\u015Fmazl\u0131k Bildir"),
-                React.createElement(ChevronRight, { size: 15, color: "#B7B4A6" })))),
+                React.createElement(ChevronRight, { size: 15, color: "#B7B4A6" }))),
+            React.createElement("button", { onClick: async () => { if (window.confirm("\u00C7\u0131k\u0131\u015F yapmak istedi\u011Finize emin misiniz?")) { await savePersonal("me", null); setMe(null); setScreen("home"); } }, style: { width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "13px 14px", background: "none", border: "none", cursor: "pointer", textAlign: "left" } },
+                React.createElement(X, { size: 16, color: COLORS.red }),
+                React.createElement("span", { style: { flex: 1, fontFamily: "Inter", fontWeight: 600, fontSize: 13, color: COLORS.red } }, "\u00C7\u0131k\u0131\u015F Yap"))),
         React.createElement("div", { id: "ilan-yonetimi-listesi", style: { fontFamily: "Inter", fontSize: 12.5, fontWeight: 600, marginBottom: 6 } },
             "\u0130lanlar\u0131m (",
             myListings.length,
@@ -20676,7 +20691,7 @@ const RAW_DATA_KEYS = [
     "listings", "requests", "offers", "members", "reviews", "messages",
     "pricing", "adminAccounts", "adminLoginLogs", "auditLog", "reports",
     "customBreeds", "customSubcategories", "announcement",
-    "notificationSettings", "passwordPolicy", "ipRestrictions", "emailChangeRequests", "calls", "callSignals",
+    "notificationSettings", "passwordPolicy", "ipRestrictions", "emailChangeRequests", "calls", "callSignals", "appointments",
 ];
 function RawDataKeyEditor({ dataKey, session, refreshAll }) {
     const [open, setOpen] = useState(false);
@@ -21298,7 +21313,7 @@ function nearestCity(lat, lng) {
     return best;
 }
 
-function MapPicker({ lat, lng, onPick, interactive = true }) {
+function MapPicker({ lat, lng, onPick, interactive = true, zoom, height = 320 }) {
     const mapRef = React.useRef(null);
     const mapInstance = React.useRef(null);
     const markerRef = React.useRef(null);
@@ -21307,8 +21322,9 @@ function MapPicker({ lat, lng, onPick, interactive = true }) {
         if (!window.L || !mapRef.current || mapInstance.current)
             return;
         const startLat = lat || 39.0, startLng = lng || 35.0;
-        const map = window.L.map(mapRef.current, { attributionControl: false, dragging: interactive, zoomControl: interactive, scrollWheelZoom: interactive }).setView([startLat, startLng], lat ? 11 : 6);
-        window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 17 }).addTo(map);
+        const defaultZoom = zoom || (lat ? 14 : 6);
+        const map = window.L.map(mapRef.current, { attributionControl: false, dragging: interactive, zoomControl: interactive, scrollWheelZoom: interactive }).setView([startLat, startLng], defaultZoom);
+        window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
         if (lat && lng)
             markerRef.current = window.L.marker([lat, lng]).addTo(map);
         if (interactive) {
@@ -21331,8 +21347,8 @@ function MapPicker({ lat, lng, onPick, interactive = true }) {
             interactive ? " — aşağıdan il/ilçenizi elle seçebilirsiniz." : "."));
     }
     return (React.createElement("div", null,
-        React.createElement("div", { ref: mapRef, style: { width: "100%", height: 220, borderRadius: 12, overflow: "hidden", border: `1px solid ${COLORS.line}` } }),
-        interactive && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 9.5, color: "#8A8776", marginTop: 5 } }, "Hayvan\u0131n bulundu\u011Fu tam noktaya dokunun.")));
+        React.createElement("div", { ref: mapRef, style: { width: "100%", height, borderRadius: 12, overflow: "hidden", border: `1px solid ${COLORS.line}` } }),
+        interactive && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 9.5, color: "#8A8776", marginTop: 5 } }, "Hayvan\u0131n bulundu\u011Fu tam noktaya dokunun. \u0130ki parmakla veya + / \u2212 ile yak\u0131nla\u015Ft\u0131rabilirsiniz.")));
 }
 
 function AccountTypeSwitch({ me, setMe }) {
@@ -21438,50 +21454,63 @@ function FullscreenMediaViewer({ mediaList, startIndex, onClose }) {
 
 function LocationViewModal({ il, ilce, lat, lng, onClose }) {
     const coords = (lat && lng) ? [lat, lng] : TURKEY_CITY_COORDS[il];
-    return (React.createElement("div", { style: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }, onClick: onClose },
-        React.createElement("div", { style: { background: COLORS.white, borderRadius: 16, padding: 14, width: "100%", maxWidth: 360 }, onClick: (e) => e.stopPropagation() },
+    return (React.createElement("div", { style: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 999, display: "flex", alignItems: "center", justifyContent: "center", padding: 14 }, onClick: onClose },
+        React.createElement("div", { style: { background: COLORS.white, borderRadius: 16, padding: 14, width: "100%", maxWidth: 480 }, onClick: (e) => e.stopPropagation() },
             React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 } },
-                React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 13.5 } }, ilce ? `${il} / ${ilce}` : il),
+                React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 14.5 } }, ilce ? `${il} / ${ilce}` : il),
                 React.createElement("button", { onClick: onClose, style: { background: "none", border: "none", cursor: "pointer" } },
-                    React.createElement(X, { size: 16, color: "#8A8776" }))),
-            coords ? (React.createElement(MapPicker, { lat: coords[0], lng: coords[1], onPick: () => { }, interactive: false })) : (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Konum bilgisi bulunamad\u0131.")))));
+                    React.createElement(X, { size: 18, color: "#8A8776" }))),
+            coords ? (React.createElement(MapPicker, { lat: coords[0], lng: coords[1], onPick: () => { }, interactive: false, zoom: lat && lng ? 15 : 10, height: 440 })) : (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Konum bilgisi bulunamad\u0131.")))));
 }
 
-function AppointmentAndCallCard({ item, me, sellerPhone }) {
+function AppointmentAndCallCard({ item, me, sellerPhone, onStartCall }) {
     const [mode, setMode] = useState(null); // null | 'randevu'
     const [date, setDate] = useState("");
+    const [time, setTime] = useState("");
     const [note, setNote] = useState("");
     const [sending, setSending] = useState(false);
     const [sent, setSent] = useState(false);
+    const conversationId = convId(item.id, me.name, item.sellerName);
     const sendMessage = async (text) => {
-        setSending(true);
-        const cid = convId(item.id, me.name, item.sellerName);
         const all = await loadShared("messages", []);
-        all.push({ id: uid(), conversationId: cid, sender: me.name, text, createdAt: Date.now() });
+        all.push({ id: uid(), conversationId, sender: me.name, text, createdAt: Date.now() });
         await saveShared("messages", all);
-        setSending(false);
-        return cid;
     };
     const sendRandevu = async () => {
         if (!date.trim())
             return;
-        await sendMessage(`📅 Randevu talebi: hayvanı canlı görmek için "${date.trim()}" tarihini/saatini teklif ediyorum.${note.trim() ? " Not: " + note.trim() : ""}`);
+        setSending(true);
+        const dateLabel = new Date(date + "T" + (time || "00:00")).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric", weekday: "long" });
+        const timeLabel = time ? `, saat ${time}` : "";
+        // Yapılandırılmış randevu kaydı (takvim/liste görünümü için ileride kullanılabilir).
+        const appointments = await loadShared("appointments", []);
+        appointments.push({
+            id: uid(), listingId: item.id, listingLabel: `${item.breed} ${item.subCategory}`,
+            buyerName: me.name, sellerName: item.sellerName, date, time: time || null, note: note.trim(),
+            status: "beklemede", createdAt: Date.now(),
+        });
+        await saveShared("appointments", appointments);
+        await sendMessage(`📅 Randevu talebi: hayvanı canlı görmek için **${dateLabel}${timeLabel}** tarihini teklif ediyorum.${note.trim() ? " Not: " + note.trim() : ""}`);
+        setSending(false);
         setSent(true);
         setMode(null);
         setDate("");
+        setTime("");
         setNote("");
         setTimeout(() => setSent(false), 3500);
     };
-    const requestVideoCall = async () => {
-        await sendMessage("📹 Görüntülü arama isteği gönderildi — hayvanı canlı görmek istiyorum, müsait olduğunuzda arayabilir miyim?");
-        setSent(true);
-        setTimeout(() => setSent(false), 3500);
-    };
+    const today = new Date().toISOString().slice(0, 10);
     return (React.createElement("div", { style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 12, marginTop: 10 } },
         React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 12, color: COLORS.ink, marginBottom: 8 } }, "Hayvan\u0131 Canl\u0131 G\u00F6rmek \u0130ster misiniz?"),
-        sent && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: COLORS.pineDeep, marginBottom: 8 } }, "\u2713 \u0130ste\u011Finiz sat\u0131c\u0131ya mesaj olarak iletildi."),
+        sent && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: COLORS.pineDeep, marginBottom: 8 } }, "\u2713 Randevu talebiniz sat\u0131c\u0131ya mesaj olarak iletildi."),
         mode === "randevu" ? (React.createElement("div", null,
-            React.createElement(FormField, { label: "Tercih etti\u011Finiz tarih/saat", value: date, onChange: setDate, placeholder: "\u00D6rn. 25 Eyl\u00FCl Per\u015Fembe, \u00F6\u011Fleden sonra" }),
+            React.createElement("div", { style: { display: "flex", gap: 8 } },
+                React.createElement("div", { style: { flex: 1 } },
+                    React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11, color: "#5A574C", fontWeight: 600 } }, "Tarih"),
+                    React.createElement("input", { type: "date", value: date, min: today, onChange: (e) => setDate(e.target.value), style: { ...inputStyle, marginTop: 3 } })),
+                React.createElement("div", { style: { flex: 1 } },
+                    React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11, color: "#5A574C", fontWeight: 600 } }, "Saat (opsiyonel)"),
+                    React.createElement("input", { type: "time", value: time, onChange: (e) => setTime(e.target.value), style: { ...inputStyle, marginTop: 3 } }))),
             React.createElement("div", { style: { marginTop: 6 } },
                 React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11, color: "#5A574C", fontWeight: 600 } }, "Not (opsiyonel)"),
                 React.createElement("textarea", { value: note, onChange: (e) => setNote(e.target.value), rows: 2, style: { ...inputStyle, marginTop: 3, resize: "vertical" } })),
@@ -21489,16 +21518,16 @@ function AppointmentAndCallCard({ item, me, sellerPhone }) {
                 React.createElement("button", { onClick: sendRandevu, disabled: sending || !date.trim(), style: btnPrimary }, sending ? "Gönderiliyor..." : "Randevu Talebini Gönder"),
                 React.createElement("button", { onClick: () => setMode(null), style: { ...btnGhost, borderColor: COLORS.line, color: "#8A8776" } }, "Vazge\u00E7")))) : (React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap" } },
             React.createElement("button", { onClick: () => setMode("randevu"), style: { ...btnGhost, borderColor: COLORS.line, color: COLORS.pineDeep, flex: 1 } }, "\uD83D\uDCC5 Randevu Al"),
-            React.createElement("button", { onClick: requestVideoCall, disabled: sending, style: { ...btnGhost, borderColor: COLORS.line, color: COLORS.pineDeep, flex: 1 } }, "\uD83D\uDCF9 G\u00F6r\u00FCnt\u00FCl\u00FC Arama \u0130ste"))),
+            onStartCall && (React.createElement("button", { onClick: () => onStartCall("video"), style: { ...btnGhost, borderColor: COLORS.line, color: COLORS.pineDeep, flex: 1 } }, "\uD83C\uDFA5 G\u00F6r\u00FCnt\u00FCl\u00FC Ara")))),
         sellerPhone && (React.createElement("a", { href: `tel:${sellerPhone}`, style: { display: "block", textAlign: "center", marginTop: 8, fontFamily: "Inter", fontSize: 11, color: "#8A8776", textDecoration: "underline" } },
             "veya do\u011Frudan telefonla aray\u0131n: ",
-            sellerPhone)),
-        React.createElement("div", { style: { fontFamily: "Inter", fontSize: 9, color: "#B7B4A6", marginTop: 6 } }, "Not: uygulama i\u00E7i ger\u00E7ek zamanl\u0131 g\u00F6r\u00FCnt\u00FCl\u00FC arama bu ortamda desteklenmiyor \u2014 istek sat\u0131c\u0131ya mesaj olarak iletilir, aramay\u0131 kendi telefonunuzdan (WhatsApp/FaceTime vb.) yapman\u0131z gerekir.")));
+            sellerPhone))));
 }
 
+const ICE_SERVERS = [{ urls: "stun:stun.l.google.com:19302" }, { urls: "stun:stun1.l.google.com:19302" }];
 function CallManager({ me, pendingCallRequest, onRequestConsumed }) {
-    const [incoming, setIncoming] = useState(null); // {id, callerName, type}
-    const [activeCall, setActiveCall] = useState(null); // {id, role, otherName, type, status: 'calling'|'ringing'|'active'}
+    const [incoming, setIncoming] = useState(null); // {id, callerName, type, conversationId}
+    const [activeCall, setActiveCall] = useState(null); // {id, role, otherName, type, status, conversationId, connectedAt}
     const [callErr, setCallErr] = useState("");
     const pcRef = React.useRef(null);
     const localStreamRef = React.useRef(null);
@@ -21508,6 +21537,13 @@ function CallManager({ me, pendingCallRequest, onRequestConsumed }) {
     const seenSignalIds = React.useRef(new Set());
     const activeCallRef = React.useRef(null);
     useEffect(() => { activeCallRef.current = activeCall; }, [activeCall]);
+    const postCallMessage = async (conversationId, text) => {
+        if (!conversationId)
+            return;
+        const all = await loadShared("messages", []);
+        all.push({ id: uid(), conversationId, sender: me.name, text, createdAt: Date.now() });
+        await saveShared("messages", all);
+    };
     const cleanupCall = () => {
         if (pcRef.current) {
             try {
@@ -21543,7 +21579,7 @@ function CallManager({ me, pendingCallRequest, onRequestConsumed }) {
         return pc;
     };
     // ---------- ARAMA BAŞLATMA (arayan taraf) ----------
-    const startCall = async (otherName, type) => {
+    const startCall = async (otherName, type, conversationId) => {
         setCallErr("");
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === "video" });
@@ -21556,12 +21592,13 @@ function CallManager({ me, pendingCallRequest, onRequestConsumed }) {
             const offer = await pc.createOffer();
             await pc.setLocalDescription(offer);
             const calls = await loadShared("calls", []);
-            calls.push({ id: callId, callerName: me.name, calleeName: otherName, type, status: "ringing", createdAt: Date.now() });
+            calls.push({ id: callId, callerName: me.name, calleeName: otherName, type, status: "ringing", conversationId: conversationId || null, createdAt: Date.now() });
             await saveShared("calls", calls);
             const signals = await loadShared("callSignals", []);
             signals.push({ id: uid(), callId, from: me.name, to: otherName, kind: "offer", payload: JSON.stringify(offer), createdAt: Date.now() });
             await saveShared("callSignals", signals);
-            setActiveCall({ id: callId, role: "caller", otherName, type, status: "calling" });
+            await postCallMessage(conversationId, `${type === "video" ? "🎥 Görüntülü" : "📞 Sesli"} arama başlatıldı.`);
+            setActiveCall({ id: callId, role: "caller", otherName, type, status: "calling", conversationId: conversationId || null, connectedAt: null });
         }
         catch (e) {
             setCallErr("Mikrofon/kamera erişimi verilmedi veya bulunamadı.");
@@ -21596,7 +21633,8 @@ function CallManager({ me, pendingCallRequest, onRequestConsumed }) {
                 calls[idx].status = "active";
                 await saveShared("calls", calls);
             }
-            setActiveCall({ id: call.id, role: "callee", otherName: call.callerName, type: call.type, status: "active" });
+            await postCallMessage(call.conversationId, `${call.type === "video" ? "🎥 Görüntülü" : "📞 Sesli"} arama kabul edildi, görüşme başladı.`);
+            setActiveCall({ id: call.id, role: "callee", otherName: call.callerName, type: call.type, status: "active", conversationId: call.conversationId || null, connectedAt: Date.now() });
         }
         catch (e) {
             setCallErr("Mikrofon/kamera erişimi verilmedi veya bulunamadı.");
@@ -21610,6 +21648,13 @@ function CallManager({ me, pendingCallRequest, onRequestConsumed }) {
             calls[idx].status = "declined";
             await saveShared("calls", calls);
         }
+        await postCallMessage(call.conversationId, `${call.type === "video" ? "🎥 Görüntülü" : "📞 Sesli"} arama reddedildi.`);
+    };
+    const formatDuration = (ms) => {
+        const s = Math.round(ms / 1000);
+        const m = Math.floor(s / 60);
+        const rem = s % 60;
+        return `${m}:${rem.toString().padStart(2, "0")}`;
     };
     const endCall = async () => {
         const current = activeCallRef.current;
@@ -21620,22 +21665,24 @@ function CallManager({ me, pendingCallRequest, onRequestConsumed }) {
                 calls[idx].status = "ended";
                 await saveShared("calls", calls);
             }
+            const durationText = current.connectedAt ? ` (${formatDuration(Date.now() - current.connectedAt)})` : "";
+            await postCallMessage(current.conversationId, `${current.type === "video" ? "🎥 Görüntülü" : "📞 Sesli"} arama sona erdi${durationText}.`);
         }
         cleanupCall();
     };
     // ---------- SÜREKLİ KONTROL (sinyalleşme "polling" ile) ----------
     useEffect(() => {
         if (me && pendingCallRequest) {
-            startCall(pendingCallRequest.otherName, pendingCallRequest.type);
+            startCall(pendingCallRequest.otherName, pendingCallRequest.type, pendingCallRequest.conversationId);
             onRequestConsumed();
         }
     }, [pendingCallRequest]);
     useEffect(() => {
-        if (!me) return;
+        if (!me)
+            return;
         const poll = async () => {
             const current = activeCallRef.current;
             if (!current) {
-                // Gelen aramaları kontrol et (son 25 saniye içinde çalmaya başlamış olmalı)
                 const calls = await loadShared("calls", []);
                 const ringing = calls.find(c => c.calleeName === me.name && c.status === "ringing" && Date.now() - c.createdAt < 25000);
                 setIncoming(prev => {
@@ -21647,15 +21694,31 @@ function CallManager({ me, pendingCallRequest, onRequestConsumed }) {
                 });
                 return;
             }
-            // Aktif/çalıyor bir aramamız varsa durumunu ve gelen sinyalleri kontrol et
             const calls = await loadShared("calls", []);
             const callRecord = calls.find(c => c.id === current.id);
-            if (!callRecord || callRecord.status === "ended" || callRecord.status === "declined") {
+            if (!callRecord) {
+                cleanupCall();
+                return;
+            }
+            if (callRecord.status === "declined" || callRecord.status === "ended") {
+                // Karşı taraf sonlandırdıysa/reddettiyse mesaj zaten o tarafça gönderildi — sadece temizle.
+                cleanupCall();
+                return;
+            }
+            // Arayan taraf için: cevapsız kalmış çalma durumu (25 sn'den uzun süre "ringing" kaldıysa).
+            if (current.role === "caller" && current.status === "calling" && callRecord.status === "ringing" && Date.now() - callRecord.createdAt > 25000) {
+                const callsAll = await loadShared("calls", []);
+                const idx = callsAll.findIndex(c => c.id === current.id);
+                if (idx > -1) {
+                    callsAll[idx].status = "ended";
+                    await saveShared("calls", callsAll);
+                }
+                await postCallMessage(current.conversationId, `${current.type === "video" ? "🎥 Görüntülü" : "📞 Sesli"} arama yanıtlanmadı.`);
                 cleanupCall();
                 return;
             }
             if (current.role === "caller" && callRecord.status === "active" && current.status !== "active") {
-                setActiveCall(prev => prev ? { ...prev, status: "active" } : prev);
+                setActiveCall(prev => prev ? { ...prev, status: "active", connectedAt: Date.now() } : prev);
             }
             const signals = await loadShared("callSignals", []);
             const mine = signals.filter(s => s.callId === current.id && s.to === me.name && !seenSignalIds.current.has(s.id));
@@ -21677,7 +21740,8 @@ function CallManager({ me, pendingCallRequest, onRequestConsumed }) {
         const interval = setInterval(poll, 2000);
         return () => clearInterval(interval);
     }, [me && me.name]);
-    if (!me) return null;
+    if (!me)
+        return null;
     return (React.createElement(React.Fragment, null,
         incoming && !activeCall && (React.createElement("div", { style: { position: "fixed", top: 16, left: "50%", transform: "translateX(-50%)", zIndex: 50, background: COLORS.pineDeep, borderRadius: 16, padding: "14px 18px", boxShadow: "0 10px 30px rgba(0,0,0,0.35)", display: "flex", alignItems: "center", gap: 12, width: 320, maxWidth: "92vw" } },
             React.createElement("div", { style: { width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 } },
