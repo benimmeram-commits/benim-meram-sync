@@ -21972,6 +21972,16 @@ function AnimalDetailEditor({ animal, barns, animals, refreshAll }) {
     const [vetNoteText, setVetNoteText] = useState("");
     const [salePrice, setSalePrice] = useState("");
     const [showSaleForm, setShowSaleForm] = useState(false);
+    const [showListForm, setShowListForm] = useState(false);
+    const [listMainCategory, setListMainCategory] = useState("buyukbas");
+    const [listSubCategory, setListSubCategory] = useState(ALT_KATEGORI.buyukbas[0]);
+    const [listAge, setListAge] = useState(AGE_OPTIONS[3]);
+    const [listPrice, setListPrice] = useState("");
+    const [listIl, setListIl] = useState(animal.barn ? "" : "");
+    const [listIlce, setListIlce] = useState("");
+    const [listNakliye, setListNakliye] = useState("var");
+    const [listBusy, setListBusy] = useState(false);
+    const [listErr, setListErr] = useState("");
     const [treatNote, setTreatNote] = useState("");
     const [medName, setMedName] = useState("");
     const [medDose, setMedDose] = useState("");
@@ -21991,7 +22001,38 @@ function AnimalDetailEditor({ animal, barns, animals, refreshAll }) {
     };
     const setStatus = async (status) => {
         if (status === "satildi") { setShowSaleForm(true); return; }
+        if (status === "satilik" && !animal.listingId) { setShowListForm(true); return; }
+        if (status === "oldu" && animal.listingId) {
+            const listings = await loadShared("listings", []);
+            const lidx = listings.findIndex(l => l.id === animal.listingId);
+            if (lidx > -1) { listings[lidx].status = "kaldirildi"; await saveShared("listings", listings); }
+        }
         await update({ status, statusDate: new Date().toISOString().slice(0, 10) });
+    };
+    const publishListing = async () => {
+        if (!listPrice || !listIl.trim()) { setListErr("Fiyat ve il zorunludur."); return; }
+        if (!animal.gender) { setListErr("Bu hayvanın cinsiyeti kayıtlı değil, önce Ahır Yönetimi'nden düzenleyin."); return; }
+        setListBusy(true); setListErr("");
+        const ownerMembers = await loadShared("members", []);
+        const ownerMember = ownerMembers.find(m => m.name === animal.ownerName) || {};
+        const newListingId = uid();
+        const listings = await loadShared("listings", []);
+        const duplicate = listings.find(l => l.earTag && l.earTag.trim().toUpperCase() === animal.tag.trim().toUpperCase() && l.status !== "kaldirildi");
+        if (duplicate) { setListBusy(false); setListErr(`Bu küpe numarası zaten bir ilanda kullanılıyor: "${duplicate.breed} ${duplicate.subCategory}".`); return; }
+        listings.push({
+            id: newListingId, mainCategory: listMainCategory, subCategory: listSubCategory, breed: animal.breed || "", age: listAge, gender: animal.gender,
+            price: Number(listPrice), weight: animal.weight || null, purpose: "Damızlık", vaccinated: (animal.vaccinations || []).length > 0 ? "Aşılı" : "Aşısız",
+            earTag: animal.tag.trim(), nakliye: listNakliye === "var", animalIl: listIl.trim(), animalIlce: listIlce.trim(), animalAddress: "", animalLat: null, animalLng: null,
+            isPregnant: animal.gender === "Dişi" ? (animal.pregnant ? "Gebe" : "Değil") : null, dailyMilkLiters: null,
+            description: `${animal.breed || ""} ${listSubCategory} — Çiftlik yönetiminden otomatik oluşturuldu.`.trim(),
+            mediaUrls: [], viewCount: 0,
+            sellerName: animal.ownerName, profileType: ownerMember.profileType || "bireysel", sellerCity: ownerMember.city || null, sellerRegion: ownerMember.region || null,
+            status: "yayinda", createdAt: Date.now(), farmAnimalId: animal.id,
+        });
+        await saveShared("listings", listings);
+        await update({ status: "satilik", statusDate: new Date().toISOString().slice(0, 10), listingId: newListingId });
+        setShowListForm(false); setListPrice(""); setListIl(""); setListIlce("");
+        setListBusy(false);
     };
     const confirmSale = async () => {
         setBusy(true);
@@ -22000,6 +22041,11 @@ function AnimalDetailEditor({ animal, barns, animals, refreshAll }) {
             const fin = await loadShared("farmFinance", []);
             fin.push({ id: uid(), ownerName: animal.ownerName, type: "gelir", category: "Hayvan Satışı", amount: Number(salePrice), date: saleDate, note: `${animal.tag} satışı`, createdAt: Date.now() });
             await saveShared("farmFinance", fin);
+        }
+        if (animal.listingId) {
+            const listings = await loadShared("listings", []);
+            const lidx = listings.findIndex(l => l.id === animal.listingId);
+            if (lidx > -1) { listings[lidx].status = "kaldirildi"; await saveShared("listings", listings); }
         }
         await update({ status: "satildi", statusDate: saleDate, salePrice: salePrice ? Number(salePrice) : null });
         setShowSaleForm(false); setSalePrice("");
@@ -22132,6 +22178,21 @@ function AnimalDetailEditor({ animal, barns, animals, refreshAll }) {
                 React.createElement("input", { type: "number", value: salePrice, onChange: (e) => setSalePrice(e.target.value), placeholder: "\u00D6rn. 45000", style: { ...inputStyle, flex: 1, fontSize: 11.5, padding: "7px 9px" } }),
                 React.createElement("button", { onClick: confirmSale, disabled: busy, style: { ...btnPrimary, padding: "7px 12px", fontSize: 11.5 } }, "Onayla"),
                 React.createElement("button", { onClick: () => setShowSaleForm(false), style: { ...btnGhost, borderColor: COLORS.line, color: "#8A8776", padding: "7px 10px", fontSize: 11.5 } }, "\u2715"))),
+        showListForm && React.createElement("div", { style: { background: COLORS.ochreSoft, borderRadius: 10, padding: 10, marginBottom: 10 } },
+            React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 11.5, color: "#7A5A1E", marginBottom: 8 } }, "Pazar Yerinde \u0130lana \u00C7\u0131kar"),
+            React.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 6 } }, [["buyukbas", "B\u00FCy\u00FCkba\u015F"], ["kucukbas", "K\u00FC\u00E7\u00FCkba\u015F"]].map(([k, l]) => (React.createElement("button", { key: k, onClick: () => { setListMainCategory(k); setListSubCategory(ALT_KATEGORI[k][0]); }, style: { flex: 1, padding: "6px", borderRadius: 7, border: `1px solid ${listMainCategory === k ? COLORS.pineDeep : COLORS.line}`, background: listMainCategory === k ? COLORS.pineDeep : COLORS.white, color: listMainCategory === k ? COLORS.white : "#5A574C", fontFamily: "Inter", fontWeight: 600, fontSize: 10.5, cursor: "pointer" } }, l)))),
+            React.createElement("select", { value: listSubCategory, onChange: (e) => setListSubCategory(e.target.value), style: { ...inputStyle, fontSize: 11.5, padding: "7px 9px", marginBottom: 6 } }, ALT_KATEGORI[listMainCategory].map(c => React.createElement("option", { key: c, value: c }, c))),
+            React.createElement("select", { value: listAge, onChange: (e) => setListAge(e.target.value), style: { ...inputStyle, fontSize: 11.5, padding: "7px 9px", marginBottom: 6 } }, AGE_OPTIONS.map(a => React.createElement("option", { key: a, value: a }, a))),
+            React.createElement("input", { type: "number", value: listPrice, onChange: (e) => setListPrice(e.target.value), placeholder: "Fiyat (TL)", style: { ...inputStyle, fontSize: 11.5, padding: "7px 9px", marginBottom: 6 } }),
+            React.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 6 } },
+                React.createElement("select", { value: listIl, onChange: (e) => setListIl(e.target.value), style: { ...inputStyle, flex: 1, fontSize: 11.5, padding: "7px 9px" } }, [React.createElement("option", { key: "", value: "" }, "\u0130l se\u00E7in"), ...TURKISH_CITIES.map(c => React.createElement("option", { key: c, value: c }, c))]),
+                React.createElement("input", { value: listIlce, onChange: (e) => setListIlce(e.target.value), placeholder: "\u0130l\u00E7e", style: { ...inputStyle, flex: 1, fontSize: 11.5, padding: "7px 9px" } })),
+            React.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 8 } }, [["var", "Nakliye Var"], ["yok", "Nakliye Yok"]].map(([k, l]) => (React.createElement("button", { key: k, onClick: () => setListNakliye(k), style: { flex: 1, padding: "6px", borderRadius: 7, border: `1px solid ${listNakliye === k ? COLORS.pineDeep : COLORS.line}`, background: listNakliye === k ? COLORS.pineDeep : COLORS.white, color: listNakliye === k ? COLORS.white : "#5A574C", fontFamily: "Inter", fontWeight: 600, fontSize: 10.5, cursor: "pointer" } }, l)))),
+            listErr && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 10.5, marginBottom: 6 } }, listErr),
+            React.createElement("div", { style: { display: "flex", gap: 6 } },
+                React.createElement("button", { onClick: publishListing, disabled: listBusy, style: { ...btnPrimary, flex: 1, fontSize: 11.5, padding: "8px" } }, listBusy ? "Yay\u0131nlan\u0131yor..." : "\u0130lan\u0131 Yay\u0131nla"),
+                React.createElement("button", { onClick: () => setShowListForm(false), style: { ...btnGhost, borderColor: COLORS.line, color: "#8A8776", padding: "7px 10px", fontSize: 11.5 } }, "\u2715"))),
+        animal.listingId && animal.status === "satilik" && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: COLORS.pineDeep, marginBottom: 10 } }, "\u2713 Pazar yerinde yay\u0131nda"),
         animal.status === "satildi" && animal.salePrice && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776", marginBottom: 10 } },
             "Sat\u0131\u015F fiyat\u0131: ",
             TL(animal.salePrice)),
