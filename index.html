@@ -17380,6 +17380,15 @@ function IconBookmark({ size = 24, color, filled, style }) {
     return React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: filled ? color : "none", stroke: color, strokeWidth: "1.8", strokeLinecap: "round", strokeLinejoin: "round", style: style },
         React.createElement("path", { d: "M6 4h12a1 1 0 0 1 1 1v15l-7-4.5L5 20V5a1 1 0 0 1 1-1Z" }));
 }
+function IconPhone({ size = 16, color = "currentColor" }) {
+  return React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: color, strokeWidth: "1.8", strokeLinecap: "round", strokeLinejoin: "round" },
+    React.createElement("path", { d: "M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" }));
+}
+function IconVideoCam({ size = 16, color = "currentColor" }) {
+  return React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: color, strokeWidth: "1.8", strokeLinecap: "round", strokeLinejoin: "round" },
+    React.createElement("polygon", { points: "23 7 16 12 23 17 23 7" }),
+    React.createElement("rect", { x: "1", y: "5", width: "15", height: "14", rx: "2", ry: "2" }));
+}
 function Eye({ size = 16, color = "currentColor" }) {
     return React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: color, strokeWidth: "1.8", strokeLinecap: "round", strokeLinejoin: "round" },
         React.createElement("path", { d: "M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z" }),
@@ -18381,6 +18390,7 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [viewedProfileName, setViewedProfileName] = useState(null);
     const openProfile = (name) => { setViewedProfileName(name); setScreen("publicProfile"); };
+    const [pendingCallRequest, setPendingCallRequest] = useState(null);
 
     // Ana 5 sekme arasında (Ana Sayfa/Reels/İlan Ver/Sohbet/Profil) sağa/sola
     // kaydırarak geçiş — sadece bu 5 ana ekrandayken aktif.
@@ -18437,6 +18447,7 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
         return p.buyerName === me.name || p.sellerName === me.name;
     }))) : [];
     return (React.createElement(React.Fragment, null,
+        React.createElement(CallManager, { me: me, pendingCallRequest: pendingCallRequest, onRequestConsumed: () => setPendingCallRequest(null) }),
         screen !== "detail" && screen !== "chat" && screen !== "regionChat" && screen !== "reels" && screen !== "search" && screen !== "publicProfile" && (React.createElement("div", { style: { background: COLORS.pine, padding: "14px 14px 10px", display: "flex", alignItems: "center", gap: 10 } },
             React.createElement("button", { onClick: () => setDrawer(true), style: { background: "none", border: "none", cursor: "pointer" } },
                 React.createElement(IconMenu, { color: COLORS.white, size: 20 })),
@@ -18530,7 +18541,7 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
             React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 19, marginBottom: 12 } }, "Favorilerim"),
             listings.filter(l => favorites.includes(l.id)).length === 0 ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12.5, color: "#8A8776" } }, "Hen\u00FCz favori ilan\u0131n\u0131z yok \u2014 bir ilan kart\u0131ndaki kalp ikonuna dokunun.")) : (React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 } }, listings.filter(l => favorites.includes(l.id)).map(item => (React.createElement(ListingCard, { key: item.id, item: item, reviews: reviews, favorites: favorites, toggleFavorite: toggleFavorite, onOpen: open }))))))),
         screen === "chatHub" && (React.createElement(ChatHub, { me: me, messages: messages, listings: listings, region: me.region, onOpenChat: openChat, onOpenRegion: (r) => { setChatRegion(r); setScreen("regionChat"); }, myConversationIds: myConversationIds })),
-        screen === "chat" && chatTarget && (React.createElement(ChatScreen, { key: chatTarget.conversationId, title: chatTarget.otherName, subtitle: chatTarget.listingLabel, conversationId: chatTarget.conversationId, me: me, messages: messages.filter(m => m.conversationId === chatTarget.conversationId), refreshAll: refreshAll, onBack: () => setScreen("chatHub") })),
+        screen === "chat" && chatTarget && (React.createElement(ChatScreen, { key: chatTarget.conversationId, title: chatTarget.otherName, subtitle: chatTarget.listingLabel, conversationId: chatTarget.conversationId, me: me, messages: messages.filter(m => m.conversationId === chatTarget.conversationId), refreshAll: refreshAll, onBack: () => setScreen("chatHub"), onStartCall: (type) => setPendingCallRequest({ otherName: chatTarget.otherName, type, nonce: Date.now() }) })),
         screen === "regionChat" && chatRegion && (React.createElement(ChatScreen, { key: chatRegion, title: chatRegion, subtitle: "B\u00F6lge Sohbeti \u2014 herkese a\u00E7\u0131k", conversationId: regionChatKey(chatRegion), me: me, messages: messages.filter(m => m.conversationId === regionChatKey(chatRegion)), refreshAll: refreshAll, onBack: () => setScreen("chatHub"), isGroup: true })),
         screen === "profile" && React.createElement(ProfileScreen, { me: me, setMe: setMe, listings: listings, members: members, favorites: favorites, pricing: pricing, offers: offers, reviews: reviews, setScreen: setScreen, refreshAll: refreshAll }),
         drawer && (React.createElement("div", { style: { position: "absolute", inset: 0, background: "rgba(20,48,31,0.4)", zIndex: 10 }, onClick: () => setDrawer(false) },
@@ -19268,7 +19279,7 @@ function ChatHub({ me, messages, listings, region, onOpenChat, onOpenRegion, myC
             })))));
 }
 // ---------- SOHBET EKRANI (özel veya bölge — ikisi de aynı yapıyı kullanır) ----------
-function ChatScreen({ title, subtitle, conversationId, me, messages, refreshAll, onBack, isGroup }) {
+function ChatScreen({ title, subtitle, conversationId, me, messages, refreshAll, onBack, isGroup, onStartCall }) {
     const [text, setText] = useState("");
     const [sending, setSending] = useState(false);
     const [showReport, setShowReport] = useState(false);
@@ -19308,6 +19319,11 @@ function ChatScreen({ title, subtitle, conversationId, me, messages, refreshAll,
             React.createElement("div", { style: { flex: 1 } },
                 React.createElement("div", { style: { color: COLORS.white, fontFamily: "Inter", fontWeight: 600, fontSize: 13.5 } }, title),
                 React.createElement("div", { style: { color: "#D8E6DC", fontFamily: "Inter", fontSize: 10.5 } }, subtitle)),
+            !isGroup && onStartCall && (React.createElement(React.Fragment, null,
+                React.createElement("button", { onClick: () => onStartCall("audio"), style: { background: "none", border: "none", cursor: "pointer" }, title: "Sesli Ara" },
+                    React.createElement(IconPhone, { size: 17, color: "#D8E6DC" })),
+                React.createElement("button", { onClick: () => onStartCall("video"), style: { background: "none", border: "none", cursor: "pointer" }, title: "G\u00F6r\u00FCnt\u00FCl\u00FC Ara" },
+                    React.createElement(IconVideoCam, { size: 18, color: "#D8E6DC" })))),
             !isGroup && (React.createElement("button", { onClick: () => setShowReport(v => !v), style: { background: "none", border: "none", cursor: "pointer" }, title: "\u015Eikayet Et" },
                 React.createElement(Flag, { size: 16, color: "#D8E6DC" })))),
         showReport && (React.createElement("div", { style: { background: COLORS.ochreSoft, padding: 12, display: "flex", flexDirection: "column", gap: 8 } },
@@ -20660,7 +20676,7 @@ const RAW_DATA_KEYS = [
     "listings", "requests", "offers", "members", "reviews", "messages",
     "pricing", "adminAccounts", "adminLoginLogs", "auditLog", "reports",
     "customBreeds", "customSubcategories", "announcement",
-    "notificationSettings", "passwordPolicy", "ipRestrictions", "emailChangeRequests",
+    "notificationSettings", "passwordPolicy", "ipRestrictions", "emailChangeRequests", "calls", "callSignals",
 ];
 function RawDataKeyEditor({ dataKey, session, refreshAll }) {
     const [open, setOpen] = useState(false);
@@ -21478,6 +21494,209 @@ function AppointmentAndCallCard({ item, me, sellerPhone }) {
             "veya do\u011Frudan telefonla aray\u0131n: ",
             sellerPhone)),
         React.createElement("div", { style: { fontFamily: "Inter", fontSize: 9, color: "#B7B4A6", marginTop: 6 } }, "Not: uygulama i\u00E7i ger\u00E7ek zamanl\u0131 g\u00F6r\u00FCnt\u00FCl\u00FC arama bu ortamda desteklenmiyor \u2014 istek sat\u0131c\u0131ya mesaj olarak iletilir, aramay\u0131 kendi telefonunuzdan (WhatsApp/FaceTime vb.) yapman\u0131z gerekir.")));
+}
+
+function CallManager({ me, pendingCallRequest, onRequestConsumed }) {
+    const [incoming, setIncoming] = useState(null); // {id, callerName, type}
+    const [activeCall, setActiveCall] = useState(null); // {id, role, otherName, type, status: 'calling'|'ringing'|'active'}
+    const [callErr, setCallErr] = useState("");
+    const pcRef = React.useRef(null);
+    const localStreamRef = React.useRef(null);
+    const localVideoRef = React.useRef(null);
+    const remoteVideoRef = React.useRef(null);
+    const remoteAudioRef = React.useRef(null);
+    const seenSignalIds = React.useRef(new Set());
+    const activeCallRef = React.useRef(null);
+    useEffect(() => { activeCallRef.current = activeCall; }, [activeCall]);
+    const cleanupCall = () => {
+        if (pcRef.current) {
+            try {
+                pcRef.current.close();
+            }
+            catch { }
+            pcRef.current = null;
+        }
+        if (localStreamRef.current) {
+            localStreamRef.current.getTracks().forEach(t => t.stop());
+            localStreamRef.current = null;
+        }
+        setActiveCall(null);
+        seenSignalIds.current = new Set();
+    };
+    const setupPeerConnection = (callId, otherName) => {
+        const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+        pc.onicecandidate = async (e) => {
+            if (!e.candidate)
+                return;
+            const all = await loadShared("callSignals", []);
+            all.push({ id: uid(), callId, from: me.name, to: otherName, kind: "ice", payload: JSON.stringify(e.candidate), createdAt: Date.now() });
+            await saveShared("callSignals", all);
+        };
+        pc.ontrack = (e) => {
+            const stream = e.streams[0];
+            if (remoteVideoRef.current)
+                remoteVideoRef.current.srcObject = stream;
+            if (remoteAudioRef.current)
+                remoteAudioRef.current.srcObject = stream;
+        };
+        pcRef.current = pc;
+        return pc;
+    };
+    // ---------- ARAMA BAŞLATMA (arayan taraf) ----------
+    const startCall = async (otherName, type) => {
+        setCallErr("");
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === "video" });
+            localStreamRef.current = stream;
+            const callId = uid();
+            const pc = setupPeerConnection(callId, otherName);
+            stream.getTracks().forEach(t => pc.addTrack(t, stream));
+            if (localVideoRef.current && type === "video")
+                localVideoRef.current.srcObject = stream;
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            const calls = await loadShared("calls", []);
+            calls.push({ id: callId, callerName: me.name, calleeName: otherName, type, status: "ringing", createdAt: Date.now() });
+            await saveShared("calls", calls);
+            const signals = await loadShared("callSignals", []);
+            signals.push({ id: uid(), callId, from: me.name, to: otherName, kind: "offer", payload: JSON.stringify(offer), createdAt: Date.now() });
+            await saveShared("callSignals", signals);
+            setActiveCall({ id: callId, role: "caller", otherName, type, status: "calling" });
+        }
+        catch (e) {
+            setCallErr("Mikrofon/kamera erişimi verilmedi veya bulunamadı.");
+        }
+    };
+    // ---------- ARAMAYI KABUL ETME (aranan taraf) ----------
+    const acceptCall = async (call) => {
+        setCallErr("");
+        setIncoming(null);
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: call.type === "video" });
+            localStreamRef.current = stream;
+            const pc = setupPeerConnection(call.id, call.callerName);
+            stream.getTracks().forEach(t => pc.addTrack(t, stream));
+            if (localVideoRef.current && call.type === "video")
+                localVideoRef.current.srcObject = stream;
+            const signals = await loadShared("callSignals", []);
+            const offerSignal = signals.find(s => s.callId === call.id && s.kind === "offer");
+            if (!offerSignal) {
+                setCallErr("Arama teklifi bulunamadı.");
+                return;
+            }
+            seenSignalIds.current.add(offerSignal.id);
+            await pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(offerSignal.payload)));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            signals.push({ id: uid(), callId: call.id, from: me.name, to: call.callerName, kind: "answer", payload: JSON.stringify(answer), createdAt: Date.now() });
+            await saveShared("callSignals", signals);
+            const calls = await loadShared("calls", []);
+            const idx = calls.findIndex(c => c.id === call.id);
+            if (idx > -1) {
+                calls[idx].status = "active";
+                await saveShared("calls", calls);
+            }
+            setActiveCall({ id: call.id, role: "callee", otherName: call.callerName, type: call.type, status: "active" });
+        }
+        catch (e) {
+            setCallErr("Mikrofon/kamera erişimi verilmedi veya bulunamadı.");
+        }
+    };
+    const declineCall = async (call) => {
+        setIncoming(null);
+        const calls = await loadShared("calls", []);
+        const idx = calls.findIndex(c => c.id === call.id);
+        if (idx > -1) {
+            calls[idx].status = "declined";
+            await saveShared("calls", calls);
+        }
+    };
+    const endCall = async () => {
+        const current = activeCallRef.current;
+        if (current) {
+            const calls = await loadShared("calls", []);
+            const idx = calls.findIndex(c => c.id === current.id);
+            if (idx > -1) {
+                calls[idx].status = "ended";
+                await saveShared("calls", calls);
+            }
+        }
+        cleanupCall();
+    };
+    // ---------- SÜREKLİ KONTROL (sinyalleşme "polling" ile) ----------
+    useEffect(() => {
+        if (me && pendingCallRequest) {
+            startCall(pendingCallRequest.otherName, pendingCallRequest.type);
+            onRequestConsumed();
+        }
+    }, [pendingCallRequest]);
+    useEffect(() => {
+        if (!me) return;
+        const poll = async () => {
+            const current = activeCallRef.current;
+            if (!current) {
+                // Gelen aramaları kontrol et (son 25 saniye içinde çalmaya başlamış olmalı)
+                const calls = await loadShared("calls", []);
+                const ringing = calls.find(c => c.calleeName === me.name && c.status === "ringing" && Date.now() - c.createdAt < 25000);
+                setIncoming(prev => {
+                    if (ringing && (!prev || prev.id !== ringing.id))
+                        return ringing;
+                    if (!ringing)
+                        return null;
+                    return prev;
+                });
+                return;
+            }
+            // Aktif/çalıyor bir aramamız varsa durumunu ve gelen sinyalleri kontrol et
+            const calls = await loadShared("calls", []);
+            const callRecord = calls.find(c => c.id === current.id);
+            if (!callRecord || callRecord.status === "ended" || callRecord.status === "declined") {
+                cleanupCall();
+                return;
+            }
+            if (current.role === "caller" && callRecord.status === "active" && current.status !== "active") {
+                setActiveCall(prev => prev ? { ...prev, status: "active" } : prev);
+            }
+            const signals = await loadShared("callSignals", []);
+            const mine = signals.filter(s => s.callId === current.id && s.to === me.name && !seenSignalIds.current.has(s.id));
+            for (const sig of mine) {
+                seenSignalIds.current.add(sig.id);
+                if (!pcRef.current)
+                    continue;
+                try {
+                    if (sig.kind === "answer" && current.role === "caller") {
+                        await pcRef.current.setRemoteDescription(new RTCSessionDescription(JSON.parse(sig.payload)));
+                    }
+                    else if (sig.kind === "ice") {
+                        await pcRef.current.addIceCandidate(new RTCIceCandidate(JSON.parse(sig.payload)));
+                    }
+                }
+                catch { /* sinyal işlenemedi, sessizce geç */ }
+            }
+        };
+        const interval = setInterval(poll, 2000);
+        return () => clearInterval(interval);
+    }, [me && me.name]);
+    if (!me) return null;
+    return (React.createElement(React.Fragment, null,
+        incoming && !activeCall && (React.createElement("div", { style: { position: "fixed", top: 16, left: "50%", transform: "translateX(-50%)", zIndex: 50, background: COLORS.pineDeep, borderRadius: 16, padding: "14px 18px", boxShadow: "0 10px 30px rgba(0,0,0,0.35)", display: "flex", alignItems: "center", gap: 12, width: 320, maxWidth: "92vw" } },
+            React.createElement("div", { style: { width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 } },
+                React.createElement("span", { style: { fontFamily: "Fraunces", fontWeight: 600, color: COLORS.white } }, incoming.callerName[0])),
+            React.createElement("div", { style: { flex: 1 } },
+                React.createElement("div", { style: { color: COLORS.white, fontFamily: "Inter", fontWeight: 700, fontSize: 13 } }, incoming.callerName),
+                React.createElement("div", { style: { color: "#CFE3D6", fontFamily: "Inter", fontSize: 11 } }, incoming.type === "video" ? "Görüntülü arama..." : "Sesli arama...")),
+            React.createElement("button", { onClick: () => declineCall(incoming), style: { width: 34, height: 34, borderRadius: "50%", background: COLORS.red, border: "none", color: "#fff", cursor: "pointer" } }, "\u2715"),
+            React.createElement("button", { onClick: () => acceptCall(incoming), style: { width: 34, height: 34, borderRadius: "50%", background: "#3AA65A", border: "none", color: "#fff", cursor: "pointer" } }, "\u2713"))),
+        activeCall && (React.createElement("div", { style: { position: "fixed", inset: 0, background: "#111", zIndex: 60, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" } },
+            activeCall.type === "video" ? (React.createElement(React.Fragment, null,
+                React.createElement("video", { ref: remoteVideoRef, autoPlay: true, playsInline: true, style: { position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", background: "#000" } }),
+                React.createElement("video", { ref: localVideoRef, autoPlay: true, playsInline: true, muted: true, style: { position: "absolute", top: 20, right: 16, width: 100, height: 140, borderRadius: 12, objectFit: "cover", border: "2px solid rgba(255,255,255,0.4)" } }))) : (React.createElement("audio", { ref: remoteAudioRef, autoPlay: true })),
+            React.createElement("div", { style: { position: "absolute", top: 40, left: 0, right: 0, textAlign: "center" } },
+                React.createElement("div", { style: { color: COLORS.white, fontFamily: "Fraunces", fontWeight: 700, fontSize: 20 } }, activeCall.otherName),
+                React.createElement("div", { style: { color: "#B7B4A6", fontFamily: "Inter", fontSize: 12, marginTop: 4 } }, activeCall.status === "calling" ? "Aranıyor..." : activeCall.type === "video" ? "Görüntülü görüşme" : "Sesli görüşme")),
+            React.createElement("button", { onClick: endCall, style: { position: "absolute", bottom: 50, width: 60, height: 60, borderRadius: "50%", background: COLORS.red, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" } },
+                React.createElement("span", { style: { fontSize: 24 } }, "\uD83D\uDCDE")))),
+        callErr && (React.createElement("div", { style: { position: "fixed", bottom: 90, left: "50%", transform: "translateX(-50%)", zIndex: 55, background: COLORS.red, color: "#fff", padding: "8px 14px", borderRadius: 10, fontFamily: "Inter", fontSize: 12 }, onClick: () => setCallErr("") }, callErr))));
 }
 
 </script>
