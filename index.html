@@ -17222,6 +17222,7 @@ exports.version = "19.2.5";
 </script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 <div id="root">
@@ -18611,7 +18612,7 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
         screen === "profileSub" && React.createElement(ProfileSubScreen, { section: profileSubSection, me: me, setMe: setMe, refreshAll: refreshAll, onBack: () => setScreen("profile") }),
         screen === "farm" && me && React.createElement(FarmManagementScreen, { me: me, refreshAll: refreshAll, onBack: () => setScreen("profile") }),
         screen === "myListings" && me && React.createElement(MyListingsScreen, { me: me, listings: listings, refreshAll: refreshAll, onBack: () => setScreen("profile") }),
-        screen === "vet" && me && React.createElement(VetScreen, { me: me, onBack: () => setScreen("profile") }),
+        screen === "vet" && me && React.createElement(VetScreen, { me: me, setMe: setMe, onBack: () => setScreen("profile") }),
         drawer && (React.createElement("div", { style: { position: "absolute", inset: 0, background: "rgba(20,48,31,0.4)", zIndex: 10 }, onClick: () => setDrawer(false) },
             React.createElement("div", { onClick: (e) => e.stopPropagation(), style: { width: 280, height: "100%", background: COLORS.white, padding: 18, overflowY: "auto" } },
                 React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 } },
@@ -22046,6 +22047,18 @@ function AnimalDetailEditor({ animal, barns, animals, refreshAll }) {
     const [feedType, setFeedType] = useState(animal.feedType || "");
     const [treatName, setTreatName] = useState("");
     const [vetNoteText, setVetNoteText] = useState("");
+    const [showExamForm, setShowExamForm] = useState(false);
+    const [examReason, setExamReason] = useState("");
+    const [examGeneral, setExamGeneral] = useState("İyi");
+    const [examBodyCondition, setExamBodyCondition] = useState("Normal");
+    const [examTemp, setExamTemp] = useState("");
+    const [examResp, setExamResp] = useState("");
+    const [examPulse, setExamPulse] = useState("");
+    const [examDigestion, setExamDigestion] = useState("");
+    const [examMovement, setExamMovement] = useState("");
+    const [examNotes, setExamNotes] = useState("");
+    const [examAction, setExamAction] = useState("");
+    const [examFollowup, setExamFollowup] = useState("");
     const [salePrice, setSalePrice] = useState("");
     const [showSaleForm, setShowSaleForm] = useState(false);
     const [showListForm, setShowListForm] = useState(false);
@@ -22156,6 +22169,18 @@ function AnimalDetailEditor({ animal, barns, animals, refreshAll }) {
         await update({ vetNotes: [...(animal.vetNotes || []), { note: vetNoteText.trim(), date: new Date().toISOString().slice(0, 10), performedBy }] });
         setVetNoteText("");
     };
+    const saveExam = async () => {
+        const performedBy = await getActorName();
+        const now = new Date();
+        const exam = {
+            date: now.toISOString().slice(0, 10), time: now.toTimeString().slice(0, 5), reason: examReason.trim(),
+            general: examGeneral, bodyCondition: examBodyCondition, temp: examTemp.trim(), resp: examResp.trim(), pulse: examPulse.trim(),
+            digestion: examDigestion.trim(), movement: examMovement.trim(), notes: examNotes.trim(), action: examAction.trim(), followup: examFollowup || null, performedBy,
+        };
+        await update({ examinations: [...(animal.examinations || []), exam] });
+        setExamReason(""); setExamTemp(""); setExamResp(""); setExamPulse(""); setExamDigestion(""); setExamMovement(""); setExamNotes(""); setExamAction(""); setExamFollowup("");
+        setShowExamForm(false);
+    };
     const addMedication = async () => {
         if (!medName.trim())
             return;
@@ -22218,10 +22243,11 @@ function AnimalDetailEditor({ animal, barns, animals, refreshAll }) {
     (animal.treatments || []).forEach(t => timeline.push({ date: t.date, text: `Tedavi: ${t.name}${t.note ? " — " + t.note : ""}${t.performedBy ? ` (${t.performedBy})` : ""}` }));
     (animal.medications || []).forEach(m => timeline.push({ date: m.date, text: `İlaç: ${m.name}${m.dose ? ` (${m.dose})` : ""}${m.performedBy ? ` — ${m.performedBy}` : ""}` }));
     (animal.vetNotes || []).forEach(n => timeline.push({ date: n.date, text: `Veteriner notu: ${n.note}${n.performedBy ? ` — ${n.performedBy}` : ""}` }));
+    (animal.examinations || []).forEach(ex => timeline.push({ date: ex.date, text: `Muayene: ${ex.reason || "Genel kontrol"} — Genel durum: ${ex.general}${ex.performedBy ? ` — ${ex.performedBy}` : ""}` }));
     (animal.breedingNotes || []).forEach(n => timeline.push({ date: n.date, text: `Üreme notu: ${n.note}` }));
     (animal.births || []).forEach(b => timeline.push({ date: b.date, text: `Doğum: ${b.offspringTag} doğdu` }));
     timeline.sort((a, b) => new Date(b.date) - new Date(a.date));
-    const SUBTABS = [["saglik", "Sağlık"], ["asilar", "Aşılar"], ["ureme", "Üreme"], ["kilo", "Kilo"], ["yem", "Yem"], ["soy", "Soy Ağacı"], ["gecmis", "Geçmiş"]];
+    const SUBTABS = [["saglik", "Sağlık"], ["muayene", "Muayene"], ["asilar", "Aşılar"], ["ureme", "Üreme"], ["kilo", "Kilo"], ["yem", "Yem"], ["soy", "Soy Ağacı"], ["gecmis", "Geçmiş"]];
     const mother = animal.motherTag ? (animals || []).find(a => a.tag === animal.motherTag) : null;
     const offspring = (animals || []).filter(a => a.motherTag === animal.tag);
     const STATUS_LABELS = { aktif: "Aktif", satilik: "Satılık", satildi: "Satıldı", oldu: "Öldü / Kayıp" };
@@ -22321,6 +22347,49 @@ function AnimalDetailEditor({ animal, barns, animals, refreshAll }) {
                 React.createElement("input", { value: medName, onChange: (e) => setMedName(e.target.value), placeholder: "\u0130la\u00E7 ad\u0131", style: { ...inputStyle, flex: 1, fontSize: 11.5, padding: "7px 9px" } }),
                 React.createElement("input", { value: medDose, onChange: (e) => setMedDose(e.target.value), placeholder: "Doz (ops.)", style: { ...inputStyle, flex: 1, fontSize: 11.5, padding: "7px 9px" } }),
                 React.createElement("button", { onClick: addMedication, style: { ...btnGhost, borderColor: COLORS.line, color: COLORS.pineDeep, padding: "6px 10px", fontSize: 11 } }, "Ekle")))),
+        subTab === "muayene" && (React.createElement("div", null,
+            (animal.examinations || []).length === 0 && !showExamForm && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#8A8776", marginBottom: 10 } }, "Hen\u00FCz muayene kayd\u0131 yok."),
+            (animal.examinations || []).slice().reverse().map((ex, i) => (React.createElement("div", { key: i, style: { background: COLORS.paper, borderRadius: 10, padding: 10, marginBottom: 8 } },
+                React.createElement("div", { style: { display: "flex", justifyContent: "space-between", marginBottom: 4 } },
+                    React.createElement("span", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 11.5 } }, ex.reason || "Genel kontrol"),
+                    React.createElement("span", { style: { fontFamily: "Inter", fontSize: 10, color: "#8A8776" } }, ex.date, " ", ex.time)),
+                React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#5A574C", lineHeight: 1.6 } },
+                    "Genel durum: ", ex.general, " \u00B7 V\u00FCcut kondisyonu: ", ex.bodyCondition,
+                    ex.temp ? React.createElement("span", null, React.createElement("br", null), "Ate\u015F: ", ex.temp, "\u00B0C") : null,
+                    ex.resp ? React.createElement("span", null, " \u00B7 Solunum: ", ex.resp, "/dk") : null,
+                    ex.pulse ? React.createElement("span", null, " \u00B7 Nab\u0131z: ", ex.pulse, "/dk") : null,
+                    ex.digestion ? React.createElement("span", null, React.createElement("br", null), "Sindirim: ", ex.digestion) : null,
+                    ex.movement ? React.createElement("span", null, React.createElement("br", null), "Hareket/y\u00FCr\u00FCy\u00FC\u015F: ", ex.movement) : null,
+                    ex.notes ? React.createElement("span", null, React.createElement("br", null), "Notlar: ", ex.notes) : null,
+                    ex.action ? React.createElement("span", null, React.createElement("br", null), "Yap\u0131lan i\u015Flem: ", ex.action) : null,
+                    ex.followup ? React.createElement("span", null, React.createElement("br", null), "Takip tarihi: ", ex.followup) : null,
+                    ex.performedBy ? React.createElement("span", null, React.createElement("br", null), React.createElement("i", null, ex.performedBy)) : null)))),
+            showExamForm ? (React.createElement("div", { style: { background: COLORS.ochreSoft, borderRadius: 10, padding: 10 } },
+                React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 11.5, color: "#7A5A1E", marginBottom: 8 } }, "Yeni Muayene Kayd\u0131"),
+                React.createElement(FormField, { label: "Muayene Nedeni", value: examReason, onChange: setExamReason, placeholder: "\u00D6rn. Rutin kontrol, i\u015Fitilen \u015Fik\u00E2yet" }),
+                React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 6 } },
+                    React.createElement("div", { style: { flex: 1 } },
+                        React.createElement("label", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#5A574C", fontWeight: 600 } }, "Genel Durum"),
+                        React.createElement("select", { value: examGeneral, onChange: (e) => setExamGeneral(e.target.value), style: { ...inputStyle, marginTop: 3, fontSize: 11, padding: "6px 8px" } },
+                            React.createElement("option", null, "\u0130yi"), React.createElement("option", null, "Orta"), React.createElement("option", null, "K\u00F6t\u00FC"))),
+                    React.createElement("div", { style: { flex: 1 } },
+                        React.createElement("label", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#5A574C", fontWeight: 600 } }, "V\u00FCcut Kondisyonu"),
+                        React.createElement("select", { value: examBodyCondition, onChange: (e) => setExamBodyCondition(e.target.value), style: { ...inputStyle, marginTop: 3, fontSize: 11, padding: "6px 8px" } },
+                            React.createElement("option", null, "Zay\u0131f"), React.createElement("option", null, "Normal"), React.createElement("option", null, "\u015Ei\u015Fman")))),
+                React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 6 } },
+                    React.createElement("input", { type: "number", value: examTemp, onChange: (e) => setExamTemp(e.target.value), placeholder: "Ate\u015F (\u00B0C)", style: { ...inputStyle, flex: 1, fontSize: 11, padding: "6px 8px" } }),
+                    React.createElement("input", { type: "number", value: examResp, onChange: (e) => setExamResp(e.target.value), placeholder: "Solunum (/dk)", style: { ...inputStyle, flex: 1, fontSize: 11, padding: "6px 8px" } }),
+                    React.createElement("input", { type: "number", value: examPulse, onChange: (e) => setExamPulse(e.target.value), placeholder: "Nab\u0131z (/dk)", style: { ...inputStyle, flex: 1, fontSize: 11, padding: "6px 8px" } })),
+                React.createElement("input", { value: examDigestion, onChange: (e) => setExamDigestion(e.target.value), placeholder: "Sindirim sistemi g\u00F6zlemi", style: { ...inputStyle, marginTop: 6, fontSize: 11, padding: "6px 8px" } }),
+                React.createElement("input", { value: examMovement, onChange: (e) => setExamMovement(e.target.value), placeholder: "Hareket / y\u00FCr\u00FCy\u00FC\u015F g\u00F6zlemi", style: { ...inputStyle, marginTop: 6, fontSize: 11, padding: "6px 8px" } }),
+                React.createElement("textarea", { value: examNotes, onChange: (e) => setExamNotes(e.target.value), placeholder: "Genel g\u00F6zlem/notlar...", rows: 2, style: { ...inputStyle, marginTop: 6, fontSize: 11, resize: "vertical" } }),
+                React.createElement("input", { value: examAction, onChange: (e) => setExamAction(e.target.value), placeholder: "Yap\u0131lan i\u015Flem", style: { ...inputStyle, marginTop: 6, fontSize: 11, padding: "6px 8px" } }),
+                React.createElement("div", { style: { marginTop: 6 } },
+                    React.createElement("label", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#5A574C", fontWeight: 600 } }, "Takip Tarihi (ops.)"),
+                    React.createElement("input", { type: "date", value: examFollowup, onChange: (e) => setExamFollowup(e.target.value), style: { ...inputStyle, marginTop: 3, fontSize: 11, padding: "6px 8px" } })),
+                React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 8 } },
+                    React.createElement("button", { onClick: saveExam, disabled: busy, style: { ...btnPrimary, flex: 1, fontSize: 11, padding: "7px" } }, "Muayeneyi Kaydet"),
+                    React.createElement("button", { onClick: () => setShowExamForm(false), style: { ...btnGhost, borderColor: COLORS.line, color: "#8A8776", padding: "7px 10px", fontSize: 11 } }, "\u2715")))) : (React.createElement("button", { onClick: () => setShowExamForm(true), style: { ...btnGhost, width: "100%", justifyContent: "center", borderColor: COLORS.line, color: COLORS.pineDeep } }, "+ Yeni Muayene Kayd\u0131")))),
         subTab === "asilar" && (React.createElement("div", null,
             (animal.vaccinations || []).length === 0 && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776", marginBottom: 6 } }, "Kay\u0131t yok."),
             (animal.vaccinations || []).map((v, i) => (React.createElement("div", { key: i, style: { display: "flex", justifyContent: "space-between", fontFamily: "Inter", fontSize: 11, marginBottom: 3 } },
@@ -23334,7 +23403,7 @@ function VetFarmAnimalsView({ farmOwnerName, initialExpandedId, onBack }) {
         }))));
 }
 
-function VetScreen({ me, onBack }) {
+function VetScreen({ me, setMe, onBack }) {
     const [tab, setTab] = useState("anasayfa");
     const [myVetLinks, setMyVetLinks] = useState([]);
     const [allAnimalsByFarm, setAllAnimalsByFarm] = useState({});
@@ -23358,7 +23427,7 @@ function VetScreen({ me, onBack }) {
     useEffect(() => { load(); }, []);
     const todayStr = new Date().toISOString().slice(0, 10);
     const todayVisits = visits.filter(v => v.date === todayStr);
-    const TABS = [["anasayfa", "Ana Sayfa", "🏠"], ["ciftlikler", "Çiftlikler", "🚜"], ["paketler", "Paketler", "📦"], ["takvim", "Takvim", "📅"], ["gelir", "Gelirim", "💰"], ["bildirim", "Bildirim", "🔔"], ["rapor", "Rapor", "📊"]];
+    const TABS = [["anasayfa", "Ana Sayfa", "🏠"], ["ciftlikler", "Çiftlikler", "🚜"], ["suru", "Sürü", "🐄"], ["paketler", "Paketler", "📦"], ["takvim", "Takvim", "📅"], ["gelir", "Gelirim", "💰"], ["bildirim", "Bildirim", "🔔"], ["rapor", "Rapor", "📊"], ["profil", "Profilim", "👤"]];
     const swipeStartX = React.useRef(null);
     const onSwipeStart = (e) => { swipeStartX.current = e.touches[0].clientX; };
     const onSwipeEnd = (e) => {
@@ -23380,7 +23449,7 @@ function VetScreen({ me, onBack }) {
                 React.createElement(ChevronLeft, { color: COLORS.white, size: 20 })),
             React.createElement("span", { style: { fontSize: 17 } }, "\uD83E\uDE7A"),
             React.createElement("div", { style: { color: COLORS.white, fontFamily: "Fraunces", fontWeight: 700, fontSize: 16 } }, "Veteriner Paneli")),
-        React.createElement("div", { onTouchStart: onSwipeStart, onTouchEnd: onSwipeEnd, style: { flex: 1, overflowY: "auto", padding: "14px 16px 16px" } }, !loaded ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Y\u00FCkleniyor...")) : tab === "anasayfa" ? (React.createElement(VetHomeTab, { me: me, myVetLinks: myVetLinks, allAnimalsByFarm: allAnimalsByFarm, todayVisits: todayVisits, upcomingVisitsCount: visits.length, setTab: setTab })) : tab === "ciftlikler" ? (selectedFarm ? (React.createElement(VetFarmAnimalsView, { farmOwnerName: selectedFarm, initialExpandedId: pendingAnimalId, onBack: () => { setSelectedFarm(null); setPendingAnimalId(null); } })) : (React.createElement("div", null, myVetLinks.length === 0 ? (React.createElement(VetConnectForm, { me: me, refreshAll: load })) : (React.createElement(React.Fragment, null,
+        React.createElement("div", { onTouchStart: onSwipeStart, onTouchEnd: onSwipeEnd, style: { flex: 1, overflowY: "auto", padding: "14px 16px 16px" } }, !loaded ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Y\u00FCkleniyor...")) : tab === "anasayfa" ? (React.createElement(VetHomeTab, { me: me, myVetLinks: myVetLinks, allAnimalsByFarm: allAnimalsByFarm, todayVisits: todayVisits, upcomingVisitsCount: visits.length, setTab: setTab, refreshAll: load })) : tab === "ciftlikler" ? (selectedFarm ? (React.createElement(VetFarmAnimalsView, { farmOwnerName: selectedFarm, initialExpandedId: pendingAnimalId, onBack: () => { setSelectedFarm(null); setPendingAnimalId(null); } })) : (React.createElement("div", null, myVetLinks.length === 0 ? (React.createElement(VetConnectForm, { me: me, refreshAll: load })) : (React.createElement(React.Fragment, null,
             myVetLinks.map(v => (React.createElement("button", { key: v.id, onClick: () => setSelectedFarm(v.ownerName), style: { width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 14, marginBottom: 8, cursor: "pointer", textAlign: "left" } },
                 React.createElement("div", null,
                     React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 13.5 } },
@@ -23391,7 +23460,7 @@ function VetScreen({ me, onBack }) {
                         " hayvan")),
                 React.createElement(ChevronRight, { size: 16, color: "#8A8776" })))),
             React.createElement("div", { style: { marginTop: 14 } },
-                React.createElement(VetConnectForm, { me: me, refreshAll: load }))))))) : tab === "paketler" ? (React.createElement(VetPaketlerTab, { me: me })) : tab === "takvim" ? (React.createElement(VetTakvimTab, { me: me, myVetLinks: myVetLinks })) : tab === "gelir" ? (React.createElement(VetGelirTab, { me: me })) : tab === "bildirim" ? (React.createElement(VetBildirimlerTab, { allAnimalsByFarm: allAnimalsByFarm, onOpenAnimal: openAnimal })) : tab === "rapor" ? (React.createElement(VetRaporlarTab, { myVetLinks: myVetLinks, allAnimalsByFarm: allAnimalsByFarm })) : null),
+                React.createElement(VetConnectForm, { me: me, refreshAll: load }))))))) : tab === "suru" ? (React.createElement(VetSuruSagligiTab, { myVetLinks: myVetLinks, allAnimalsByFarm: allAnimalsByFarm, vetName: me.name })) : tab === "paketler" ? (React.createElement(VetPaketlerTab, { me: me })) : tab === "takvim" ? (React.createElement(VetTakvimTab, { me: me, myVetLinks: myVetLinks })) : tab === "gelir" ? (React.createElement(VetGelirTab, { me: me })) : tab === "bildirim" ? (React.createElement(VetBildirimlerTab, { allAnimalsByFarm: allAnimalsByFarm, onOpenAnimal: openAnimal })) : tab === "rapor" ? (React.createElement(VetRaporlarTab, { myVetLinks: myVetLinks, allAnimalsByFarm: allAnimalsByFarm })) : tab === "profil" ? (React.createElement(VetProfilTab, { me: me, setMe: setMe })) : null),
         React.createElement("div", { style: { display: "flex", padding: "8px 4px", overflowX: "auto", borderTop: `1px solid ${COLORS.line}`, background: COLORS.white, flexShrink: 0 } }, TABS.map(([k, l, icon]) => (React.createElement("button", { key: k, onClick: () => { setTab(k); setSelectedFarm(null); }, style: { flexShrink: 0, width: 58, background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "4px 0" } },
             React.createElement("span", { style: { fontSize: 17, opacity: tab === k ? 1 : 0.55 } }, icon),
             React.createElement("span", { style: { fontFamily: "Inter", fontSize: 8.5, fontWeight: 600, color: tab === k ? COLORS.pineDeep : "#B7B4A6", whiteSpace: "nowrap" } }, l)))))));
@@ -23801,7 +23870,7 @@ function AddAnimalWizard({ me, barns, onDone, onCancel }) {
         React.createElement("button", { onClick: onCancel, style: { background: "none", border: "none", color: "#8A8776", fontFamily: "Inter", fontSize: 11, cursor: "pointer", marginTop: 10, padding: 0 } }, "Vazge\u00E7")));
 }
 
-function VetHomeTab({ me, myVetLinks, allAnimalsByFarm, todayVisits, upcomingVisitsCount, setTab }) {
+function VetHomeTab({ me, myVetLinks, allAnimalsByFarm, todayVisits, upcomingVisitsCount, setTab, refreshAll }) {
     const allAnimals = Object.values(allAnimalsByFarm).flat();
     const totalAnimals = allAnimals.length;
     const upcomingChecks = allAnimals.filter(a => { const d = daysUntil(a.nextCheckup); return d !== null && d >= 0 && d <= 7; }).length;
@@ -23837,7 +23906,7 @@ function VetHomeTab({ me, myVetLinks, allAnimalsByFarm, todayVisits, upcomingVis
                 React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5, color: COLORS.ink } }, title),
                 React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776" } }, sub)),
             React.createElement(ChevronRight, { size: 15, color: "#B7B4A6" }))))),
-        myVetLinks.length === 0 && React.createElement(VetConnectForm, { me: me, refreshAll: () => { } })));
+        myVetLinks.length === 0 && React.createElement(VetConnectForm, { me: me, refreshAll: refreshAll })));
 }
 
 function EkipmanTab({ me, refreshAll }) {
@@ -24107,6 +24176,142 @@ function MyListingsScreen({ me, listings, refreshAll, onBack }) {
                 myListings.length,
                 ")")),
         React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "16px 18px 100px" } }, myListings.length === 0 ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12.5, color: "#8A8776" } }, "Hen\u00FCz ilan\u0131n\u0131z yok.")) : (myListings.map(l => React.createElement(SellerListingRow, { key: l.id, listing: l, refreshAll: refreshAll }))))));
+}
+
+function VetProfilTab({ me, setMe }) {
+    const [clinicAddress, setClinicAddress] = useState(me.clinicAddress || "");
+    const [workingHours, setWorkingHours] = useState(me.workingHours || "");
+    const [emergencyService, setEmergencyService] = useState(me.emergencyService || false);
+    const [specialties, setSpecialties] = useState(me.specialties || []);
+    const [serviceRegions, setServiceRegions] = useState(me.serviceRegions || []);
+    const [saving, setSaving] = useState(false);
+    const [saved, setSaved] = useState(false);
+    const SPECIALTY_OPTIONS = ["Büyükbaş", "Küçükbaş", "Cerrahi", "Üreme/Suni Tohumlama", "İç Hastalıkları", "Doğum Uzmanı", "Aşılama", "Beslenme"];
+    const toggleSpecialty = (s) => setSpecialties(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
+    const toggleRegion = (r) => setServiceRegions(prev => prev.includes(r) ? prev.filter(x => x !== r) : [...prev, r]);
+    const save = async () => {
+        setSaving(true);
+        const updated = { ...me, clinicAddress: clinicAddress.trim(), workingHours: workingHours.trim(), emergencyService, specialties, serviceRegions };
+        await savePersonal("me", updated);
+        const members = await loadShared("members", []);
+        const idx = members.findIndex(m => m.name === me.name && m.joinedAt === me.joinedAt);
+        if (idx > -1) {
+            members[idx] = { ...members[idx], clinicAddress: clinicAddress.trim(), workingHours: workingHours.trim(), emergencyService, specialties, serviceRegions };
+            await saveShared("members", members);
+        }
+        setMe(updated);
+        setSaving(false);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2500);
+    };
+    return (React.createElement("div", null,
+        React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#8A8776", marginBottom: 12 } }, "Bu bilgiler, \u00E7iftlik sahiplerinin sizi tan\u0131mas\u0131na yard\u0131mc\u0131 olur."),
+        React.createElement("div", { style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 12, marginBottom: 12 } },
+            React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 12.5, marginBottom: 8 } }, "Klinik Bilgileri"),
+            React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 4, fontFamily: "Inter", fontSize: 12, marginBottom: 8 } },
+                React.createElement("div", null,
+                    React.createElement("span", { style: { color: "#8A8776" } }, "Klinik:"),
+                    " ",
+                    me.clinicName || "—"),
+                React.createElement("div", null,
+                    React.createElement("span", { style: { color: "#8A8776" } }, "Ruhsat No:"),
+                    " ",
+                    me.licenseNo || "—"),
+                React.createElement("div", null,
+                    React.createElement("span", { style: { color: "#8A8776" } }, "\u0130l/\u0130l\u00E7e:"),
+                    " ",
+                    me.vetIl || "—",
+                    me.vetIlce ? `/${me.vetIlce}` : "")),
+            React.createElement(FormField, { label: "Klinik Adresi", value: clinicAddress, onChange: setClinicAddress, placeholder: "A\u00E7\u0131k adres" })),
+        React.createElement("div", { style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 12, marginBottom: 12 } },
+            React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 12.5, marginBottom: 8 } }, "\u00C7al\u0131\u015Fma Saatleri"),
+            React.createElement(FormField, { label: "\u00C7al\u0131\u015Fma Saatleri", value: workingHours, onChange: setWorkingHours, placeholder: "\u00D6rn. Hafta i\u00E7i 09:00\u201318:00" }),
+            React.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, fontFamily: "Inter", fontSize: 12, marginTop: 8 } },
+                React.createElement("input", { type: "checkbox", checked: emergencyService, onChange: (e) => setEmergencyService(e.target.checked) }),
+                " Acil durum hizmeti veriyorum")),
+        React.createElement("div", { style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 12, marginBottom: 12 } },
+            React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 12.5, marginBottom: 8 } }, "Uzmanl\u0131k / \u0130lgi Alanlar\u0131"),
+            React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 6 } }, SPECIALTY_OPTIONS.map(s => (React.createElement("button", { key: s, onClick: () => toggleSpecialty(s), style: { padding: "6px 10px", borderRadius: 20, border: `1px solid ${specialties.includes(s) ? COLORS.pineDeep : COLORS.line}`, background: specialties.includes(s) ? COLORS.pineDeep : COLORS.white, color: specialties.includes(s) ? COLORS.white : "#5A574C", fontFamily: "Inter", fontWeight: 600, fontSize: 10.5, cursor: "pointer" } }, s))))),
+        React.createElement("div", { style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 12, marginBottom: 12 } },
+            React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 12.5, marginBottom: 8 } }, "Hizmet Verdi\u011Fi B\u00F6lgeler"),
+            React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 6 } }, REGIONS.map(r => (React.createElement("button", { key: r, onClick: () => toggleRegion(r), style: { padding: "6px 10px", borderRadius: 20, border: `1px solid ${serviceRegions.includes(r) ? COLORS.pineDeep : COLORS.line}`, background: serviceRegions.includes(r) ? COLORS.pineDeep : COLORS.white, color: serviceRegions.includes(r) ? COLORS.white : "#5A574C", fontFamily: "Inter", fontWeight: 600, fontSize: 10.5, cursor: "pointer" } }, r))))),
+        saved && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11.5, color: COLORS.pineDeep, marginBottom: 8 } }, "\u2713 Kaydedildi."),
+        React.createElement("button", { onClick: save, disabled: saving, style: { ...btnPrimary, width: "100%" } }, saving ? "Kaydediliyor..." : "Profili Kaydet")));
+}
+
+function VetSuruSagligiTab({ myVetLinks, allAnimalsByFarm, vetName }) {
+    const [selectedFarm, setSelectedFarm] = useState(myVetLinks[0] ? myVetLinks[0].ownerName : null);
+    const animals = selectedFarm ? (allAnimalsByFarm[selectedFarm] || []) : [];
+    const totalAnimals = animals.length;
+    const healthy = animals.filter(a => (a.status || "aktif") === "aktif" && daysUntil(a.nextCheckup) === null).length;
+    const needsFollowup = animals.filter(a => { const d = daysUntil(a.nextCheckup); return d !== null && d <= 14; }).length;
+    const pregnant = animals.filter(a => a.pregnant).length;
+    const newborns = animals.filter(a => a.motherTag).length;
+    const vaccinatedCount = animals.filter(a => (a.vaccinations || []).length > 0).length;
+    const sickOrTreated = animals.filter(a => (a.treatments || []).length > 0 || (a.medications || []).length > 0).length;
+    const lost = animals.filter(a => a.status === "oldu").length;
+    const totalVaccinations = animals.reduce((s, a) => s + (a.vaccinations || []).length, 0);
+    const totalTreatments = animals.reduce((s, a) => s + (a.treatments || []).length, 0);
+    const followupAnimals = animals.filter(a => { const d = daysUntil(a.nextCheckup); return d !== null && d <= 14; });
+    const downloadPdf = () => {
+        if (!window.jspdf || !window.jspdf.jsPDF) {
+            alert("PDF oluşturucu yüklenemedi — internet bağlantınızı kontrol edip tekrar deneyin.");
+            return;
+        }
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const today = new Date().toLocaleDateString("tr-TR");
+        let y = 18;
+        doc.setFontSize(16);
+        doc.text(`${selectedFarm} - Suru Saglik Raporu`, 14, y);
+        y += 8;
+        doc.setFontSize(10);
+        doc.text(`Kontrol tarihi: ${today}`, 14, y);
+        y += 5;
+        doc.text(`Veteriner: ${vetName}`, 14, y);
+        y += 10;
+        doc.setFontSize(12);
+        doc.text("Ozet", 14, y);
+        y += 6;
+        doc.setFontSize(10);
+        [
+            [`Toplam hayvan: ${totalAnimals}`], [`Saglikli kayitli: ${healthy}`], [`Takip gerektiren: ${needsFollowup}`],
+            [`Gebe: ${pregnant}`], [`Yavru (kayitli): ${newborns}`], [`Toplam asi kaydi: ${totalVaccinations}`],
+            [`Toplam tedavi kaydi: ${totalTreatments}`], [`Olum/kayip: ${lost}`],
+        ].forEach(([line]) => { doc.text(line, 14, y); y += 5.5; });
+        y += 4;
+        doc.setFontSize(12);
+        doc.text("Takip Gereken Hayvanlar", 14, y);
+        y += 6;
+        doc.setFontSize(9.5);
+        if (followupAnimals.length === 0) {
+            doc.text("Yok", 14, y);
+            y += 5.5;
+        }
+        followupAnimals.forEach(a => {
+            const d = daysUntil(a.nextCheckup);
+            doc.text(`${a.tag} - kontrol: ${a.nextCheckup} (${d} gun)`, 14, y);
+            y += 5.5;
+            if (y > 280) {
+                doc.addPage();
+                y = 18;
+            }
+        });
+        y += 4;
+        doc.setFontSize(8);
+        doc.setTextColor(140);
+        doc.text("benimmeram uygulamasi uzerinden otomatik olusturulmustur.", 14, 290);
+        doc.save(`${selectedFarm}-suru-saglik-raporu.pdf`);
+    };
+    return (React.createElement("div", null,
+        React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#8A8776", marginBottom: 10 } }, "Tek tek hayvan yerine, ba\u011Fl\u0131 bir \u00E7iftli\u011Fin t\u00FCm s\u00FCr\u00FCs\u00FCn\u00FC toplu olarak g\u00F6r\u00FCnt\u00FCleyin."),
+        myVetLinks.length === 0 ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Hen\u00FCz ba\u011Fl\u0131 \u00E7iftlik yok.")) : (React.createElement(React.Fragment, null,
+            React.createElement("div", { style: { display: "flex", gap: 5, marginBottom: 14, overflowX: "auto" } }, myVetLinks.map(v => (React.createElement("button", { key: v.id, onClick: () => setSelectedFarm(v.ownerName), style: { flexShrink: 0, padding: "7px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "Inter", fontWeight: 600, fontSize: 11, background: selectedFarm === v.ownerName ? COLORS.pineDeep : COLORS.paper, color: selectedFarm === v.ownerName ? COLORS.white : "#5A574C" } }, v.ownerName)))),
+            React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 } }, [["🐄", totalAnimals, "Toplam Hayvan"], ["✅", healthy, "Sağlıklı Kayıtlı"], ["⏰", needsFollowup, "Takip Gerektiren"], ["🤰", pregnant, "Gebe"], ["🐣", newborns, "Yavru (kayıtlı)"], ["💉", vaccinatedCount, "Aşılı"], ["💊", sickOrTreated, "Tedavi Gören/Görmüş"], ["⚠️", lost, "Ölüm/Kayıp"]].map(([icon, val, label], i) => (React.createElement("div", { key: i, style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 12 } },
+                React.createElement("div", { style: { fontSize: 16, marginBottom: 3 } }, icon),
+                React.createElement("div", { style: { fontFamily: "IBM Plex Mono", fontWeight: 700, fontSize: 16, color: COLORS.ink } }, val),
+                React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10, color: "#8A8776" } }, label))))),
+            totalAnimals === 0 ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Bu \u00E7iftlikte kay\u0131tl\u0131 hayvan yok.")) : (React.createElement("button", { onClick: downloadPdf, style: { ...btnPrimary, width: "100%" } }, "\uD83D\uDCC4 PDF Olarak \u0130ndir"))))));
 }
 
 </script>
