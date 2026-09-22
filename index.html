@@ -17998,6 +17998,7 @@ function Onboarding({ onDone, onCancel, onEmployeeLogin }) {
     const [docPhotoError, setDocPhotoError] = useState("");
     const [err, setErr] = useState("");
     const [saving, setSaving] = useState(false);
+    const [profileStep, setProfileStep] = useState(0);
     const [passwordPolicy, setPasswordPolicy] = useState(DEFAULT_PASSWORD_POLICY);
     useEffect(() => {
         loadShared("passwordPolicy", DEFAULT_PASSWORD_POLICY).then(setPasswordPolicy);
@@ -18018,7 +18019,7 @@ function Onboarding({ onDone, onCancel, onEmployeeLogin }) {
     const verifyCode = () => { if (code !== "1234") {
         setErr("Kod hatalı. (Simülasyon kodu: 1234)");
         return;
-    } setErr(""); setStep("profile"); };
+    } setErr(""); setProfileStep(0); setStep("profile"); };
     const goToDoc = async () => {
         if (!name.trim()) {
             setErr(accountType === "kurumsal" ? "Yetkili ad soyad girin." : "Ad soyad girin.");
@@ -18175,7 +18176,7 @@ function Onboarding({ onDone, onCancel, onEmployeeLogin }) {
         ...(passwordPolicy.requireUpper ? [{ ok: /[A-Z]/.test(password), label: "En az 1 büyük harf" }] : []),
         ...(passwordPolicy.requireNumber ? [{ ok: /[0-9]/.test(password), label: "En az 1 rakam" }] : []),
     ];
-    return (React.createElement("div", { style: { flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 26px", position: "relative" } },
+    return (React.createElement("div", { style: { flex: 1, display: "flex", flexDirection: "column", justifyContent: step === "choice" ? "center" : "flex-start", padding: "20px 26px 30px", position: "relative", overflowY: "auto" } },
         onCancel && (React.createElement("button", { onClick: onCancel, style: { position: "absolute", top: 14, right: 0, background: "none", border: "none", cursor: "pointer" } },
             React.createElement(X, { size: 18, color: "#8A8776" }))),
         React.createElement("div", { style: { marginBottom: 4 } },
@@ -18222,65 +18223,17 @@ function Onboarding({ onDone, onCancel, onEmployeeLogin }) {
             React.createElement(FormField, { label: "Do\u011Frulama Kodu", value: code, onChange: setCode, placeholder: "1234" }),
             err && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11.5, marginTop: 6 } }, err),
             React.createElement("button", { onClick: verifyCode, style: { ...btnPrimary, marginTop: 14 } }, "Do\u011Frula"))),
-        step === "profile" && (React.createElement(React.Fragment, null,
-            React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6, marginBottom: 14 } },
-                React.createElement(Badge, { tone: accountType === "kurumsal" ? "pine" : accountType === "veteriner" ? "pine" : "gray" }, accountType === "kurumsal" ? "Kurumsal Hesap" : accountType === "veteriner" ? "Veteriner Hesabı" : "Bireysel Hesap"),
-                (accountType === "kurumsal" || accountType === "veteriner") && React.createElement(VerifiedBadge, { size: 15 })),
-            React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } },
-                accountType === "veteriner" && (React.createElement(React.Fragment, null,
-                    React.createElement(FormField, { label: "Klinik / \u0130\u015Fletme Ad\u0131", value: clinicName, onChange: setClinicName, placeholder: "\u00D6rn. Yeşilova Veteriner Klini\u011Fi" }),
-                    React.createElement(FormField, { label: "Veteriner Diploma / Ruhsat No", value: licenseNo, onChange: setLicenseNo, placeholder: "Diploma veya ruhsat numaran\u0131z" }),
-                    React.createElement("div", { style: { display: "flex", gap: 8 } },
-                        React.createElement("div", { style: { flex: 1 } },
-                            React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "\u0130l"),
-                            React.createElement("select", { value: vetIl, onChange: (e) => setVetIl(e.target.value), style: { ...inputStyle, marginTop: 4 } },
-                                React.createElement("option", { value: "" }, "Se\u00E7in"),
-                                TURKISH_CITIES.map(c => React.createElement("option", { key: c, value: c }, c)))),
-                        React.createElement("div", { style: { flex: 1 } },
-                            React.createElement(FormField, { label: "\u0130l\u00E7e", value: vetIlce, onChange: setVetIlce, placeholder: "\u0130l\u00E7e" }))),
-                    React.createElement(FormField, { label: "Vergi Numaras\u0131", value: vetTaxNo, onChange: setVetTaxNo, placeholder: "Vergi No" }),
-                    React.createElement("div", null,
-                        React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "Vergi Dairesi"),
-                        React.createElement("select", { value: vetTaxOffice, onChange: (e) => setVetTaxOffice(e.target.value), style: { ...inputStyle, marginTop: 4 } },
-                            React.createElement("option", { value: "" }, "Se\u00E7in"),
-                            (VERGI_DAIRELERI_ORNEK[vetIl] || []).map(v => React.createElement("option", { key: v, value: v }, v)),
-                            React.createElement("option", { value: "Di\u011Fer" }, "Di\u011Fer (listede yok)")),
-                        !VERGI_DAIRELERI_ORNEK[vetIl] && vetIl && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 9.5, color: "#8A8776", marginTop: 3 } }, "Bu il i\u00E7in \u00F6rnek liste hen\u00FCz yok, \"Di\u011Fer\" se\u00E7ip devam edebilirsiniz.")),
-                    React.createElement("div", { style: { fontFamily: "Inter", fontSize: 9.5, color: "#8A8776" } }, "Veteriner hesab\u0131 belge onay\u0131 gerektirmez \u2014 kaydolduktan sonra \u00E7iftliklerin size verdi\u011Fi davet koduyla ba\u011Flanabilirsiniz."))),
-                accountType === "kurumsal" && (React.createElement(React.Fragment, null,
-                    React.createElement(FormField, { label: "\u015Eirket / \u0130\u015Fletme Unvan\u0131", value: companyName, onChange: setCompanyName, placeholder: "\u00D6rn. Y\u0131ld\u0131z Tar\u0131m Hayvanc\u0131l\u0131k Ltd. \u015Eti." }),
-                    React.createElement("div", null,
-                        React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "\u015Eirket T\u00FCr\u00FC"),
-                        React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 4 } }, [["sahis", "Şahıs Şirketi"], ["limited", "Limited"], ["anonim", "Anonim"]].map(([k, l]) => (React.createElement("button", { key: k, onClick: () => setCompanyType(k), style: { flex: 1, padding: "8px 4px", borderRadius: 8, cursor: "pointer", fontFamily: "Inter", fontWeight: 600, fontSize: 11, background: companyType === k ? COLORS.pineDeep : COLORS.white, color: companyType === k ? COLORS.white : "#5A574C", border: `1px solid ${COLORS.line}` } }, l))))),
-                    React.createElement("div", { style: { display: "flex", gap: 8 } },
-                        React.createElement("div", { style: { flex: 1 } },
-                            React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "\u0130l"),
-                            React.createElement("select", { value: companyIl, onChange: (e) => setCompanyIl(e.target.value), style: { ...inputStyle, marginTop: 4 } },
-                                React.createElement("option", { value: "" }, "Se\u00E7in"),
-                                TURKISH_CITIES.map(c => React.createElement("option", { key: c, value: c }, c)))),
-                        React.createElement("div", { style: { flex: 1 } },
-                            React.createElement(FormField, { label: "\u0130l\u00E7e", value: companyIlce, onChange: setCompanyIlce, placeholder: "\u0130l\u00E7e" }))),
-                    React.createElement("div", null,
-                        React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "Vergi Dairesi"),
-                        React.createElement("input", { list: "vergi-dairesi-list", value: taxOffice, onChange: (e) => setTaxOffice(e.target.value), placeholder: "Yazmaya ba\u015Flay\u0131n veya se\u00E7in", style: { ...inputStyle, marginTop: 4 } }),
-                        React.createElement("datalist", { id: "vergi-dairesi-list" }, (VERGI_DAIRELERI_ORNEK[companyIl] || []).map(v => React.createElement("option", { key: v, value: v }))),
-                        React.createElement("div", { style: { fontFamily: "Inter", fontSize: 9.5, color: "#8A8776", marginTop: 3 } }, "Listedekiler bilinen b\u00FCy\u00FCk vergi daireleridir, resmi/eksiksiz bir kay\u0131t de\u011Fildir \u2014 listede yoksa do\u011Frudan yazabilirsiniz.")),
-                    React.createElement(FormField, { label: "Yetkilinin TC Kimlik Numaras\u0131", value: authorizedTc, onChange: setAuthorizedTc, placeholder: "11 haneli TC Kimlik No" }))),
-                React.createElement(FormField, { label: accountType === "kurumsal" ? "Yetkili Ad Soyad" : "Ad Soyad", value: name, onChange: setName, placeholder: "Ad\u0131n\u0131z Soyad\u0131n\u0131z" }),
-                React.createElement(FormField, { label: "E-posta", value: email, onChange: setEmail, placeholder: "ornek@eposta.com", type: "email" }),
-                React.createElement("div", null,
-                    React.createElement(FormField, { label: "\u015Eifre", value: password, onChange: setPassword, placeholder: "\u015Eifre olu\u015Fturun", type: "password" }),
-                    React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 8, marginTop: 5 } }, pwChecks.map((c, i) => (React.createElement("span", { key: i, style: { fontFamily: "Inter", fontSize: 10, color: c.ok ? COLORS.pineDeep : "#B7B4A6", display: "flex", alignItems: "center", gap: 3 } },
-                        c.ok ? "✓" : "○",
-                        " ",
-                        c.label)))))),
-            accountType === "bireysel" && (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10, color: "#8A8776", marginTop: 10 } },
-                "Bireysel hesaplar ayda en fazla ",
-                MAX_MONTHLY_LISTINGS_BIREYSEL,
-                " ilan verebilir. S\u0131n\u0131rs\u0131z ilan i\u00E7in Kurumsal hesaba ge\u00E7ebilirsiniz.")),
-            err && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11.5, marginTop: 6 } }, err),
-            React.createElement("button", { onClick: goToDoc, style: { ...btnPrimary, marginTop: 14 } }, "Devam Et"),
-            React.createElement("button", { onClick: () => { setErr(""); setStep("choice"); }, style: { background: "none", border: "none", color: "#8A8776", fontFamily: "Inter", fontSize: 11.5, marginTop: 10, cursor: "pointer" } }, "\u2190 Geri"))),
+        step === "profile" && React.createElement(ProfileWizardStep, {
+            accountType: accountType, profileStep: profileStep, setProfileStep: setProfileStep,
+            name: name, setName: setName, email: email, setEmail: setEmail, password: password, setPassword: setPassword, pwChecks: pwChecks,
+            companyName: companyName, setCompanyName: setCompanyName, companyType: companyType, setCompanyType: setCompanyType,
+            companyIl: companyIl, setCompanyIl: setCompanyIl, companyIlce: companyIlce, setCompanyIlce: setCompanyIlce,
+            taxOffice: taxOffice, setTaxOffice: setTaxOffice, authorizedTc: authorizedTc, setAuthorizedTc: setAuthorizedTc,
+            clinicName: clinicName, setClinicName: setClinicName, licenseNo: licenseNo, setLicenseNo: setLicenseNo,
+            vetIl: vetIl, setVetIl: setVetIl, vetIlce: vetIlce, setVetIlce: setVetIlce,
+            vetTaxNo: vetTaxNo, setVetTaxNo: setVetTaxNo, vetTaxOffice: vetTaxOffice, setVetTaxOffice: setVetTaxOffice,
+            err: err, goToDoc: goToDoc, onBackToChoice: () => { setErr(""); setStep("choice"); },
+        }),
         step === "belge" && (React.createElement(React.Fragment, null,
             React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776", marginBottom: 10 } },
                 "Sat\u0131\u015F yapabilmeniz i\u00E7in ",
@@ -24312,6 +24265,143 @@ function VetSuruSagligiTab({ myVetLinks, allAnimalsByFarm, vetName }) {
                 React.createElement("div", { style: { fontFamily: "IBM Plex Mono", fontWeight: 700, fontSize: 16, color: COLORS.ink } }, val),
                 React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10, color: "#8A8776" } }, label))))),
             totalAnimals === 0 ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Bu \u00E7iftlikte kay\u0131tl\u0131 hayvan yok.")) : (React.createElement("button", { onClick: downloadPdf, style: { ...btnPrimary, width: "100%" } }, "\uD83D\uDCC4 PDF Olarak \u0130ndir"))))));
+}
+
+function ProfileWizardStep({ accountType, profileStep, setProfileStep, name, setName, email, setEmail, password, setPassword, pwChecks, companyName, setCompanyName, companyType, setCompanyType, companyIl, setCompanyIl, companyIlce, setCompanyIlce, taxOffice, setTaxOffice, authorizedTc, setAuthorizedTc, clinicName, setClinicName, licenseNo, setLicenseNo, vetIl, setVetIl, vetIlce, setVetIlce, vetTaxNo, setVetTaxNo, vetTaxOffice, setVetTaxOffice, err, goToDoc, onBackToChoice, }) {
+    const STEP_DEFS = {
+        bireysel: ["name", "email", "password"],
+        kurumsal: ["companyName", "companyType", "companyLocation", "taxOffice", "authorizedTc", "name", "email", "password"],
+        veteriner: ["clinicName", "licenseNo", "vetLocation", "vetTaxNo", "vetTaxOffice", "name", "email", "password"],
+    };
+    const keys = STEP_DEFS[accountType];
+    const key = keys[profileStep];
+    const total = keys.length;
+    const isValid = () => {
+        switch (key) {
+            case "name": return name.trim().length > 0;
+            case "email": return /^\S+@\S+\.\S+$/.test(email);
+            case "password": return isPasswordValid(password, DEFAULT_PASSWORD_POLICY) || pwChecks.every(c => c.ok);
+            case "companyName": return companyName.trim().length > 0;
+            case "companyType": return !!companyType;
+            case "companyLocation": return companyIl.trim().length > 0 && companyIlce.trim().length > 0;
+            case "taxOffice": return taxOffice.trim().length > 0;
+            case "authorizedTc": return isValidTcFormat(authorizedTc);
+            case "clinicName": return clinicName.trim().length > 0;
+            case "licenseNo": return licenseNo.trim().length > 0;
+            case "vetLocation": return vetIl.trim().length > 0 && vetIlce.trim().length > 0;
+            case "vetTaxNo": return vetTaxNo.trim().length > 0;
+            case "vetTaxOffice": return vetTaxOffice.trim().length > 0;
+            default: return true;
+        }
+    };
+    const goNext = () => { if (profileStep < total - 1)
+        setProfileStep(profileStep + 1);
+    else
+        goToDoc(); };
+    const goBack = () => { if (profileStep > 0)
+        setProfileStep(profileStep - 1);
+    else
+        onBackToChoice(); };
+    const pickAndAdvance = (setter, value) => { setter(value); setTimeout(goNext, 150); };
+    const QUESTIONS = {
+        name: accountType === "kurumsal" ? "Yetkilinin Adı Soyadı Nedir?" : "Adınız Soyadınız Nedir?",
+        email: "E-posta Adresiniz Nedir?",
+        password: "Bir Şifre Oluşturun",
+        companyName: "Şirket / İşletme Unvanınız Nedir?",
+        companyType: "Şirket Türünüz Nedir?",
+        companyLocation: "Şirketiniz Nerede Kayıtlı?",
+        taxOffice: "Vergi Daireniz Nedir?",
+        authorizedTc: "Yetkilinin TC Kimlik Numarası",
+        clinicName: "Klinik / İşletme Adınız Nedir?",
+        licenseNo: "Diploma / Ruhsat Numaranız Nedir?",
+        vetLocation: "Kliniğiniz Nerede?",
+        vetTaxNo: "Vergi Numaranız Nedir?",
+        vetTaxOffice: "Vergi Daireniz Nedir?",
+    };
+    const renderInput = () => {
+        switch (key) {
+            case "name":
+                return React.createElement(FormField, { label: accountType === "kurumsal" ? "Yetkili Ad Soyad" : "Ad Soyad", value: name, onChange: setName, placeholder: "Ad\u0131n\u0131z Soyad\u0131n\u0131z" });
+            case "email":
+                return React.createElement(FormField, { label: "E-posta", value: email, onChange: setEmail, placeholder: "ornek@eposta.com", type: "email" });
+            case "password":
+                return (React.createElement("div", null,
+                    React.createElement(FormField, { label: "\u015Eifre", value: password, onChange: setPassword, placeholder: "\u015Eifre olu\u015Fturun", type: "password" }),
+                    React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 } }, pwChecks.map((c, i) => (React.createElement("span", { key: i, style: { fontFamily: "Inter", fontSize: 10, color: c.ok ? COLORS.pineDeep : "#B7B4A6", display: "flex", alignItems: "center", gap: 3 } },
+                        c.ok ? "✓" : "○",
+                        " ",
+                        c.label))))));
+            case "companyName":
+                return React.createElement(FormField, { label: "\u015Eirket / \u0130\u015Fletme Unvan\u0131", value: companyName, onChange: setCompanyName, placeholder: "\u00D6rn. Y\u0131ld\u0131z Tar\u0131m Hayvanc\u0131l\u0131k Ltd. \u015Eti." });
+            case "companyType":
+                return (React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, [["sahis", "Şahıs Şirketi"], ["limited", "Limited Şirket"], ["anonim", "Anonim Şirket"]].map(([k, l]) => (React.createElement("button", { key: k, onClick: () => pickAndAdvance(setCompanyType, k), style: { padding: "14px 16px", borderRadius: 12, border: `1.5px solid ${companyType === k ? COLORS.pineDeep : COLORS.line}`, background: companyType === k ? COLORS.pineDeep : COLORS.white, color: companyType === k ? COLORS.white : COLORS.ink, fontFamily: "Inter", fontWeight: 600, fontSize: 14, cursor: "pointer", textAlign: "left" } }, l)))));
+            case "companyLocation":
+                return (React.createElement("div", { style: { display: "flex", gap: 8 } },
+                    React.createElement("div", { style: { flex: 1 } },
+                        React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "\u0130l"),
+                        React.createElement("select", { value: companyIl, onChange: (e) => { setCompanyIl(e.target.value); setCompanyIlce(""); }, style: { ...inputStyle, marginTop: 4 } },
+                            React.createElement("option", { value: "" }, "Se\u00E7in"),
+                            TURKISH_CITIES.map(c => React.createElement("option", { key: c, value: c }, c)))),
+                    React.createElement("div", { style: { flex: 1 } },
+                        React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "\u0130l\u00E7e"),
+                        React.createElement("select", { value: companyIlce, onChange: (e) => setCompanyIlce(e.target.value), disabled: !companyIl, style: { ...inputStyle, marginTop: 4 } },
+                            React.createElement("option", { value: "" }, "Se\u00E7in"),
+                            (TURKEY_DISTRICTS[companyIl] || []).map(d => React.createElement("option", { key: d, value: d }, d))))));
+            case "taxOffice":
+                return (React.createElement("div", null,
+                    React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "Vergi Dairesi"),
+                    React.createElement("select", { value: taxOffice, onChange: (e) => setTaxOffice(e.target.value), style: { ...inputStyle, marginTop: 4 } },
+                        React.createElement("option", { value: "" }, "Se\u00E7in"),
+                        (TURKEY_DISTRICTS[companyIl] || []).map(d => React.createElement("option", { key: d, value: `${d} Vergi Dairesi` },
+                            d,
+                            " Vergi Dairesi")))));
+            case "authorizedTc":
+                return React.createElement(FormField, { label: "TC Kimlik Numaras\u0131", value: authorizedTc, onChange: setAuthorizedTc, placeholder: "11 haneli TC Kimlik No" });
+            case "clinicName":
+                return React.createElement(FormField, { label: "Klinik / \u0130\u015Fletme Ad\u0131", value: clinicName, onChange: setClinicName, placeholder: "\u00D6rn. Ye\u015Filova Veteriner Klini\u011Fi" });
+            case "licenseNo":
+                return React.createElement(FormField, { label: "Diploma / Ruhsat No", value: licenseNo, onChange: setLicenseNo, placeholder: "Diploma veya ruhsat numaran\u0131z" });
+            case "vetLocation":
+                return (React.createElement("div", { style: { display: "flex", gap: 8 } },
+                    React.createElement("div", { style: { flex: 1 } },
+                        React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "\u0130l"),
+                        React.createElement("select", { value: vetIl, onChange: (e) => { setVetIl(e.target.value); setVetIlce(""); }, style: { ...inputStyle, marginTop: 4 } },
+                            React.createElement("option", { value: "" }, "Se\u00E7in"),
+                            TURKISH_CITIES.map(c => React.createElement("option", { key: c, value: c }, c)))),
+                    React.createElement("div", { style: { flex: 1 } },
+                        React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "\u0130l\u00E7e"),
+                        React.createElement("select", { value: vetIlce, onChange: (e) => setVetIlce(e.target.value), disabled: !vetIl, style: { ...inputStyle, marginTop: 4 } },
+                            React.createElement("option", { value: "" }, "Se\u00E7in"),
+                            (TURKEY_DISTRICTS[vetIl] || []).map(d => React.createElement("option", { key: d, value: d }, d))))));
+            case "vetTaxNo":
+                return React.createElement(FormField, { label: "Vergi Numaras\u0131", value: vetTaxNo, onChange: setVetTaxNo, placeholder: "Vergi No" });
+            case "vetTaxOffice":
+                return (React.createElement("div", null,
+                    React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "Vergi Dairesi"),
+                    React.createElement("select", { value: vetTaxOffice, onChange: (e) => setVetTaxOffice(e.target.value), style: { ...inputStyle, marginTop: 4 } },
+                        React.createElement("option", { value: "" }, "Se\u00E7in"),
+                        (TURKEY_DISTRICTS[vetIl] || []).map(d => React.createElement("option", { key: d, value: `${d} Vergi Dairesi` },
+                            d,
+                            " Vergi Dairesi")))));
+            default:
+                return null;
+        }
+    };
+    return (React.createElement("div", null,
+        React.createElement("div", { style: { display: "flex", gap: 4, marginBottom: 14 } }, keys.map((k, i) => React.createElement("div", { key: k, style: { flex: 1, height: 3, borderRadius: 2, background: i <= profileStep ? COLORS.pineDeep : COLORS.line } }))),
+        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6, marginBottom: 14 } },
+            React.createElement(Badge, { tone: accountType === "bireysel" ? "gray" : "pine" }, accountType === "kurumsal" ? "Kurumsal Hesap" : accountType === "veteriner" ? "Veteriner Hesabı" : "Bireysel Hesap"),
+            accountType !== "bireysel" && React.createElement(VerifiedBadge, { size: 15 })),
+        React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 17, marginBottom: 14 } }, QUESTIONS[key]),
+        renderInput(),
+        key === "password" && accountType === "bireysel" && (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10, color: "#8A8776", marginTop: 10 } },
+            "Bireysel hesaplar ayda en fazla ",
+            MAX_MONTHLY_LISTINGS_BIREYSEL,
+            " ilan verebilir. S\u0131n\u0131rs\u0131z ilan i\u00E7in Kurumsal hesaba ge\u00E7ebilirsiniz.")),
+        err && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11.5, marginTop: 10 } }, err),
+        React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 16 } },
+            React.createElement("button", { onClick: goBack, style: { ...btnGhost, borderColor: COLORS.line, color: "#5A574C" } }, "\u2190 Geri"),
+            key !== "companyType" && (React.createElement("button", { onClick: goNext, disabled: !isValid(), style: { ...btnPrimary, flex: 1, opacity: isValid() ? 1 : 0.5 } }, profileStep === total - 1 ? "Devam Et" : "İleri")))));
 }
 
 </script>
