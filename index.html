@@ -17505,6 +17505,8 @@ function resizeImageFile(file, maxDim) {
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext("2d");
+                ctx.fillStyle = "#FFFFFF";
+                ctx.fillRect(0, 0, width, height);
                 ctx.drawImage(img, 0, 0, width, height);
                 resolve(canvas.toDataURL("image/jpeg", 0.82));
             };
@@ -17550,6 +17552,10 @@ function resizeImageFileToReels(file) {
                 canvas.width = outW;
                 canvas.height = outH;
                 const ctx = canvas.getContext("2d");
+                // JPEG şeffaflığı desteklemez; \u015Feffaf (PNG) kaynaklar \u00E7izilmeden \u00F6nce
+                // arka plan doldurulmazsa şeffaf alanlar SİYAH olarak dışa aktarılır.
+                ctx.fillStyle = "#FFFFFF";
+                ctx.fillRect(0, 0, outW, outH);
                 ctx.drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
                 resolve(canvas.toDataURL("image/jpeg", 0.85));
             };
@@ -17568,7 +17574,9 @@ function fileToDataUrl(file) {
         reader.readAsDataURL(file);
     });
 }
-const MAX_VIDEO_BYTES = 8 * 1024 * 1024; // 8 MB
+const MAX_VIDEO_BYTES = 3 * 1024 * 1024; // 3 MB — sunucu/Upstash istek boyutu sınırları (10MB) ve
+// base64 kodlamasının getirdiği ~%33 büyüme + biriken diğer ilanların toplam boyutu göz önüne
+// alınarak güvenli bir üst sınır seçildi.
 const convId = (listingId, buyerName, sellerName) => `${listingId}::${buyerName}::${sellerName}`;
 const convParts = (conversationId) => {
     const [listingId, buyerName, sellerName] = conversationId.split("::");
@@ -18767,9 +18775,8 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
             const active = s === "chatHub" ? ["chatHub", "chat", "regionChat"].includes(screen) : screen === s;
             const onReels = screen === "reels";
             const iconColor = onReels ? (active ? COLORS.white : "rgba(255,255,255,0.6)") : (active ? COLORS.pineDeep : "#B7B4A6");
-            return (React.createElement("button", { key: s, onClick: () => (s === "home" || s === "reels" ? setScreen(s) : goToProtected(s)), style: { flex: 1, background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, cursor: "pointer" } },
-                React.createElement(Icon, { size: s === "create" ? 25 : 19, color: iconColor, style: onReels ? { filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.6))" } : undefined }),
-                !onReels && React.createElement("span", { style: { fontFamily: "Inter", fontSize: 9, color: active ? COLORS.pineDeep : "#B7B4A6", fontWeight: 600 } }, l)));
+            return (React.createElement("button", { key: s, onClick: () => (s === "home" || s === "reels" ? setScreen(s) : goToProtected(s)), style: { flex: 1, background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer" } },
+                React.createElement(Icon, { size: s === "create" ? 27 : 22, color: iconColor, style: onReels ? { filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.6))" } : undefined })));
         })))));
 }
 // ---------- ARAMA ----------
@@ -19222,7 +19229,7 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
             }
             else if (file.type.startsWith("video/")) {
                 if (file.size > MAX_VIDEO_BYTES) {
-                    setMediaError(`${file.name} çok büyük (video için sınır 8 MB).`);
+                    setMediaError(`${file.name} çok büyük (video için sınır 3 MB).`);
                     continue;
                 }
                 try {
@@ -19414,7 +19421,7 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
                             "Kamera ile \u00C7ek"),
                         React.createElement("label", { htmlFor: "media-input", style: { flex: 1, display: "flex", alignItems: "center", justifyContent: "center", border: `1.5px dashed ${COLORS.line}`, borderRadius: 12, padding: "14px 10px", textAlign: "center", fontFamily: "Inter", fontSize: 12, color: "#8A8776", cursor: media.length >= 6 ? "not-allowed" : "pointer" } }, "\uD83D\uDCC1 Galeriden Se\u00E7")),
                     React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776", marginTop: 6, textAlign: "center" } },
-                        mediaBusy ? "İşleniyor..." : `${media.length}/6 \u2014 video maks. 8 MB`),
+                        mediaBusy ? "İşleniyor..." : `${media.length}/6 \u2014 video maks. 3 MB`),
                     React.createElement("div", { style: { fontFamily: "Inter", fontSize: 9.5, color: "#8A8776", marginTop: 3, textAlign: "center" } }, "\uD83D\uDCF1 Fotoğraflar Reels'te tam ekran g\u00F6r\u00FCnmesi i\u00E7in dikey (9:16) formata otomatik ayarlan\u0131r \u2014 en iyi sonu\u00E7 i\u00E7in dikey \u00E7ekin."),
                     mediaError && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11, marginTop: 4 } }, mediaError),
                     media.length > 0 && (React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 } }, media.map((m, i) => (React.createElement("div", { key: i, style: { position: "relative", width: 62, height: 62, borderRadius: 8, overflow: "hidden", border: `1px solid ${COLORS.line}`, background: "#000" } },
@@ -19687,7 +19694,7 @@ function SellerListingRow({ listing, onOpen, refreshAll }) {
             }
             else if (file.type.startsWith("video/")) {
                 if (file.size > MAX_VIDEO_BYTES) {
-                    setMediaError(`${file.name} çok büyük (video için sınır 8 MB).`);
+                    setMediaError(`${file.name} çok büyük (video için sınır 3 MB).`);
                     continue;
                 }
                 try {
@@ -24828,7 +24835,7 @@ function MyListingCard({ listing, onOpen, refreshAll }) {
             }
             else if (file.type.startsWith("video/")) {
                 if (file.size > MAX_VIDEO_BYTES) {
-                    setMediaError(`${file.name} çok büyük (video için sınır 8 MB).`);
+                    setMediaError(`${file.name} çok büyük (video için sınır 3 MB).`);
                     continue;
                 }
                 try {
