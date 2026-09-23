@@ -24362,18 +24362,26 @@ function ProfileWizardStep({ accountType, profileStep, setProfileStep, name, set
     const [nviStatus, setNviStatus] = useState("idle"); // idle | checking | verified | mismatch | error
     const [nviCheckedTc, setNviCheckedTc] = useState("");
     const [nviErrorDetail, setNviErrorDetail] = useState("");
+    const nameParts = name.trim().split(/\s+/).filter(Boolean);
+    const [nviAd, setNviAd] = useState("");
+    const [nviSoyad, setNviSoyad] = useState("");
+    const nviAutoFilled = React.useRef(false);
+    useEffect(() => {
+        if (key === "authorizedTc" && !nviAutoFilled.current && nameParts.length > 0) {
+            nviAutoFilled.current = true;
+            setNviAd(nameParts.length > 1 ? nameParts.slice(0, -1).join(" ") : nameParts[0]);
+            setNviSoyad(nameParts.length > 1 ? nameParts[nameParts.length - 1] : "");
+        }
+    }, [key]);
     const verifyNvi = async () => {
-        if (!isValidTcFormat(authorizedTc) || nviBirthYear.trim().length !== 4 || !name.trim())
+        if (!isValidTcFormat(authorizedTc) || nviBirthYear.trim().length !== 4 || !nviAd.trim() || !nviSoyad.trim())
             return;
         setNviStatus("checking");
         setNviErrorDetail("");
         try {
-            const parts = name.trim().split(/\s+/);
-            const soyad = parts.length > 1 ? parts[parts.length - 1] : "";
-            const ad = parts.length > 1 ? parts.slice(0, -1).join(" ") : parts[0];
             const res = await fetch("/api/nvi-verify", {
                 method: "POST", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ tcKimlikNo: authorizedTc, ad, soyad, dogumYili: nviBirthYear.trim() }),
+                body: JSON.stringify({ tcKimlikNo: authorizedTc, ad: nviAd.trim(), soyad: nviSoyad.trim(), dogumYili: nviBirthYear.trim() }),
             });
             const data = await res.json();
             if (!res.ok) {
@@ -24471,11 +24479,17 @@ function ProfileWizardStep({ accountType, profileStep, setProfileStep, name, set
             case "authorizedTc":
                 return (React.createElement("div", null,
                     React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776", marginBottom: 10 } },
-                        "Ad Soyad (", name, ") ile birlikte NV\u0130 (T.C. Kimlik Do\u011Frulama) sisteminde kontrol edilecektir."),
-                    React.createElement(FormField, { label: "TC Kimlik Numaras\u0131", value: authorizedTc, onChange: (v) => { setAuthorizedTc(v); setNviStatus("idle"); }, placeholder: "11 haneli TC Kimlik No" }),
+                        "NV\u0130 (T.C. Kimlik Do\u011Frulama) sisteminde kontrol edilecek bilgileri girin."),
+                    React.createElement("div", { style: { display: "flex", gap: 8 } },
+                        React.createElement("div", { style: { flex: 1 } },
+                            React.createElement(FormField, { label: "Ad", value: nviAd, onChange: (v) => { setNviAd(v); setNviStatus("idle"); }, placeholder: "Ad" })),
+                        React.createElement("div", { style: { flex: 1 } },
+                            React.createElement(FormField, { label: "Soyad", value: nviSoyad, onChange: (v) => { setNviSoyad(v); setNviStatus("idle"); }, placeholder: "Soyad" }))),
+                    React.createElement("div", { style: { marginTop: 10 } },
+                        React.createElement(FormField, { label: "TC Kimlik Numaras\u0131", value: authorizedTc, onChange: (v) => { setAuthorizedTc(v); setNviStatus("idle"); }, placeholder: "11 haneli TC Kimlik No" })),
                     React.createElement("div", { style: { marginTop: 10 } },
                         React.createElement(FormField, { label: "Do\u011Fum Y\u0131l\u0131", value: nviBirthYear, onChange: (v) => { setNviBirthYear(v); setNviStatus("idle"); }, placeholder: "\u00D6rn. 1985", type: "number" })),
-                    React.createElement("button", { onClick: verifyNvi, disabled: !isValidTcFormat(authorizedTc) || nviBirthYear.trim().length !== 4 || nviStatus === "checking", style: { ...btnGhost, width: "100%", justifyContent: "center", marginTop: 10, borderColor: COLORS.pineDeep, color: COLORS.pineDeep, opacity: (!isValidTcFormat(authorizedTc) || nviBirthYear.trim().length !== 4) ? 0.5 : 1 } }, nviStatus === "checking" ? "NV\u0130 sorgulan\u0131yor..." : "\uD83D\uDEE1\uFE0F NV\u0130 ile Kimlik Do\u011Frula"),
+                    React.createElement("button", { onClick: verifyNvi, disabled: !isValidTcFormat(authorizedTc) || nviBirthYear.trim().length !== 4 || !nviAd.trim() || !nviSoyad.trim() || nviStatus === "checking", style: { ...btnGhost, width: "100%", justifyContent: "center", marginTop: 10, borderColor: COLORS.pineDeep, color: COLORS.pineDeep, opacity: (!isValidTcFormat(authorizedTc) || nviBirthYear.trim().length !== 4 || !nviAd.trim() || !nviSoyad.trim()) ? 0.5 : 1 } }, nviStatus === "checking" ? "NV\u0130 sorgulan\u0131yor..." : "\uD83D\uDEE1\uFE0F NV\u0130 ile Kimlik Do\u011Frula"),
                     nviStatus === "verified" && React.createElement("div", { style: { marginTop: 8, display: "flex", alignItems: "center", gap: 5, fontFamily: "Inter", fontSize: 11.5, color: COLORS.pineDeep, fontWeight: 600 } }, "\u2713 NV\u0130 ile kimlik do\u011Fruland\u0131"),
                     nviStatus === "mismatch" && React.createElement("div", { style: { marginTop: 8, fontFamily: "Inter", fontSize: 11.5, color: COLORS.red, fontWeight: 600 } }, "\u2715 Bilgiler NV\u0130 kay\u0131tlar\u0131yla e\u015Fle\u015Fmedi \u2014 ad, soyad, TC ve do\u011Fum y\u0131l\u0131n\u0131 kontrol edin."),
                     nviStatus === "error" && React.createElement("div", { style: { marginTop: 8 } },
