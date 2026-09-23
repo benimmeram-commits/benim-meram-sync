@@ -17329,8 +17329,14 @@ exports.version = "19.2.5";
         });
     },
     set: function (key, value, shared) {
-      // Veri kaybını en aza indirmek için her zaman önce yerel yedeğe de yazılır.
-      localBackend.set(key, value, shared);
+      // Veri kaybını en aza indirmek için yerel yedeğe de yazılmaya çalışılır,
+      // ancak bu İSTEĞE BAĞLIDIR: localStorage kotası dolarsa (büyük fotoğraflı
+      // ilan listeleri gibi büyük verilerde olabilir) sessizce atlanır — asıl
+      // kayıt zaten aşağıdaki sunucu isteğiyle yapılıyor, yerel yedek sadece
+      // ekstra bir güvenlik önlemidir ve başarısız olması akışı durdurmamalı.
+      localBackend.set(key, value, shared).catch(function (e) {
+        console.warn("Yerel yedek yazılamadı (kota dolu olabilir), devam ediliyor:", key, e);
+      });
       return fetch(API_BASE_URL + "/kv/set", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
