@@ -393,9 +393,9 @@ app.post("/api/nvi-verify", async (req, res) => {
         method: "POST",
         headers: {
           "Content-Type": "text/xml; charset=utf-8",
-          "SOAPAction": "http://tckimlik.nvi.gov.tr/WS/TCKimlikNoDogrula",
+          "SOAPAction": "\"http://tckimlik.nvi.gov.tr/WS/TCKimlikNoDogrula\"",
           "User-Agent": "Mozilla/5.0 (compatible; BenimMeram/1.0; +https://benim-meram-sync.onrender.com)",
-          "Accept": "text/xml",
+          "Accept": "*/*",
         },
         body: soapBody,
         signal: controller.signal,
