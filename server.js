@@ -393,7 +393,7 @@ app.post("/api/nvi-verify", async (req, res) => {
         method: "POST",
         headers: {
           "Content-Type": "text/xml; charset=utf-8",
-          "SOAPAction": "\"http://tckimlik.nvi.gov.tr/WS/TCKimlikNoDogrula\"",
+          "SOAPAction": "http://tckimlik.nvi.gov.tr/WS/TCKimlikNoDogrula",
           "User-Agent": "Mozilla/5.0 (compatible; BenimMeram/1.0; +https://benim-meram-sync.onrender.com)",
           "Accept": "*/*",
         },
@@ -406,12 +406,17 @@ app.post("/api/nvi-verify", async (req, res) => {
     const text = await r.text();
     if (!r.ok) {
       console.error(`NVİ HTTP ${r.status}:`, text.slice(0, 500));
-      return res.status(502).json({ error: `NVİ servisi HTTP ${r.status} döndürdü`, detail: text.slice(0, 300) });
+      return res.status(502).json({ error: `NVİ servisi HTTP ${r.status} döndürdü`, detail: text.slice(0, 300) || "(boş yanıt gövdesi)" });
+    }
+    const faultMatch = text.match(/<faultstring>([\s\S]*?)<\/faultstring>/i);
+    if (faultMatch) {
+      console.error("NVİ SOAP Fault:", faultMatch[1]);
+      return res.status(502).json({ error: "NVİ servisi hata döndürdü (SOAP Fault)", detail: faultMatch[1].slice(0, 300) });
     }
     const match = text.match(/<TCKimlikNoDogrulaResult>(true|false)<\/TCKimlikNoDogrulaResult>/i);
     if (!match) {
       console.error("NVİ yanıtı beklenmedik formatta:", text.slice(0, 500));
-      return res.status(502).json({ error: "NVİ servisinden geçerli bir yanıt alınamadı", detail: text.slice(0, 300) });
+      return res.status(502).json({ error: "NVİ servisinden geçerli bir yanıt alınamadı", detail: text.slice(0, 300) || "(boş yanıt gövdesi, HTTP " + r.status + ")" });
     }
     res.json({ verified: match[1].toLowerCase() === "true" });
   } catch (e) {
