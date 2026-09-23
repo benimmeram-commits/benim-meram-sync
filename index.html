@@ -18400,8 +18400,6 @@ function BenimMeram() {
     }
     return (React.createElement("div", { style: { minHeight: "100vh", background: `linear-gradient(180deg, ${COLORS.paper}, #ECE9DF)`, display: "flex", flexDirection: "column", alignItems: "center", padding: "30px 16px 60px", fontFamily: "Inter" } },
         React.createElement("style", null, fontImport),
-        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 4 } },
-            React.createElement(Logo, { size: 30 })),
         React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776", marginBottom: 6, textAlign: "center", maxWidth: 440 } }, "Ger\u00E7ek verilerle \u00E7al\u0131\u015Fan pazar yeri. Bu uygulamay\u0131 kullanan herkes ayn\u0131 ilanlar\u0131 ve talepleri g\u00F6r\u00FCr."),
         React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: COLORS.ochre, marginBottom: 18 } }, "\u26A0 SMS ve \u00F6deme ad\u0131mlar\u0131 sim\u00FClasyondur \u2014 ger\u00E7ek sa\u011Flay\u0131c\u0131 ba\u011Flanmad\u0131."),
         announcement.active && announcement.text && (React.createElement("div", { style: { width: "100%", maxWidth: 380, background: COLORS.ochreSoft, border: `1px solid ${COLORS.ochre}`, borderRadius: 12, padding: "10px 14px", marginBottom: 18, display: "flex", alignItems: "flex-start", gap: 8 } },
@@ -18422,9 +18420,6 @@ function BenimMeram() {
 function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews, messages, members, pricing, customBreeds, customSubcategories, favorites, toggleFavorite, likes, favoritesLog, refreshAll, screen, setScreen, tab, setTab, subTab, setSubTab, breedTab, setBreedTab, drawer, setDrawer, selected, setSelected }) {
     const [expandedSub, setExpandedSub] = useState(null);
     const [seedState, setSeedState] = useState({ loading: false, error: null, fallback: false });
-    const [homeFilters, setHomeFilters] = useState({ mainCategory: "", subCategory: "", il: "", minPrice: "", maxPrice: "", gender: "" });
-    const [showHomeFilter, setShowHomeFilter] = useState(false);
-    const homeFilterCount = Object.values(homeFilters).filter(v => v).length;
     const [chatTarget, setChatTarget] = useState(null); // { conversationId, otherName, listingLabel }
     const [chatRegion, setChatRegion] = useState(null);
     const [selectedRequest, setSelectedRequest] = useState(null);
@@ -18445,11 +18440,6 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
         .filter(l => subTab === "tumu" || l.subCategory === subTab)
         .filter(l => breedTab === "tumu" || l.breed === breedTab)
         .filter(l => l.status !== "kaldirildi")
-        .filter(l => !homeFilters.subCategory || l.subCategory === homeFilters.subCategory)
-        .filter(l => !homeFilters.il || l.animalIl === homeFilters.il)
-        .filter(l => !homeFilters.gender || l.gender === homeFilters.gender)
-        .filter(l => !homeFilters.minPrice || l.price >= Number(homeFilters.minPrice))
-        .filter(l => !homeFilters.maxPrice || l.price <= Number(homeFilters.maxPrice))
         .slice()
         .sort((a, b) => {
             // Aynı şehir/bölgedeki ilanlar öne çıkar (kullanıcının konumuna göre).
@@ -18468,16 +18458,22 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
     const openChat = (conversationId, otherName, listingLabel) => { setChatTarget({ conversationId, otherName, listingLabel }); setScreen("chat"); };
     const goToProtected = (s) => { if (requireAuth())
         setScreen(s); };
+    const [pendingApptCount, setPendingApptCount] = useState(0);
+    useEffect(() => {
+        if (!me) { setPendingApptCount(0); return; }
+        loadShared("appointments", []).then(all => {
+            setPendingApptCount(all.filter(a => a.status === "beklemede" && (a.sellerName === me.name || a.buyerName === me.name)).length);
+        });
+    }, [me && me.name, screen]);
     const myIncomingOffers = me ? offers.filter(o => o.sellerName === me.name) : [];
     const myOutgoingOffers = me ? offers.filter(o => o.buyerName === me.name) : [];
-    const hasNotification = myIncomingOffers.some(o => o.status === "beklemede") || myOutgoingOffers.some(o => o.status === "karsi_teklif" || o.status === "kabul");
+    const hasNotification = pendingApptCount > 0 || myIncomingOffers.some(o => o.status === "beklemede") || myOutgoingOffers.some(o => o.status === "karsi_teklif" || o.status === "kabul");
     const myConversationIds = me ? Array.from(new Set(messages.map(m => m.conversationId).filter(cid => {
         const p = convParts(cid);
         return p.buyerName === me.name || p.sellerName === me.name;
     }))) : [];
     return (React.createElement(React.Fragment, null,
         React.createElement(CallManager, { me: me, pendingCallRequest: pendingCallRequest, onRequestConsumed: () => setPendingCallRequest(null) }),
-        showHomeFilter && React.createElement(ReelsFilterSheet, { filters: homeFilters, setFilters: setHomeFilters, onClose: () => setShowHomeFilter(false) }),
         screen !== "detail" && screen !== "chat" && screen !== "regionChat" && screen !== "reels" && screen !== "search" && screen !== "publicProfile" && screen !== "profileSub" && screen !== "farm" && screen !== "vet" && screen !== "myListings" && (React.createElement("div", { style: { background: COLORS.pine, padding: "14px 14px 10px", display: "flex", alignItems: "center", gap: 10 } },
             React.createElement("button", { onClick: () => setDrawer(true), style: { background: "none", border: "none", cursor: "pointer" } },
                 React.createElement(IconMenu, { color: COLORS.white, size: 20 })),
@@ -18485,9 +18481,6 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
             React.createElement("div", { style: { flex: 1 } }),
             React.createElement("button", { onClick: () => setScreen("search"), style: { background: "none", border: "none", cursor: "pointer" } },
                 React.createElement(IconSearch, { size: 20, color: COLORS.white })),
-            React.createElement("button", { onClick: () => setShowHomeFilter(true), style: { background: "none", border: "none", cursor: "pointer", position: "relative" } },
-                React.createElement(Filter, { size: 20, color: COLORS.white }),
-                homeFilterCount > 0 && React.createElement("span", { style: { position: "absolute", top: -3, right: -3, width: 8, height: 8, borderRadius: "50%", background: COLORS.ochre } })),
             React.createElement(AssistantWidget, { me: me, refreshAll: refreshAll }),
             React.createElement("button", { onClick: () => goToProtected("myoffers"), style: { background: "none", border: "none", cursor: "pointer", position: "relative" } },
                 React.createElement(IconInbox, { color: COLORS.white, size: 20 }),
@@ -18500,16 +18493,13 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
                 React.createElement("div", { style: { color: COLORS.white, fontFamily: "Inter", fontSize: 12.5 } },
                     React.createElement("b", { style: { fontFamily: "IBM Plex Mono" } }, requests.filter(r => r.status !== "kapandi").length),
                     " a\u00E7\u0131k al\u0131m talebi var")),
-            (tab !== "buyukbas" || subTab !== "tumu" || breedTab !== "tumu" || homeFilterCount > 0) && (React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6, padding: "8px 14px 0", flexWrap: "wrap" } },
+            (tab !== "buyukbas" || subTab !== "tumu" || breedTab !== "tumu") && (React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6, padding: "8px 14px 0", flexWrap: "wrap" } },
                 React.createElement("span", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776" } }, "Filtre:"),
                 React.createElement(Badge, { tone: "pine" }, tab === "buyukbas" ? "Büyükbaş" : "Küçükbaş"),
                 subTab !== "tumu" && React.createElement(Badge, { tone: "ochre" }, subTab),
                 breedTab !== "tumu" && React.createElement(Badge, { tone: "gray" }, breedTab),
-                homeFilters.il && React.createElement(Badge, { tone: "gray" }, homeFilters.il),
-                homeFilters.gender && React.createElement(Badge, { tone: "gray" }, homeFilters.gender),
-                (homeFilters.minPrice || homeFilters.maxPrice) && React.createElement(Badge, { tone: "gray" }, `${homeFilters.minPrice || "0"}-${homeFilters.maxPrice || "\u2192"} TL`),
                 React.createElement("button", { onClick: () => setDrawer(true), style: { fontFamily: "Inter", fontSize: 10.5, color: COLORS.pineDeep, background: "none", border: "none", textDecoration: "underline", cursor: "pointer" } }, "de\u011Fi\u015Ftir"),
-                (subTab !== "tumu" || breedTab !== "tumu" || homeFilterCount > 0) && React.createElement("button", { onClick: () => { setSubTab("tumu"); setBreedTab("tumu"); setHomeFilters({ mainCategory: "", subCategory: "", il: "", minPrice: "", maxPrice: "", gender: "" }); }, style: { fontFamily: "Inter", fontSize: 10.5, color: COLORS.red, background: "none", border: "none", textDecoration: "underline", cursor: "pointer" } }, "filtreyi temizle"))),
+                (subTab !== "tumu" || breedTab !== "tumu") && React.createElement("button", { onClick: () => { setSubTab("tumu"); setBreedTab("tumu"); }, style: { fontFamily: "Inter", fontSize: 10.5, color: COLORS.red, background: "none", border: "none", textDecoration: "underline", cursor: "pointer" } }, "filtreyi temizle"))),
             React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "10px 14px 90px" } }, filtered.length === 0 ? (React.createElement("div", { style: { textAlign: "center", marginTop: 40, color: "#8A8776", fontFamily: "Inter", fontSize: 12.5 } },
                 "Hen\u00FCz ilan yok.",
                 React.createElement("div", { style: { marginTop: 10 } },
@@ -18557,6 +18547,7 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
                 " ile mesajla\u015F")) : !me ? (React.createElement("button", { onClick: requireAuth, style: btnPrimary }, "Mesajla\u015Fmak \u0130\u00E7in Giri\u015F Yap\u0131n")) : null)),
         screen === "myoffers" && (React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "16px 18px 100px" } },
             React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 19, marginBottom: 12 } }, "Bildirimlerim"),
+            React.createElement(AppointmentsNotificationSection, { me: me, listings: listings, onOpen: open, onOpenChat: openChat }),
             React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 13, marginBottom: 8 } }, "\u0130lanlar\u0131ma Gelen Teklifler"),
             myIncomingOffers.length === 0 && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12.5, color: "#8A8776", marginBottom: 16 } }, "Hen\u00FCz teklif yok."),
             myIncomingOffers.slice().reverse().map(o => (React.createElement(IncomingOfferRow, { key: o.id, offer: o, listings: listings, onOpen: open, refreshAll: refreshAll }))),
@@ -21574,6 +21565,7 @@ function LocationViewModal({ il, ilce, lat, lng, onClose }) {
 
 function AppointmentAndCallCard({ item, me, sellerPhone, onStartCall }) {
     const [mode, setMode] = useState(null); // null | 'randevu'
+    const [reason, setReason] = useState("canli");
     const [date, setDate] = useState("");
     const [time, setTime] = useState("");
     const [note, setNote] = useState("");
@@ -21581,6 +21573,7 @@ function AppointmentAndCallCard({ item, me, sellerPhone, onStartCall }) {
     const [sent, setSent] = useState(false);
     const [approvedAppt, setApprovedAppt] = useState(null);
     const conversationId = convId(item.id, me.name, item.sellerName);
+    const REASONS = { canli: "Canlı Hayvana Bakma", goruntulu: "Görüntülü Hayvana Bakma" };
     useEffect(() => {
         loadShared("appointments", []).then(all => {
             const found = all.find(a => a.listingId === item.id && a.buyerName === me.name && a.sellerName === item.sellerName && a.status === "kabul");
@@ -21595,14 +21588,14 @@ function AppointmentAndCallCard({ item, me, sellerPhone, onStartCall }) {
         const appointments = await loadShared("appointments", []);
         appointments.push({
             id: appointmentId, listingId: item.id, listingLabel: `${item.breed} ${item.subCategory}`,
-            buyerName: me.name, sellerName: item.sellerName, date, time: time || null, note: note.trim(),
+            buyerName: me.name, sellerName: item.sellerName, reason, date, time: time || null, note: note.trim(),
             status: "beklemede", createdAt: Date.now(),
         });
         await saveShared("appointments", appointments);
         const all = await loadShared("messages", []);
         all.push({
             id: uid(), conversationId, sender: me.name, type: "appointment", appointmentId,
-            apptDate: date, apptTime: time || null, apptNote: note.trim(), apptStatus: "beklemede",
+            apptReason: reason, apptDate: date, apptTime: time || null, apptNote: note.trim(), apptStatus: "beklemede",
             text: "📅 Randevu teklifi", createdAt: Date.now(),
         });
         await saveShared("messages", all);
@@ -21616,16 +21609,22 @@ function AppointmentAndCallCard({ item, me, sellerPhone, onStartCall }) {
     };
     const today = new Date().toISOString().slice(0, 10);
     return (React.createElement("div", { style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 12, marginTop: 10 } },
-        React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 12, color: COLORS.ink, marginBottom: 8 } }, "Hayvan\u0131 Canl\u0131 G\u00F6rmek \u0130ster misiniz?"),
-        sent && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: COLORS.pineDeep, marginBottom: 8 } }, "\u2713 Randevu teklifiniz sat\u0131c\u0131ya g\u00F6nderildi, sohbette yan\u0131t\u0131n\u0131 g\u00F6rebilirsiniz."),
+        React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 12, color: COLORS.ink, marginBottom: 8 } }, "Hayvan\u0131 G\u00F6rmek \u0130ster misiniz?"),
+        sent && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: COLORS.pineDeep, marginBottom: 8 } }, "\u2713 Randevu teklifiniz sat\u0131c\u0131ya g\u00F6nderildi, sohbette ve bildirimlerde yan\u0131t\u0131n\u0131 g\u00F6rebilirsiniz."),
         approvedAppt && onStartCall && (React.createElement("div", { style: { background: COLORS.ochreSoft, borderRadius: 10, padding: 10, marginBottom: 8 } },
             React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#7A5A1E", marginBottom: 6 } },
                 "\u2713 Randevunuz onayland\u0131 (",
                 approvedAppt.date,
                 approvedAppt.time ? `, ${approvedAppt.time}` : "",
-                ") \u2014 g\u00F6r\u00FCnt\u00FCl\u00FC arama art\u0131k a\u00E7\u0131k."),
-            React.createElement("button", { onClick: () => onStartCall("video"), style: { ...btnPrimary, width: "100%" } }, "\uD83C\uDFA5 G\u00F6r\u00FCnt\u00FCl\u00FC Ara"))),
+                ") \u2014 ",
+                REASONS[approvedAppt.reason] || "görüşme",
+                "."),
+            approvedAppt.reason === "goruntulu" && React.createElement("button", { onClick: () => onStartCall("video"), style: { ...btnPrimary, width: "100%" } }, "\uD83C\uDFA5 G\u00F6r\u00FCnt\u00FCl\u00FC Ara"))),
         mode === "randevu" ? (React.createElement("div", null,
+            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#5A574C", fontWeight: 600, marginBottom: 5 } }, "Randevu Nedeni"),
+            React.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 8 } }, Object.entries(REASONS).map(([k, l]) => (React.createElement("button", { key: k, onClick: () => setReason(k), style: { flex: 1, padding: "8px 6px", borderRadius: 8, border: `1px solid ${reason === k ? COLORS.pineDeep : COLORS.line}`, background: reason === k ? COLORS.pineDeep : COLORS.white, color: reason === k ? COLORS.white : "#5A574C", fontFamily: "Inter", fontWeight: 600, fontSize: 11, cursor: "pointer" } },
+                k === "canli" ? "🐄 " : "🎥 ",
+                l)))),
             React.createElement("div", { style: { display: "flex", gap: 8 } },
                 React.createElement("div", { style: { flex: 1 } },
                     React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11, color: "#5A574C", fontWeight: 600 } }, "Tarih"),
@@ -21639,13 +21638,19 @@ function AppointmentAndCallCard({ item, me, sellerPhone, onStartCall }) {
             React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 8 } },
                 React.createElement("button", { onClick: sendRandevu, disabled: sending || !date.trim(), style: btnPrimary }, sending ? "Gönderiliyor..." : "Randevu Teklifini Gönder"),
                 React.createElement("button", { onClick: () => setMode(null), style: { ...btnGhost, borderColor: COLORS.line, color: "#8A8776" } }, "Vazge\u00E7")))) : (React.createElement("button", { onClick: () => setMode("randevu"), style: { ...btnGhost, width: "100%", justifyContent: "center", borderColor: COLORS.line, color: COLORS.pineDeep } }, "\uD83D\uDCC5 Randevu Al")),
-        React.createElement("div", { style: { fontFamily: "Inter", fontSize: 9.5, color: "#8A8776", marginTop: 6, textAlign: "center" } }, "G\u00F6r\u00FCnt\u00FCl\u00FC arama, ancak randevunuz onayland\u0131ktan sonra a\u00E7\u0131l\u0131r."),
+        React.createElement("div", { style: { fontFamily: "Inter", fontSize: 9.5, color: "#8A8776", marginTop: 6, textAlign: "center" } }, "G\u00F6r\u00FCnt\u00FCl\u00FC arama, ancak \"G\u00F6r\u00FCnt\u00FCl\u00FC Hayvana Bakma\" randevunuz onayland\u0131ktan sonra a\u00E7\u0131l\u0131r."),
         sellerPhone && (React.createElement("a", { href: `tel:${sellerPhone}`, style: { display: "block", textAlign: "center", marginTop: 8, fontFamily: "Inter", fontSize: 11, color: "#8A8776", textDecoration: "underline" } },
             "veya do\u011Frudan telefonla aray\u0131n: ",
             sellerPhone))));
 }
 
-const ICE_SERVERS = [{ urls: "stun:stun.l.google.com:19302" }, { urls: "stun:stun1.l.google.com:19302" }];
+const ICE_SERVERS = [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "turn:openrelay.metered.ca:80", username: "openrelayproject", credential: "openrelayproject" },
+    { urls: "turn:openrelay.metered.ca:443", username: "openrelayproject", credential: "openrelayproject" },
+    { urls: "turn:openrelay.metered.ca:443?transport=tcp", username: "openrelayproject", credential: "openrelayproject" },
+];
 function CallManager({ me, pendingCallRequest, onRequestConsumed }) {
     const [incoming, setIncoming] = useState(null); // {id, callerName, type, conversationId}
     const [activeCall, setActiveCall] = useState(null); // {id, role, otherName, type, status, conversationId, connectedAt}
@@ -21680,8 +21685,15 @@ function CallManager({ me, pendingCallRequest, onRequestConsumed }) {
         setActiveCall(null);
         seenSignalIds.current = new Set();
     };
+    const scheduleConnectTimeout = (pc) => {
+        setTimeout(() => {
+            if (pc === pcRef.current && pc.iceConnectionState !== "connected" && pc.iceConnectionState !== "completed") {
+                setCallErr("Bağlantı kurulamıyor — farklı ağlarda olabilirsiniz, tekrar deneyin.");
+            }
+        }, 20000);
+    };
     const setupPeerConnection = (callId, otherName) => {
-        const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+        const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS, iceCandidatePoolSize: 10 });
         pc.onicecandidate = async (e) => {
             if (!e.candidate)
                 return;
@@ -21696,6 +21708,11 @@ function CallManager({ me, pendingCallRequest, onRequestConsumed }) {
             if (remoteAudioRef.current)
                 remoteAudioRef.current.srcObject = stream;
         };
+        pc.oniceconnectionstatechange = () => {
+            if (pc.iceConnectionState === "failed" || pc.iceConnectionState === "disconnected") {
+                setCallErr("Bağlantı kurulamadı — ağ engelliyor olabilir.");
+            }
+        };
         pcRef.current = pc;
         return pc;
     };
@@ -21707,6 +21724,7 @@ function CallManager({ me, pendingCallRequest, onRequestConsumed }) {
             localStreamRef.current = stream;
             const callId = uid();
             const pc = setupPeerConnection(callId, otherName);
+            scheduleConnectTimeout(pc);
             stream.getTracks().forEach(t => pc.addTrack(t, stream));
             if (localVideoRef.current && type === "video")
                 localVideoRef.current.srcObject = stream;
@@ -21733,6 +21751,7 @@ function CallManager({ me, pendingCallRequest, onRequestConsumed }) {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: call.type === "video" });
             localStreamRef.current = stream;
             const pc = setupPeerConnection(call.id, call.callerName);
+            scheduleConnectTimeout(pc);
             stream.getTracks().forEach(t => pc.addTrack(t, stream));
             if (localVideoRef.current && call.type === "video")
                 localVideoRef.current.srcObject = stream;
@@ -21858,7 +21877,7 @@ function CallManager({ me, pendingCallRequest, onRequestConsumed }) {
                 catch { /* sinyal işlenemedi, sessizce geç */ }
             }
         };
-        const interval = setInterval(poll, 2000);
+        const interval = setInterval(poll, 1000);
         return () => clearInterval(interval);
     }, [me && me.name]);
     if (!me)
@@ -21925,12 +21944,12 @@ function AppointmentMessageCard({ message, me, refreshAll }) {
         appts.push({
             id: newAppointmentId, listingId: original ? original.listingId : null, listingLabel: original ? original.listingLabel : "",
             buyerName: original ? original.buyerName : "", sellerName: original ? original.sellerName : "",
-            date: counterDate, time: counterTime || null, note: "", status: "beklemede", createdAt: Date.now(), counterOf: message.appointmentId,
+            reason: original ? original.reason : "canli", date: counterDate, time: counterTime || null, note: "", status: "beklemede", createdAt: Date.now(), counterOf: message.appointmentId,
         });
         await saveShared("appointments", appts);
         allMsgs.push({
             id: uid(), conversationId: message.conversationId, sender: me.name, type: "appointment", appointmentId: newAppointmentId,
-            apptDate: counterDate, apptTime: counterTime || null, apptNote: "", apptStatus: "beklemede",
+            apptReason: original ? original.reason : "canli", apptDate: counterDate, apptTime: counterTime || null, apptNote: "", apptStatus: "beklemede",
             text: "📅 Karşı randevu teklifi", createdAt: Date.now(),
         });
         await saveShared("messages", allMsgs);
@@ -21949,6 +21968,8 @@ function AppointmentMessageCard({ message, me, refreshAll }) {
         React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: COLORS.ink } },
             dateLabel,
             message.apptTime ? `, saat ${message.apptTime}` : ""),
+        message.apptReason && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: COLORS.ochre, marginTop: 2, fontWeight: 600 } },
+            message.apptReason === "goruntulu" ? "🎥 Görüntülü Hayvana Bakma" : "🐄 Canlı Hayvana Bakma"),
         message.apptNote && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#5A574C", marginTop: 4 } },
             "Not: ",
             message.apptNote),
@@ -24614,6 +24635,39 @@ function MyListingCard({ listing, onOpen, refreshAll }) {
                         m.type === "image" ? React.createElement("img", { src: m.dataUrl, style: { width: "100%", height: "100%", objectFit: "cover" } }) : React.createElement("video", { src: m.dataUrl, style: { width: "100%", height: "100%", objectFit: "cover" }, muted: true }),
                         React.createElement("button", { onClick: () => removeMedia(i), style: { position: "absolute", top: 1, right: 1, background: "rgba(0,0,0,0.65)", color: "#fff", border: "none", borderRadius: "50%", width: 13, height: 13, fontSize: 8, cursor: "pointer", lineHeight: 1 } }, "\u2715")))))))),
             React.createElement("button", { onClick: save, disabled: busy, style: { ...btnPrimary, marginTop: 8, width: "100%", fontSize: 11.5, padding: "7px" } }, busy ? "Kaydediliyor..." : "Kaydet")))));
+}
+
+function AppointmentsNotificationSection({ me, listings, onOpen, onOpenChat }) {
+    const [appointments, setAppointments] = useState([]);
+    const [loaded, setLoaded] = useState(false);
+    useEffect(() => { loadShared("appointments", []).then(all => { setAppointments(all.filter(a => a.buyerName === me.name || a.sellerName === me.name)); setLoaded(true); }); }, []);
+    const REASON_LABELS = { canli: "🐄 Canlı Hayvana Bakma", goruntulu: "🎥 Görüntülü Hayvana Bakma" };
+    const STATUS_LABELS = { beklemede: "Yanıt bekleniyor", kabul: "Onaylandı", red: "Reddedildi", karsi_teklif: "Karşı teklif gönderildi" };
+    const STATUS_TONE = { beklemede: "ochre", kabul: "pine", red: "gray", karsi_teklif: "ochre" };
+    if (!loaded || appointments.length === 0)
+        return null;
+    const openAppt = (a) => {
+        const listing = listings.find(l => l.id === a.listingId);
+        const otherName = a.buyerName === me.name ? a.sellerName : a.buyerName;
+        if (listing) {
+            onOpen(listing);
+            return;
+        }
+        if (onOpenChat)
+            onOpenChat(convId(a.listingId, a.buyerName, a.sellerName), otherName, a.listingLabel);
+    };
+    return (React.createElement("div", { style: { marginBottom: 18 } },
+        React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 13, marginBottom: 8 } }, "Randevular\u0131m"),
+        appointments.slice().reverse().slice(0, 15).map(a => (React.createElement("button", { key: a.id, onClick: () => openAppt(a), style: { width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 11, marginBottom: 8, cursor: "pointer", textAlign: "left" } },
+            React.createElement("div", { style: { minWidth: 0 } },
+                React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5 } }, a.listingLabel || "İlan"),
+                React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776", marginTop: 2 } },
+                    a.date,
+                    a.time ? `, ${a.time}` : "",
+                    " \u00B7 ",
+                    REASON_LABELS[a.reason] || "Randevu"),
+                React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776" } }, a.buyerName === me.name ? `Satıcı: ${a.sellerName}` : `Alıcı: ${a.buyerName}`)),
+            React.createElement(Badge, { tone: STATUS_TONE[a.status] || "gray" }, STATUS_LABELS[a.status] || a.status))))));
 }
 
 </script>
