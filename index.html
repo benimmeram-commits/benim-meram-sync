@@ -17461,6 +17461,51 @@ function resizeImageFile(file, maxDim) {
         reader.readAsDataURL(file);
     });
 }
+// İlan foto\u011Fraflar\u0131n\u0131 Reels'in dikey (9:16) format\u0131na standart bir \u015Fekilde
+// merkezden k\u0131rparak haz\u0131rlar; b\u00F6ylece Reels ak\u0131\u015F\u0131nda t\u00FCm foto\u011Fraflar
+// tutarl\u0131, tam ekran bir g\u00F6r\u00FCn\u00FCme sahip olur. \u0130lan detay\u0131nda da object-fit:cover
+// ile ayn\u0131 g\u00F6rsel kullan\u0131l\u0131r, dolay\u0131s\u0131yla oradaki g\u00F6r\u00FCn\u00FCm de tutarl\u0131 kal\u0131r.
+function resizeImageFileToReels(file) {
+    const TARGET_W = 1080, TARGET_H = 1920; // 9:16
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const srcRatio = img.width / img.height;
+                const targetRatio = TARGET_W / TARGET_H;
+                let sx, sy, sw, sh;
+                if (srcRatio > targetRatio) {
+                    // Kaynak daha geni\u015F \u2014 yanlardan k\u0131rp
+                    sh = img.height;
+                    sw = sh * targetRatio;
+                    sx = (img.width - sw) / 2;
+                    sy = 0;
+                }
+                else {
+                    // Kaynak daha dar/uzun \u2014 üst-alttan k\u0131rp
+                    sw = img.width;
+                    sh = sw / targetRatio;
+                    sx = 0;
+                    sy = (img.height - sh) / 2;
+                }
+                // \u00C7ok k\u00FC\u00E7\u00FCk kaynaklar\u0131 gereksiz b\u00FCy\u00FCtmemek i\u00E7in \u00E7\u0131k\u0131\u015F boyutunu s\u0131n\u0131rla
+                const outW = Math.min(TARGET_W, Math.round(sw));
+                const outH = Math.round(outW / targetRatio);
+                const canvas = document.createElement("canvas");
+                canvas.width = outW;
+                canvas.height = outH;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
+                resolve(canvas.toDataURL("image/jpeg", 0.85));
+            };
+            img.onerror = () => reject(new Error("Görsel okunamadı"));
+            img.src = e.target.result;
+        };
+        reader.onerror = () => reject(new Error("Dosya okunamadı"));
+        reader.readAsDataURL(file);
+    });
+}
 function fileToDataUrl(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -19056,7 +19101,7 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
             }
             if (file.type.startsWith("image/")) {
                 try {
-                    const dataUrl = await resizeImageFile(file, 900);
+                    const dataUrl = await resizeImageFileToReels(file);
                     setMedia(prev => [...prev, { type: "image", dataUrl, name: file.name }]);
                 }
                 catch {
@@ -19258,6 +19303,7 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
                         React.createElement("label", { htmlFor: "media-input", style: { flex: 1, display: "flex", alignItems: "center", justifyContent: "center", border: `1.5px dashed ${COLORS.line}`, borderRadius: 12, padding: "14px 10px", textAlign: "center", fontFamily: "Inter", fontSize: 12, color: "#8A8776", cursor: media.length >= 6 ? "not-allowed" : "pointer" } }, "\uD83D\uDCC1 Galeriden Se\u00E7")),
                     React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776", marginTop: 6, textAlign: "center" } },
                         mediaBusy ? "İşleniyor..." : `${media.length}/6 \u2014 video maks. 8 MB`),
+                    React.createElement("div", { style: { fontFamily: "Inter", fontSize: 9.5, color: "#8A8776", marginTop: 3, textAlign: "center" } }, "\uD83D\uDCF1 Fotoğraflar Reels'te tam ekran g\u00F6r\u00FCnmesi i\u00E7in dikey (9:16) formata otomatik ayarlan\u0131r \u2014 en iyi sonu\u00E7 i\u00E7in dikey \u00E7ekin."),
                     mediaError && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11, marginTop: 4 } }, mediaError),
                     media.length > 0 && (React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 } }, media.map((m, i) => (React.createElement("div", { key: i, style: { position: "relative", width: 62, height: 62, borderRadius: 8, overflow: "hidden", border: `1px solid ${COLORS.line}`, background: "#000" } },
                         m.type === "image" ? React.createElement("img", { src: m.dataUrl, style: { width: "100%", height: "100%", objectFit: "cover" } }) : React.createElement("video", { src: m.dataUrl, style: { width: "100%", height: "100%", objectFit: "cover" }, muted: true }),
@@ -19520,7 +19566,7 @@ function SellerListingRow({ listing, onOpen, refreshAll }) {
             }
             if (file.type.startsWith("image/")) {
                 try {
-                    const dataUrl = await resizeImageFile(file, 900);
+                    const dataUrl = await resizeImageFileToReels(file);
                     setMedia(prev => [...prev, { type: "image", dataUrl, name: file.name }]);
                 }
                 catch {
@@ -24611,7 +24657,7 @@ function MyListingCard({ listing, onOpen, refreshAll }) {
             }
             if (file.type.startsWith("image/")) {
                 try {
-                    const dataUrl = await resizeImageFile(file, 900);
+                    const dataUrl = await resizeImageFileToReels(file);
                     setMedia(prev => [...prev, { type: "image", dataUrl, name: file.name }]);
                 }
                 catch {
