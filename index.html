@@ -17334,14 +17334,14 @@ const ICON_GLYPHS = {
     X: "✕", Check: "✓", TrendingUp: "📈", Lock: "🔒", Filter: "≡", Heart: "♥",
     Bell: "🔔", CreditCard: "💳", LifeBuoy: "🛟", Users: "👥", BarChart3: "📊",
     Settings: "⚙", Ban: "🚫", Flag: "🚩", DollarSign: "₺", ChevronRight: "›",
-    Repeat: "↻", Loader2: "⏳", Inbox: "📥", Send: "➤", Globe2: "🌐", Film: "🎬",
+    Repeat: "↻", Loader2: "⏳", Inbox: "📥", Send: "➤", Globe2: "🌐", Film: "🎬", Camera: "📷",
 };
 function makeIcon(glyph) {
     return function IconComp({ size = 16, color, fill, style, strokeWidth, className, ...rest }) {
         return (React.createElement("span", { ...rest, style: { fontSize: size, lineHeight: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", color: fill && fill !== "none" ? fill : color, width: size, height: size, ...style } }, glyph));
     };
 }
-const Menu = makeIcon(ICON_GLYPHS.Menu), Search = makeIcon(ICON_GLYPHS.Search), MessageCircle = makeIcon(ICON_GLYPHS.MessageCircle), Home = makeIcon(ICON_GLYPHS.Home), PlusCircle = makeIcon(ICON_GLYPHS.PlusCircle), User = makeIcon(ICON_GLYPHS.User), MapPin = makeIcon(ICON_GLYPHS.MapPin), ChevronLeft = makeIcon(ICON_GLYPHS.ChevronLeft), Star = makeIcon(ICON_GLYPHS.Star), ShieldCheck = makeIcon(ICON_GLYPHS.ShieldCheck), X = makeIcon(ICON_GLYPHS.X), Check = makeIcon(ICON_GLYPHS.Check), TrendingUp = makeIcon(ICON_GLYPHS.TrendingUp), Lock = makeIcon(ICON_GLYPHS.Lock), Filter = makeIcon(ICON_GLYPHS.Filter), Heart = makeIcon(ICON_GLYPHS.Heart), Bell = makeIcon(ICON_GLYPHS.Bell), CreditCard = makeIcon(ICON_GLYPHS.CreditCard), LifeBuoy = makeIcon(ICON_GLYPHS.LifeBuoy), Users = makeIcon(ICON_GLYPHS.Users), BarChart3 = makeIcon(ICON_GLYPHS.BarChart3), Settings = makeIcon(ICON_GLYPHS.Settings), Ban = makeIcon(ICON_GLYPHS.Ban), Flag = makeIcon(ICON_GLYPHS.Flag), DollarSign = makeIcon(ICON_GLYPHS.DollarSign), ChevronRight = makeIcon(ICON_GLYPHS.ChevronRight), Repeat = makeIcon(ICON_GLYPHS.Repeat), Loader2 = makeIcon(ICON_GLYPHS.Loader2), Inbox = makeIcon(ICON_GLYPHS.Inbox), Send = makeIcon(ICON_GLYPHS.Send), Globe2 = makeIcon(ICON_GLYPHS.Globe2), Film = makeIcon(ICON_GLYPHS.Film);
+const Menu = makeIcon(ICON_GLYPHS.Menu), Search = makeIcon(ICON_GLYPHS.Search), MessageCircle = makeIcon(ICON_GLYPHS.MessageCircle), Home = makeIcon(ICON_GLYPHS.Home), PlusCircle = makeIcon(ICON_GLYPHS.PlusCircle), User = makeIcon(ICON_GLYPHS.User), MapPin = makeIcon(ICON_GLYPHS.MapPin), ChevronLeft = makeIcon(ICON_GLYPHS.ChevronLeft), Star = makeIcon(ICON_GLYPHS.Star), ShieldCheck = makeIcon(ICON_GLYPHS.ShieldCheck), X = makeIcon(ICON_GLYPHS.X), Check = makeIcon(ICON_GLYPHS.Check), TrendingUp = makeIcon(ICON_GLYPHS.TrendingUp), Lock = makeIcon(ICON_GLYPHS.Lock), Filter = makeIcon(ICON_GLYPHS.Filter), Heart = makeIcon(ICON_GLYPHS.Heart), Bell = makeIcon(ICON_GLYPHS.Bell), CreditCard = makeIcon(ICON_GLYPHS.CreditCard), LifeBuoy = makeIcon(ICON_GLYPHS.LifeBuoy), Users = makeIcon(ICON_GLYPHS.Users), BarChart3 = makeIcon(ICON_GLYPHS.BarChart3), Settings = makeIcon(ICON_GLYPHS.Settings), Ban = makeIcon(ICON_GLYPHS.Ban), Flag = makeIcon(ICON_GLYPHS.Flag), DollarSign = makeIcon(ICON_GLYPHS.DollarSign), ChevronRight = makeIcon(ICON_GLYPHS.ChevronRight), Repeat = makeIcon(ICON_GLYPHS.Repeat), Loader2 = makeIcon(ICON_GLYPHS.Loader2), Inbox = makeIcon(ICON_GLYPHS.Inbox), Send = makeIcon(ICON_GLYPHS.Send), Globe2 = makeIcon(ICON_GLYPHS.Globe2), Film = makeIcon(ICON_GLYPHS.Film), Camera = makeIcon(ICON_GLYPHS.Camera);
 // Alt navigasyon için tek renkli (monokrom) çizgi ikonlar — emoji değil,
 // "color" özelliğinden renk alan basit SVG'ler.
 function NavIconHome({ size = 20, color }) {
@@ -18477,7 +18477,6 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
         screen !== "detail" && screen !== "chat" && screen !== "regionChat" && screen !== "reels" && screen !== "search" && screen !== "publicProfile" && screen !== "profileSub" && screen !== "farm" && screen !== "vet" && screen !== "myListings" && (React.createElement("div", { style: { background: COLORS.pine, padding: "14px 14px 10px", display: "flex", alignItems: "center", gap: 10 } },
             React.createElement("button", { onClick: () => setDrawer(true), style: { background: "none", border: "none", cursor: "pointer" } },
                 React.createElement(IconMenu, { color: COLORS.white, size: 20 })),
-            React.createElement(Logo, { size: 30, color: COLORS.white }),
             React.createElement("div", { style: { flex: 1 } }),
             React.createElement("button", { onClick: () => setScreen("search"), style: { background: "none", border: "none", cursor: "pointer" } },
                 React.createElement(IconSearch, { size: 20, color: COLORS.white })),
@@ -19251,7 +19250,14 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
             case "medya":
                 return (React.createElement("div", null,
                     React.createElement("input", { id: "media-input", type: "file", accept: "image/*,video/*", multiple: true, onChange: handleFiles, style: { display: "none" }, disabled: mediaBusy || media.length >= 6 }),
-                    React.createElement("label", { htmlFor: "media-input", style: { display: "block", border: `1.5px dashed ${COLORS.line}`, borderRadius: 12, padding: 20, textAlign: "center", fontFamily: "Inter", fontSize: 12, color: "#8A8776", cursor: media.length >= 6 ? "not-allowed" : "pointer" } }, mediaBusy ? "İşleniyor..." : `+ Fotoğraf veya video ekle (${media.length}/6, video max 8 MB)`),
+                    React.createElement("input", { id: "camera-input", type: "file", accept: "image/*", capture: "environment", onChange: handleFiles, style: { display: "none" }, disabled: mediaBusy || media.length >= 6 }),
+                    React.createElement("div", { style: { display: "flex", gap: 8 } },
+                        React.createElement("label", { htmlFor: "camera-input", style: { flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, border: `1.5px solid ${COLORS.pineDeep}`, borderRadius: 12, padding: "14px 10px", textAlign: "center", fontFamily: "Inter", fontWeight: 600, fontSize: 12, color: COLORS.pineDeep, cursor: media.length >= 6 ? "not-allowed" : "pointer" } },
+                            React.createElement(Camera, { size: 16, color: COLORS.pineDeep }),
+                            "Kamera ile \u00C7ek"),
+                        React.createElement("label", { htmlFor: "media-input", style: { flex: 1, display: "flex", alignItems: "center", justifyContent: "center", border: `1.5px dashed ${COLORS.line}`, borderRadius: 12, padding: "14px 10px", textAlign: "center", fontFamily: "Inter", fontSize: 12, color: "#8A8776", cursor: media.length >= 6 ? "not-allowed" : "pointer" } }, "\uD83D\uDCC1 Galeriden Se\u00E7")),
+                    React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776", marginTop: 6, textAlign: "center" } },
+                        mediaBusy ? "İşleniyor..." : `${media.length}/6 \u2014 video maks. 8 MB`),
                     mediaError && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11, marginTop: 4 } }, mediaError),
                     media.length > 0 && (React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 } }, media.map((m, i) => (React.createElement("div", { key: i, style: { position: "relative", width: 62, height: 62, borderRadius: 8, overflow: "hidden", border: `1px solid ${COLORS.line}`, background: "#000" } },
                         m.type === "image" ? React.createElement("img", { src: m.dataUrl, style: { width: "100%", height: "100%", objectFit: "cover" } }) : React.createElement("video", { src: m.dataUrl, style: { width: "100%", height: "100%", objectFit: "cover" }, muted: true }),
@@ -24346,12 +24352,37 @@ function VetSuruSagligiTab({ myVetLinks, allAnimalsByFarm, vetName }) {
 function ProfileWizardStep({ accountType, profileStep, setProfileStep, name, setName, email, setEmail, password, setPassword, pwChecks, companyName, setCompanyName, companyType, setCompanyType, companyIl, setCompanyIl, companyIlce, setCompanyIlce, taxOffice, setTaxOffice, authorizedTc, setAuthorizedTc, clinicName, setClinicName, licenseNo, setLicenseNo, vetIl, setVetIl, vetIlce, setVetIlce, vetTaxNo, setVetTaxNo, vetTaxOffice, setVetTaxOffice, err, goToDoc, onBackToChoice, }) {
     const STEP_DEFS = {
         bireysel: ["name", "email", "password"],
-        kurumsal: ["companyName", "companyType", "companyLocation", "taxOffice", "authorizedTc", "name", "email", "password"],
+        kurumsal: ["companyName", "companyType", "companyLocation", "taxOffice", "name", "authorizedTc", "email", "password"],
         veteriner: ["clinicName", "licenseNo", "vetLocation", "vetTaxNo", "vetTaxOffice", "name", "email", "password"],
     };
     const keys = STEP_DEFS[accountType];
     const key = keys[profileStep];
     const total = keys.length;
+    const [nviBirthYear, setNviBirthYear] = useState("");
+    const [nviStatus, setNviStatus] = useState("idle"); // idle | checking | verified | mismatch | error
+    const [nviCheckedTc, setNviCheckedTc] = useState("");
+    const verifyNvi = async () => {
+        if (!isValidTcFormat(authorizedTc) || nviBirthYear.trim().length !== 4 || !name.trim())
+            return;
+        setNviStatus("checking");
+        try {
+            const parts = name.trim().split(/\s+/);
+            const soyad = parts.length > 1 ? parts[parts.length - 1] : "";
+            const ad = parts.length > 1 ? parts.slice(0, -1).join(" ") : parts[0];
+            const res = await fetch("/api/nvi-verify", {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ tcKimlikNo: authorizedTc, ad, soyad, dogumYili: nviBirthYear.trim() }),
+            });
+            const data = await res.json();
+            if (!res.ok)
+                throw new Error(data.error || "hata");
+            setNviStatus(data.verified ? "verified" : "mismatch");
+            setNviCheckedTc(authorizedTc);
+        }
+        catch (e) {
+            setNviStatus("error");
+        }
+    };
     const isValid = () => {
         switch (key) {
             case "name": return name.trim().length > 0;
@@ -24361,7 +24392,7 @@ function ProfileWizardStep({ accountType, profileStep, setProfileStep, name, set
             case "companyType": return !!companyType;
             case "companyLocation": return companyIl.trim().length > 0 && companyIlce.trim().length > 0;
             case "taxOffice": return taxOffice.trim().length > 0;
-            case "authorizedTc": return isValidTcFormat(authorizedTc);
+            case "authorizedTc": return isValidTcFormat(authorizedTc) && nviStatus === "verified" && nviCheckedTc === authorizedTc;
             case "clinicName": return clinicName.trim().length > 0;
             case "licenseNo": return licenseNo.trim().length > 0;
             case "vetLocation": return vetIl.trim().length > 0 && vetIlce.trim().length > 0;
@@ -24432,7 +24463,17 @@ function ProfileWizardStep({ accountType, profileStep, setProfileStep, name, set
                             d,
                             " Vergi Dairesi")))));
             case "authorizedTc":
-                return React.createElement(FormField, { label: "TC Kimlik Numaras\u0131", value: authorizedTc, onChange: setAuthorizedTc, placeholder: "11 haneli TC Kimlik No" });
+                return (React.createElement("div", null,
+                    React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776", marginBottom: 10 } },
+                        "Ad Soyad (", name, ") ile birlikte NV\u0130 (T.C. Kimlik Do\u011Frulama) sisteminde kontrol edilecektir."),
+                    React.createElement(FormField, { label: "TC Kimlik Numaras\u0131", value: authorizedTc, onChange: (v) => { setAuthorizedTc(v); setNviStatus("idle"); }, placeholder: "11 haneli TC Kimlik No" }),
+                    React.createElement("div", { style: { marginTop: 10 } },
+                        React.createElement(FormField, { label: "Do\u011Fum Y\u0131l\u0131", value: nviBirthYear, onChange: (v) => { setNviBirthYear(v); setNviStatus("idle"); }, placeholder: "\u00D6rn. 1985", type: "number" })),
+                    React.createElement("button", { onClick: verifyNvi, disabled: !isValidTcFormat(authorizedTc) || nviBirthYear.trim().length !== 4 || nviStatus === "checking", style: { ...btnGhost, width: "100%", justifyContent: "center", marginTop: 10, borderColor: COLORS.pineDeep, color: COLORS.pineDeep, opacity: (!isValidTcFormat(authorizedTc) || nviBirthYear.trim().length !== 4) ? 0.5 : 1 } }, nviStatus === "checking" ? "NV\u0130 sorgulan\u0131yor..." : "\uD83D\uDEE1\uFE0F NV\u0130 ile Kimlik Do\u011Frula"),
+                    nviStatus === "verified" && React.createElement("div", { style: { marginTop: 8, display: "flex", alignItems: "center", gap: 5, fontFamily: "Inter", fontSize: 11.5, color: COLORS.pineDeep, fontWeight: 600 } }, "\u2713 NV\u0130 ile kimlik do\u011Fruland\u0131"),
+                    nviStatus === "mismatch" && React.createElement("div", { style: { marginTop: 8, fontFamily: "Inter", fontSize: 11.5, color: COLORS.red, fontWeight: 600 } }, "\u2715 Bilgiler NV\u0130 kay\u0131tlar\u0131yla e\u015Fle\u015Fmedi \u2014 ad, soyad, TC ve do\u011Fum y\u0131l\u0131n\u0131 kontrol edin."),
+                    nviStatus === "error" && React.createElement("div", { style: { marginTop: 8, fontFamily: "Inter", fontSize: 11.5, color: COLORS.ochre, fontWeight: 600 } }, "\u26A0 NV\u0130 servisine ula\u015F\u0131lamad\u0131, birazdan tekrar deneyin."),
+                    React.createElement("div", { style: { fontFamily: "Inter", fontSize: 9.5, color: "#8A8776", marginTop: 8 } }, "T.C. Nüfus ve Vatandaşlık \u0130şleri Genel Müdürlü\u011Fü'nün resmi, ücretsiz do\u011Frulama servisi (KPSPublic) kullan\u0131l\u0131r. Sadece bilgilerin do\u011Fru olup olmad\u0131\u011F\u0131 kontrol edilir; adres veya ba\u015Fka ki\u015Fisel veri al\u0131nmaz/saklanmaz.")));
             case "clinicName":
                 return React.createElement(FormField, { label: "Klinik / \u0130\u015Fletme Ad\u0131", value: clinicName, onChange: setClinicName, placeholder: "\u00D6rn. Ye\u015Filova Veteriner Klini\u011Fi" });
             case "licenseNo":
