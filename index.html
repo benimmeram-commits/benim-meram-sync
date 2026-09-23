@@ -18545,13 +18545,7 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
                 React.createElement("button", { onClick: () => setDrawer(true), style: { fontFamily: "Inter", fontSize: 10.5, color: COLORS.pineDeep, background: "none", border: "none", textDecoration: "underline", cursor: "pointer" } }, "de\u011Fi\u015Ftir"),
                 (subTab !== "tumu" || breedTab !== "tumu") && React.createElement("button", { onClick: () => { setSubTab("tumu"); setBreedTab("tumu"); }, style: { fontFamily: "Inter", fontSize: 10.5, color: COLORS.red, background: "none", border: "none", textDecoration: "underline", cursor: "pointer" } }, "filtreyi temizle"))),
             React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "10px 14px 90px" } }, filtered.length === 0 ? (React.createElement("div", { style: { textAlign: "center", marginTop: 40, color: "#8A8776", fontFamily: "Inter", fontSize: 12.5 } },
-                "Hen\u00FCz ilan yok.",
-                React.createElement("div", { style: { marginTop: 10 } },
-                    React.createElement("button", { onClick: runSeed, disabled: seedState.loading, style: { ...btnGhost, borderColor: COLORS.pine, color: COLORS.pineDeep, margin: "0 auto" } }, seedState.loading ? "Yükleniyor..." : "Önizleme için örnek ilanlar yükle"),
-                    seedState.error && (React.createElement("div", { style: { color: COLORS.red, fontSize: 10.5, marginTop: 6, maxWidth: 260, marginLeft: "auto", marginRight: "auto" } },
-                        "Hata: ",
-                        seedState.error)),
-                    seedState.fallback && (React.createElement("div", { style: { color: COLORS.ochre, fontSize: 10.5, marginTop: 6, maxWidth: 260, marginLeft: "auto", marginRight: "auto" } }, "Not: kal\u0131c\u0131 depolama \u015Fu an bu ortamda \u00E7al\u0131\u015Fm\u0131yor, veriler bu oturum i\u00E7in ge\u00E7ici olarak tutuluyor (sayfa tamamen yenilenirse silinir)."))))) : (React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 } }, filtered.map(item => React.createElement(ListingCard, { key: item.id, item: item, reviews: reviews, favorites: favorites, toggleFavorite: toggleFavorite, onOpen: open }))))))),
+                "Hen\u00FCz ilan yok.")) : (React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 } }, filtered.map(item => React.createElement(ListingCard, { key: item.id, item: item, reviews: reviews, favorites: favorites, toggleFavorite: toggleFavorite, onOpen: open }))))))),
         screen === "detail" && selected && (React.createElement(DetailScreen, { item: listings.find(l => l.id === selected.id) || selected, me: me, requireAuth: requireAuth, offers: offers, reviews: reviews, favorites: favorites, toggleFavorite: toggleFavorite, favoritesLog: favoritesLog, members: members, listings: listings, onOpen: open, onOpenChat: openChat, onOpenProfile: openProfile, onStartCall: (otherName, type, conversationId) => setPendingCallRequest({ otherName, type, conversationId, nonce: Date.now() }), refreshAll: refreshAll, onBack: () => setScreen("home") })),
         screen === "create" && React.createElement(CreateScreen, { me: me, members: members, customSubcategories: customSubcategories, refreshAll: refreshAll, onDone: () => setScreen("home") }),
         screen === "requests" && (React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "16px 18px 100px" } },
@@ -21712,9 +21706,24 @@ function CallManager({ me, pendingCallRequest, onRequestConsumed }) {
     const localVideoRef = React.useRef(null);
     const remoteVideoRef = React.useRef(null);
     const remoteAudioRef = React.useRef(null);
+    const remoteStreamRef = React.useRef(null);
     const seenSignalIds = React.useRef(new Set());
     const activeCallRef = React.useRef(null);
     useEffect(() => { activeCallRef.current = activeCall; }, [activeCall]);
+    // activeCall de\u011Fi\u015Fti\u011Finde (yani video/audio elementleri DOM'a yeni
+    // eklendi\u011Finde) elde zaten haz\u0131r bekleyen ak\u0131\u015Flar\u0131 (varsa) elementlere
+    // ba\u011Fla \u2014 pc.ontrack / getUserMedia elementler monte olmadan \u00F6nce
+    // tetiklenmi\u015F olabilece\u011Fi i\u00E7in bu senkronizasyon \u015Fart.
+    useEffect(() => {
+        if (!activeCall)
+            return;
+        if (localVideoRef.current && localStreamRef.current)
+            localVideoRef.current.srcObject = localStreamRef.current;
+        if (remoteVideoRef.current && remoteStreamRef.current)
+            remoteVideoRef.current.srcObject = remoteStreamRef.current;
+        if (remoteAudioRef.current && remoteStreamRef.current)
+            remoteAudioRef.current.srcObject = remoteStreamRef.current;
+    }, [activeCall && activeCall.id, activeCall && activeCall.type]);
     const postCallMessage = async (conversationId, text) => {
         if (!conversationId)
             return;
@@ -21735,6 +21744,7 @@ function CallManager({ me, pendingCallRequest, onRequestConsumed }) {
             localStreamRef.current = null;
         }
         setActiveCall(null);
+        remoteStreamRef.current = null;
         seenSignalIds.current = new Set();
     };
     const scheduleConnectTimeout = (pc) => {
@@ -21755,6 +21765,7 @@ function CallManager({ me, pendingCallRequest, onRequestConsumed }) {
         };
         pc.ontrack = (e) => {
             const stream = e.streams[0];
+            remoteStreamRef.current = stream;
             if (remoteVideoRef.current)
                 remoteVideoRef.current.srcObject = stream;
             if (remoteAudioRef.current)
