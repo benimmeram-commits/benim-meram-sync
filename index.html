@@ -21701,6 +21701,8 @@ function CallManager({ me, pendingCallRequest, onRequestConsumed }) {
     const [incoming, setIncoming] = useState(null); // {id, callerName, type, conversationId}
     const [activeCall, setActiveCall] = useState(null); // {id, role, otherName, type, status, conversationId, connectedAt}
     const [callErr, setCallErr] = useState("");
+    const [isMuted, setIsMuted] = useState(false);
+    const [isCameraOff, setIsCameraOff] = useState(false);
     const pcRef = React.useRef(null);
     const localStreamRef = React.useRef(null);
     const localVideoRef = React.useRef(null);
@@ -21717,12 +21719,18 @@ function CallManager({ me, pendingCallRequest, onRequestConsumed }) {
     useEffect(() => {
         if (!activeCall)
             return;
-        if (localVideoRef.current && localStreamRef.current)
+        if (localVideoRef.current && localStreamRef.current) {
             localVideoRef.current.srcObject = localStreamRef.current;
-        if (remoteVideoRef.current && remoteStreamRef.current)
+            localVideoRef.current.play().catch(() => { });
+        }
+        if (remoteVideoRef.current && remoteStreamRef.current) {
             remoteVideoRef.current.srcObject = remoteStreamRef.current;
-        if (remoteAudioRef.current && remoteStreamRef.current)
+            remoteVideoRef.current.play().catch(() => { });
+        }
+        if (remoteAudioRef.current && remoteStreamRef.current) {
             remoteAudioRef.current.srcObject = remoteStreamRef.current;
+            remoteAudioRef.current.play().catch(() => { });
+        }
     }, [activeCall && activeCall.id, activeCall && activeCall.type]);
     const postCallMessage = async (conversationId, text) => {
         if (!conversationId)
@@ -21746,6 +21754,8 @@ function CallManager({ me, pendingCallRequest, onRequestConsumed }) {
         setActiveCall(null);
         remoteStreamRef.current = null;
         seenSignalIds.current = new Set();
+        setIsMuted(false);
+        setIsCameraOff(false);
     };
     const scheduleConnectTimeout = (pc) => {
         setTimeout(() => {
@@ -21766,10 +21776,14 @@ function CallManager({ me, pendingCallRequest, onRequestConsumed }) {
         pc.ontrack = (e) => {
             const stream = e.streams[0];
             remoteStreamRef.current = stream;
-            if (remoteVideoRef.current)
+            if (remoteVideoRef.current) {
                 remoteVideoRef.current.srcObject = stream;
-            if (remoteAudioRef.current)
+                remoteVideoRef.current.play().catch(() => { });
+            }
+            if (remoteAudioRef.current) {
                 remoteAudioRef.current.srcObject = stream;
+                remoteAudioRef.current.play().catch(() => { });
+            }
         };
         pc.oniceconnectionstatechange = () => {
             if (pc.iceConnectionState === "failed" || pc.iceConnectionState === "disconnected") {
@@ -21873,6 +21887,20 @@ function CallManager({ me, pendingCallRequest, onRequestConsumed }) {
         }
         cleanupCall();
     };
+    const toggleMute = () => {
+        if (!localStreamRef.current)
+            return;
+        const next = !isMuted;
+        localStreamRef.current.getAudioTracks().forEach(t => { t.enabled = !next; });
+        setIsMuted(next);
+    };
+    const toggleCamera = () => {
+        if (!localStreamRef.current)
+            return;
+        const next = !isCameraOff;
+        localStreamRef.current.getVideoTracks().forEach(t => { t.enabled = !next; });
+        setIsCameraOff(next);
+    };
     // ---------- SÜREKLİ KONTROL (sinyalleşme "polling" ile) ----------
     useEffect(() => {
         if (me && pendingCallRequest) {
@@ -21961,8 +21989,13 @@ function CallManager({ me, pendingCallRequest, onRequestConsumed }) {
             React.createElement("div", { style: { position: "absolute", top: 40, left: 0, right: 0, textAlign: "center" } },
                 React.createElement("div", { style: { color: COLORS.white, fontFamily: "Fraunces", fontWeight: 700, fontSize: 20 } }, activeCall.otherName),
                 React.createElement("div", { style: { color: "#B7B4A6", fontFamily: "Inter", fontSize: 12, marginTop: 4 } }, activeCall.status === "calling" ? "Aranıyor..." : activeCall.type === "video" ? "Görüntülü görüşme" : "Sesli görüşme")),
-            React.createElement("button", { onClick: endCall, style: { position: "absolute", bottom: 50, width: 60, height: 60, borderRadius: "50%", background: COLORS.red, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" } },
-                React.createElement("span", { style: { fontSize: 24 } }, "\uD83D\uDCDE")))),
+            React.createElement("div", { style: { position: "absolute", bottom: 50, display: "flex", alignItems: "center", gap: 20 } },
+                React.createElement("button", { onClick: toggleMute, style: { width: 52, height: 52, borderRadius: "50%", background: isMuted ? COLORS.white : "rgba(255,255,255,0.18)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" } },
+                    React.createElement("span", { style: { fontSize: 22 } }, isMuted ? "\uD83D\uDD07" : "\uD83C\uDFA4")),
+                React.createElement("button", { onClick: endCall, style: { width: 64, height: 64, borderRadius: "50%", background: COLORS.red, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" } },
+                    React.createElement("span", { style: { fontSize: 26 } }, "\uD83D\uDCDE")),
+                activeCall.type === "video" && React.createElement("button", { onClick: toggleCamera, style: { width: 52, height: 52, borderRadius: "50%", background: isCameraOff ? COLORS.white : "rgba(255,255,255,0.18)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" } },
+                    React.createElement("span", { style: { fontSize: 22 } }, isCameraOff ? "\uD83D\uDCF7" : "\uD83D\uDCF9"))))),
         callErr && (React.createElement("div", { style: { position: "fixed", bottom: 90, left: "50%", transform: "translateX(-50%)", zIndex: 55, background: COLORS.red, color: "#fff", padding: "8px 14px", borderRadius: 10, fontFamily: "Inter", fontSize: 12 }, onClick: () => setCallErr("") }, callErr))));
 }
 
