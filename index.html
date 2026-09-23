@@ -24361,10 +24361,12 @@ function ProfileWizardStep({ accountType, profileStep, setProfileStep, name, set
     const [nviBirthYear, setNviBirthYear] = useState("");
     const [nviStatus, setNviStatus] = useState("idle"); // idle | checking | verified | mismatch | error
     const [nviCheckedTc, setNviCheckedTc] = useState("");
+    const [nviErrorDetail, setNviErrorDetail] = useState("");
     const verifyNvi = async () => {
         if (!isValidTcFormat(authorizedTc) || nviBirthYear.trim().length !== 4 || !name.trim())
             return;
         setNviStatus("checking");
+        setNviErrorDetail("");
         try {
             const parts = name.trim().split(/\s+/);
             const soyad = parts.length > 1 ? parts[parts.length - 1] : "";
@@ -24374,12 +24376,16 @@ function ProfileWizardStep({ accountType, profileStep, setProfileStep, name, set
                 body: JSON.stringify({ tcKimlikNo: authorizedTc, ad, soyad, dogumYili: nviBirthYear.trim() }),
             });
             const data = await res.json();
-            if (!res.ok)
+            if (!res.ok) {
+                setNviErrorDetail(data.detail || data.error || "");
                 throw new Error(data.error || "hata");
+            }
             setNviStatus(data.verified ? "verified" : "mismatch");
             setNviCheckedTc(authorizedTc);
         }
         catch (e) {
+            if (!nviErrorDetail)
+                setNviErrorDetail(e.message || "");
             setNviStatus("error");
         }
     };
@@ -24472,7 +24478,9 @@ function ProfileWizardStep({ accountType, profileStep, setProfileStep, name, set
                     React.createElement("button", { onClick: verifyNvi, disabled: !isValidTcFormat(authorizedTc) || nviBirthYear.trim().length !== 4 || nviStatus === "checking", style: { ...btnGhost, width: "100%", justifyContent: "center", marginTop: 10, borderColor: COLORS.pineDeep, color: COLORS.pineDeep, opacity: (!isValidTcFormat(authorizedTc) || nviBirthYear.trim().length !== 4) ? 0.5 : 1 } }, nviStatus === "checking" ? "NV\u0130 sorgulan\u0131yor..." : "\uD83D\uDEE1\uFE0F NV\u0130 ile Kimlik Do\u011Frula"),
                     nviStatus === "verified" && React.createElement("div", { style: { marginTop: 8, display: "flex", alignItems: "center", gap: 5, fontFamily: "Inter", fontSize: 11.5, color: COLORS.pineDeep, fontWeight: 600 } }, "\u2713 NV\u0130 ile kimlik do\u011Fruland\u0131"),
                     nviStatus === "mismatch" && React.createElement("div", { style: { marginTop: 8, fontFamily: "Inter", fontSize: 11.5, color: COLORS.red, fontWeight: 600 } }, "\u2715 Bilgiler NV\u0130 kay\u0131tlar\u0131yla e\u015Fle\u015Fmedi \u2014 ad, soyad, TC ve do\u011Fum y\u0131l\u0131n\u0131 kontrol edin."),
-                    nviStatus === "error" && React.createElement("div", { style: { marginTop: 8, fontFamily: "Inter", fontSize: 11.5, color: COLORS.ochre, fontWeight: 600 } }, "\u26A0 NV\u0130 servisine ula\u015F\u0131lamad\u0131, birazdan tekrar deneyin."),
+                    nviStatus === "error" && React.createElement("div", { style: { marginTop: 8 } },
+                        React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11.5, color: COLORS.ochre, fontWeight: 600 } }, "\u26A0 NV\u0130 servisine ula\u015F\u0131lamad\u0131, birazdan tekrar deneyin."),
+                        nviErrorDetail && React.createElement("div", { style: { fontFamily: "IBM Plex Mono", fontSize: 9.5, color: "#8A8776", marginTop: 3, wordBreak: "break-all" } }, nviErrorDetail)),
                     React.createElement("div", { style: { fontFamily: "Inter", fontSize: 9.5, color: "#8A8776", marginTop: 8 } }, "T.C. Nüfus ve Vatandaşlık \u0130şleri Genel Müdürlü\u011Fü'nün resmi, ücretsiz do\u011Frulama servisi (KPSPublic) kullan\u0131l\u0131r. Sadece bilgilerin do\u011Fru olup olmad\u0131\u011F\u0131 kontrol edilir; adres veya ba\u015Fka ki\u015Fisel veri al\u0131nmaz/saklanmaz.")));
             case "clinicName":
                 return React.createElement(FormField, { label: "Klinik / \u0130\u015Fletme Ad\u0131", value: clinicName, onChange: setClinicName, placeholder: "\u00D6rn. Ye\u015Filova Veteriner Klini\u011Fi" });

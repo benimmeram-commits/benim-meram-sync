@@ -385,24 +385,39 @@ app.post("/api/nvi-verify", async (req, res) => {
     </TCKimlikNoDogrula>
   </soap:Body>
 </soap:Envelope>`;
-    const r = await fetch(NVI_SOAP_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "text/xml; charset=utf-8",
-        "SOAPAction": "http://tckimlik.nvi.gov.tr/WS/TCKimlikNoDogrula",
-      },
-      body: soapBody,
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
+    let r;
+    try {
+      r = await fetch(NVI_SOAP_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/xml; charset=utf-8",
+          "SOAPAction": "http://tckimlik.nvi.gov.tr/WS/TCKimlikNoDogrula",
+          "User-Agent": "Mozilla/5.0 (compatible; BenimMeram/1.0; +https://benim-meram-sync.onrender.com)",
+          "Accept": "text/xml",
+        },
+        body: soapBody,
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
     const text = await r.text();
+    if (!r.ok) {
+      console.error(`NVİ HTTP ${r.status}:`, text.slice(0, 500));
+      return res.status(502).json({ error: `NVİ servisi HTTP ${r.status} döndürdü`, detail: text.slice(0, 300) });
+    }
     const match = text.match(/<TCKimlikNoDogrulaResult>(true|false)<\/TCKimlikNoDogrulaResult>/i);
     if (!match) {
-      console.error("NVİ yanıtı beklenmedik formatta:", text.slice(0, 300));
-      return res.status(502).json({ error: "NVİ servisinden geçerli bir yanıt alınamadı" });
+      console.error("NVİ yanıtı beklenmedik formatta:", text.slice(0, 500));
+      return res.status(502).json({ error: "NVİ servisinden geçerli bir yanıt alınamadı", detail: text.slice(0, 300) });
     }
     res.json({ verified: match[1].toLowerCase() === "true" });
   } catch (e) {
     console.error("NVİ doğrulama hatası:", e);
-    res.status(502).json({ error: "NVİ servisine ulaşılamadı" });
+    const detail = e.cause ? `${e.message} (${e.cause.code || e.cause.message || e.cause})` : (e.name === "AbortError" ? "zaman aşımı (12sn)" : e.message);
+    res.status(502).json({ error: "NVİ servisine ulaşılamadı", detail });
   }
 });
 
