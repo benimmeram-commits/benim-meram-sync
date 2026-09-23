@@ -17279,6 +17279,37 @@ exports.version = "19.2.5";
     list: function () { return Promise.resolve({ keys: [] }); }
   };
 
+  // ---- Yerelde yazılıp henüz sunucuya ulaşamamış anahtarları izler ----
+  // Sunucu tekrar erişilebilir olduğunda bu anahtarlar otomatik olarak
+  // sunucuya geri yazılır — aksi halde "sadece bu cihazda" kalan bir
+  // veri (ör. yeni oluşturulan bir ilan), sunucu düzeldiğinde sunucudaki
+  // ESKİ veriyle üzerine yazılıp kullanıcıya "kayboldu" gibi görünür.
+  var dirtyKeys = {}; // "shared:key" veya "personal:key" -> true
+  function dirtyName(key, shared) { return (shared ? "shared:" : "personal:") + key; }
+  function resyncDirtyKeys() {
+    var names = Object.keys(dirtyKeys);
+    if (names.length === 0) return;
+    names.forEach(function (name) {
+      delete dirtyKeys[name];
+      var shared = name.indexOf("shared:") === 0;
+      var key = name.slice(name.indexOf(":") + 1);
+      localBackend.get(key, shared).then(function (local) {
+        if (!local) return;
+        fetch(API_BASE_URL + "/kv/set", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: key, shared: shared, owner: getDeviceId(), value: local.value })
+        }).then(function (r) {
+          if (!r.ok) throw new Error("sunucu hatası: " + r.status);
+          console.info("Gecikmiş veri sunucuya senkronize edildi:", name);
+        }).catch(function (e) {
+          console.warn("Gecikmiş senkronizasyon başarısız, tekrar denenecek:", name, e);
+          dirtyKeys[name] = true; // tekrar denenmek üzere geri işaretle
+        });
+      });
+    });
+  }
+
   // ---- Sunucu tabanlı (çok cihazlı, paylaşımlı) depolama ----
   var remoteBackend = {
     get: function (key, shared) {
@@ -17289,6 +17320,7 @@ exports.version = "19.2.5";
       })
         .then(function (r) { if (!r.ok) throw new Error("sunucu hatası: " + r.status); return r.json(); })
         .then(function (data) {
+          resyncDirtyKeys(); // sunucuya ulaşabildik — bekleyen yerel değişiklikler varsa gönder
           return data.value == null ? null : { key: key, value: data.value, shared: !!shared };
         })
         .catch(function (e) {
@@ -17297,16 +17329,22 @@ exports.version = "19.2.5";
         });
     },
     set: function (key, value, shared) {
+      // Veri kaybını en aza indirmek için her zaman önce yerel yedeğe de yazılır.
+      localBackend.set(key, value, shared);
       return fetch(API_BASE_URL + "/kv/set", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key: key, shared: !!shared, owner: getDeviceId(), value: value })
       })
         .then(function (r) { if (!r.ok) throw new Error("sunucu hatası: " + r.status); return r.json(); })
-        .then(function () { return { key: key, value: value, shared: !!shared }; })
+        .then(function () {
+          resyncDirtyKeys();
+          return { key: key, value: value, shared: !!shared };
+        })
         .catch(function (e) {
           console.warn("Senkronizasyon sunucusuna ulaşılamadı, bu cihazda yerel depolamaya geçiliyor:", e);
-          return localBackend.set(key, value, shared);
+          dirtyKeys[dirtyName(key, shared)] = true;
+          return { key: key, value: value, shared: !!shared };
         });
     },
     delete: function (key, shared) {
@@ -17315,6 +17353,16 @@ exports.version = "19.2.5";
     },
     list: function () { return Promise.resolve({ keys: [] }); }
   };
+
+  // Ba\u011Flant\u0131 kesikken yaz\u0131lan verilerin sunucuya ula\u015Fmas\u0131 i\u00E7in, sayfa a\u00E7\u0131k kald\u0131\u011F\u0131
+  // s\u00FCrece d\u00FCzenli aral\u0131klarla da sunucu durumu yoklan\u0131r (kullan\u0131c\u0131 yeni bir
+  // get/set \u00E7a\u011Fr\u0131s\u0131 yapmasa bile).
+  setInterval(function () {
+    if (Object.keys(dirtyKeys).length === 0) return;
+    fetch(API_BASE_URL + "/health").then(function (r) {
+      if (r.ok) resyncDirtyKeys();
+    }).catch(function () { /* h\u00E2l\u00E2 ula\u015F\u0131lam\u0131yor, sonraki denemede tekrar bak\u0131l\u0131r */ });
+  }, 20000);
 
   // Bu sürüm her zaman sunucu (remote) depolamayı kullanır — aynı adresten servis edildiği için.
   window.storage = remoteBackend;
@@ -17946,40 +17994,101 @@ function Loading() {
         React.createElement(Loader2, { className: "spin", size: 26 }),
         React.createElement("style", null, `.spin{animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}`));
 }
-// ---------- STORAGE HELPERS (window.storage başarısız olursa bellek içi yedeğe düşer) ----------
-const memoryStore = { shared: {}, personal: {} };
-let storageIsHealthy = true; // ilk arızadan sonra tekrar tekrar denemekle uğraşmamak için
-async function rawGet(key, shared) {
-    if (!window.storage || !storageIsHealthy) {
-        const store = shared ? memoryStore.shared : memoryStore.personal;
-        return key in store ? { value: store[key] } : null;
-    }
+// ---------- STORAGE HELPERS (window.storage başarısız olursa localStorage yedeğine düşer) ----------
+// Not: Yedek olarak salt bellek (memory) DEĞİL, localStorage kullanılır — böylece
+// backend'e ulaşılamadığı bir anda kaydedilen veri sayfa yenilense/kapatılsa bile
+// bu cihazda kalıcı olur. Ayrıca "sağlıksız" durum kalıcı değildir: belirli bir
+// bekleme süresinden sonra ger\u00E7ek backend otomatik olarak tekrar denenir — Render gibi
+// \u00FCcretsiz sunucular birka\u00E7 dakika hareketsizlikten sonra "uyuyabilir" ve ilk iste\u011Fe
+// yava\u015F/hatal\u0131 yan\u0131t verebilir; bu ge\u00E7icidir, kal\u0131c\u0131 ar\u0131za de\u011Fildir.
+const UNHEALTHY_RETRY_MS = 15000;
+let unhealthySince = null;
+const dirtyFallbackKeys = new Set(); // ar\u0131za s\u0131ras\u0131nda sadece yerelde g\u00FCncellenen anahtarlar
+function fallbackKey(key, shared) { return `bm_fallback_${shared ? "shared" : "personal"}_${key}`; }
+function fallbackGet(key, shared) {
     try {
-        return await window.storage.get(key, shared);
+        const raw = localStorage.getItem(fallbackKey(key, shared));
+        return raw === null ? null : { value: raw };
+    }
+    catch { return null; }
+}
+function fallbackSet(key, value, shared) {
+    try {
+        localStorage.setItem(fallbackKey(key, shared), value);
+    }
+    catch { /* localStorage da dolu/kapal\u0131ysa yapacak bir \u015Fey yok */ }
+}
+function backendShouldBeTried() {
+    if (!window.storage)
+        return false;
+    if (!unhealthySince)
+        return true;
+    return Date.now() - unhealthySince > UNHEALTHY_RETRY_MS; // soğuma süresi doldu, tekrar dene
+}
+// Backend ar\u0131zadan d\u00F6nd\u00FC\u011F\u00FCnde, ar\u0131za s\u0131ras\u0131nda sadece yerelde g\u00FCncellenmi\u015F
+// (dirty) anahtarlar\u0131 backend'e geri yazar \u2014 aksi halde o s\u0131rada olu\u015Fturulan/
+// de\u011Fi\u015Ftirilen veri (\u00F6r. yeni bir ilan) backend d\u00FCzeldi\u011Finde "kaybolmu\u015F" gibi
+// g\u00F6r\u00FCn\u00FCr (asl\u0131nda hi\u00E7 payla\u015F\u0131lan depoya ula\u015Fmam\u0131\u015Ft\u0131r).
+async function syncDirtyKeysToBackend() {
+    if (dirtyFallbackKeys.size === 0)
+        return;
+    const keys = Array.from(dirtyFallbackKeys);
+    dirtyFallbackKeys.clear();
+    for (const compositeKey of keys) {
+        const shared = compositeKey.startsWith("shared:");
+        const key = compositeKey.slice(compositeKey.indexOf(":") + 1);
+        const local = fallbackGet(key, shared);
+        if (!local)
+            continue;
+        try {
+            await window.storage.set(key, local.value, shared);
+        }
+        catch (e) {
+            console.warn("Gecikmiş senkronizasyon başarısız, tekrar denenecek:", key, e);
+            dirtyFallbackKeys.add(compositeKey); // tekrar denenmek üzere geri ekle
+        }
+    }
+}
+async function rawGet(key, shared) {
+    if (!backendShouldBeTried()) {
+        return fallbackGet(key, shared);
+    }
+    const wasUnhealthy = !!unhealthySince;
+    try {
+        const result = await window.storage.get(key, shared);
+        unhealthySince = null; // ba\u015Far\u0131l\u0131 oldu, sa\u011Fl\u0131kl\u0131 duruma d\u00F6n
+        if (wasUnhealthy)
+            syncDirtyKeysToBackend();
+        return result;
     }
     catch (e) {
-        console.warn("window.storage.get başarısız, bellek yedeğine geçiliyor:", e);
-        storageIsHealthy = false;
-        const store = shared ? memoryStore.shared : memoryStore.personal;
-        return key in store ? { value: store[key] } : null;
+        console.warn("window.storage.get başarısız, yerel yedeğe geçiliyor:", e);
+        unhealthySince = Date.now();
+        return fallbackGet(key, shared);
     }
 }
 async function rawSet(key, value, shared) {
-    const store = shared ? memoryStore.shared : memoryStore.personal;
-    if (!window.storage || !storageIsHealthy) {
-        store[key] = value;
+    // Backend'e yaz\u0131l\u0131p yaz\u0131lamayaca\u011F\u0131ndan ba\u011F\u0131ms\u0131z olarak, veri kayb\u0131n\u0131 en aza
+    // indirmek i\u00E7in her zaman yerel yede\u011Fe de yaz\u0131l\u0131r.
+    fallbackSet(key, value, shared);
+    if (!backendShouldBeTried()) {
+        dirtyFallbackKeys.add(`${shared ? "shared" : "personal"}:${key}`);
         return { ok: true, fallback: true };
     }
+    const wasUnhealthy = !!unhealthySince;
     try {
         const result = await window.storage.set(key, value, shared);
         if (!result)
             throw new Error("window.storage.set null/boş yanıt döndürdü.");
+        unhealthySince = null;
+        if (wasUnhealthy)
+            syncDirtyKeysToBackend();
         return { ok: true };
     }
     catch (e) {
-        console.warn("window.storage.set başarısız, bellek yedeğine geçiliyor:", e);
-        storageIsHealthy = false;
-        store[key] = value; // yine de kullanıcı kaybetmesin diye belleğe yaz
+        console.warn("window.storage.set başarısız, yerel yedeğe geçiliyor:", e);
+        unhealthySince = Date.now();
+        dirtyFallbackKeys.add(`${shared ? "shared" : "personal"}:${key}`);
         return { ok: true, fallback: true };
     }
 }
@@ -18648,11 +18757,13 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
                                     color: tab === mainKey && subTab === sub && breedTab === breed ? COLORS.white : "#8A8776",
                                 } }, breed)))))));
                     })))))))),
-        screen !== "detail" && screen !== "chat" && screen !== "regionChat" && screen !== "search" && screen !== "publicProfile" && screen !== "profileSub" && screen !== "farm" && screen !== "vet" && screen !== "myListings" && (React.createElement("div", { style: { display: "flex", borderTop: `1px solid ${COLORS.line}`, background: COLORS.white, padding: "10px 0 14px" } }, [["home", NavIconHome, "Ana Sayfa"], ["reels", NavIconFilm, "Aktif"], ["create", NavIconPlus, "İlan Ver"], ["chatHub", NavIconChat, "Sohbet"], ["profile", NavIconUser, "Profil"]].map(([s, Icon, l]) => {
+        screen !== "detail" && screen !== "chat" && screen !== "regionChat" && screen !== "search" && screen !== "publicProfile" && screen !== "profileSub" && screen !== "farm" && screen !== "vet" && screen !== "myListings" && (React.createElement("div", { style: screen === "reels" ? { display: "flex", position: "absolute", left: 0, right: 0, bottom: 0, background: "transparent", padding: "10px 0 14px", zIndex: 8 } : { display: "flex", borderTop: `1px solid ${COLORS.line}`, background: COLORS.white, padding: "10px 0 14px" } }, [["home", NavIconHome, "Ana Sayfa"], ["reels", NavIconFilm, "Aktif"], ["create", NavIconPlus, "İlan Ver"], ["chatHub", NavIconChat, "Sohbet"], ["profile", NavIconUser, "Profil"]].map(([s, Icon, l]) => {
             const active = s === "chatHub" ? ["chatHub", "chat", "regionChat"].includes(screen) : screen === s;
+            const onReels = screen === "reels";
+            const iconColor = onReels ? (active ? COLORS.white : "rgba(255,255,255,0.6)") : (active ? COLORS.pineDeep : "#B7B4A6");
             return (React.createElement("button", { key: s, onClick: () => (s === "home" || s === "reels" ? setScreen(s) : goToProtected(s)), style: { flex: 1, background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, cursor: "pointer" } },
-                React.createElement(Icon, { size: s === "create" ? 25 : 19, color: active ? COLORS.pineDeep : "#B7B4A6" }),
-                React.createElement("span", { style: { fontFamily: "Inter", fontSize: 9, color: active ? COLORS.pineDeep : "#B7B4A6", fontWeight: 600 } }, l)));
+                React.createElement(Icon, { size: s === "create" ? 25 : 19, color: iconColor, style: onReels ? { filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.6))" } : undefined }),
+                !onReels && React.createElement("span", { style: { fontFamily: "Inter", fontSize: 9, color: active ? COLORS.pineDeep : "#B7B4A6", fontWeight: 600 } }, l)));
         })))));
 }
 // ---------- ARAMA ----------
@@ -18959,7 +19070,8 @@ function DetailScreen({ item, me, requireAuth, offers, reviews, favorites, toggl
                 dealDone && (React.createElement("div", { style: { marginTop: 10 } }, myReview ? (React.createElement("div", { style: { background: COLORS.paper, borderRadius: 12, padding: 12, fontFamily: "Inter", fontSize: 12 } },
                     "De\u011Ferlendirmeniz: ",
                     React.createElement(StarRow, { value: myReview.stars, size: 13 }),
-                    myReview.comment && React.createElement("div", { style: { color: "#5A574C", marginTop: 4 } }, myReview.comment))) : (React.createElement(ReviewForm, { listingId: item.id, sellerName: item.sellerName, buyerName: me.name, refreshAll: refreshAll }))), React.createElement(SimilarListingsSection, { item: item, listings: listings, reviews: reviews, favorites: favorites, toggleFavorite: toggleFavorite, onOpen: onOpen })))))));
+                    myReview.comment && React.createElement("div", { style: { color: "#5A574C", marginTop: 4 } }, myReview.comment))) : (React.createElement(ReviewForm, { listingId: item.id, sellerName: item.sellerName, buyerName: me.name, refreshAll: refreshAll }))))))),
+        React.createElement(SimilarListingsSection, { item: item, listings: listings, reviews: reviews, favorites: favorites, toggleFavorite: toggleFavorite, onOpen: onOpen })));
 }
 function ReviewForm({ listingId, sellerName, buyerName, refreshAll }) {
     const [stars, setStars] = useState(5);
