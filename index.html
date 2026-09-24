@@ -17575,10 +17575,11 @@ function fileToDataUrl(file) {
         reader.readAsDataURL(file);
     });
 }
-const MAX_VIDEO_BYTES = 6 * 1024 * 1024; // 6 MB — Upstash Redis'in TEK İSTEK için sert üst sınırı
-// 10MB'd\u0131r (resmi belgelerinden do\u011Fruland\u0131). 8MB ham video base64'e \u00E7evrilince ~10.7MB
-// olur ve bu sert s\u0131n\u0131r\u0131 tek ba\u015F\u0131na a\u015Far; bu y\u00FCzden 8MB g\u00FCvenle desteklenemez. 6MB ham
-// video ~8MB base64'e denk gelir ve di\u011Fer ilan verileri i\u00E7in makul bir pay b\u0131rak\u0131r.
+const MAX_VIDEO_BYTES = 6.8 * 1024 * 1024; // 6.8 MB — Upstash Redis'in TEK İSTEK için sert üst
+// sınırı 10MB'dır (resmi belgelerinden doğrulandı). 6.8MB ham video base64'e çevrilince ~9.1MB
+// olur; geri kalan ~0.9MB pay, bu ilanın diğer alanlarına ve (varsa) aynı istekte giden diğer
+// ilanların verisine ayrılır. Bu, sistemin verebileceği en geniş güvenli sınırdır — üzerine
+// çıkmak, ilan biriktikçe kayıtların başarısız olma riskini artırır.
 const convId = (listingId, buyerName, sellerName) => `${listingId}::${buyerName}::${sellerName}`;
 const convParts = (conversationId) => {
     const [listingId, buyerName, sellerName] = conversationId.split("::");
@@ -19236,7 +19237,7 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
             }
             else if (file.type.startsWith("video/")) {
                 if (file.size > MAX_VIDEO_BYTES) {
-                    setMediaError(`${file.name} çok büyük (video için sınır 6 MB).`);
+                    setMediaError(`${file.name} çok büyük (video için sınır 6,8 MB).`);
                     continue;
                 }
                 try {
@@ -19429,7 +19430,7 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
                             "Kamera ile \u00C7ek"),
                         React.createElement("label", { htmlFor: "media-input", style: { flex: 1, display: "flex", alignItems: "center", justifyContent: "center", border: `1.5px dashed ${COLORS.line}`, borderRadius: 12, padding: "14px 10px", textAlign: "center", fontFamily: "Inter", fontSize: 12, color: "#8A8776", cursor: media.length >= 6 ? "not-allowed" : "pointer" } }, "\uD83D\uDCC1 Galeriden Se\u00E7")),
                     React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776", marginTop: 6, textAlign: "center" } },
-                        mediaBusy ? "İşleniyor..." : `${media.length}/6 \u2014 video maks. 6 MB`),
+                        mediaBusy ? "İşleniyor..." : `${media.length}/6 \u2014 video maks. 6,8 MB`),
                     React.createElement("div", { style: { fontFamily: "Inter", fontSize: 9.5, color: "#8A8776", marginTop: 3, textAlign: "center" } }, "\uD83D\uDCF1 Fotoğraflar Reels'te tam ekran g\u00F6r\u00FCnmesi i\u00E7in dikey (9:16) formata otomatik ayarlan\u0131r \u2014 en iyi sonu\u00E7 i\u00E7in dikey \u00E7ekin."),
                     mediaError && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11, marginTop: 4 } }, mediaError),
                     media.length > 0 && (React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 } }, media.map((m, i) => (React.createElement("div", { key: i, style: { position: "relative", width: 62, height: 62, borderRadius: 8, overflow: "hidden", border: `1px solid ${COLORS.line}`, background: "#000" } },
@@ -19707,7 +19708,7 @@ function SellerListingRow({ listing, onOpen, refreshAll }) {
             }
             else if (file.type.startsWith("video/")) {
                 if (file.size > MAX_VIDEO_BYTES) {
-                    setMediaError(`${file.name} çok büyük (video için sınır 6 MB).`);
+                    setMediaError(`${file.name} çok büyük (video için sınır 6,8 MB).`);
                     continue;
                 }
                 try {
@@ -24854,7 +24855,7 @@ function MyListingCard({ listing, onOpen, refreshAll }) {
             }
             else if (file.type.startsWith("video/")) {
                 if (file.size > MAX_VIDEO_BYTES) {
-                    setMediaError(`${file.name} çok büyük (video için sınır 6 MB).`);
+                    setMediaError(`${file.name} çok büyük (video için sınır 6,8 MB).`);
                     continue;
                 }
                 try {

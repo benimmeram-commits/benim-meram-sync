@@ -25,7 +25,7 @@ const path = require("path");
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: "9mb" }));
+app.use(express.json({ limit: "9.6mb" }));
 
 const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
 const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
