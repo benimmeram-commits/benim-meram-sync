@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Benim Meram</title>
 
 <div id="error-box" style="display:none; position:fixed; top:0; left:0; right:0; max-height:40vh; background:#fff8f6; border-bottom:2px solid #B3432B; padding:12px 16px; font-family:monospace; font-size:11px; color:#B3432B; overflow:auto; z-index:9999; white-space:pre-wrap; box-shadow:0 4px 12px rgba(0,0,0,0.15);"></div>
@@ -18460,6 +18460,14 @@ function ListingCard({ item, reviews, favorites, toggleFavorite, onOpen }) {
 // ---------- MAIN APP ----------
 function BenimMeram() {
     const [loading, setLoading] = useState(true);
+    const [isMobileViewport, setIsMobileViewport] = useState(() => {
+        try { return window.innerWidth <= 500; } catch { return true; }
+    });
+    useEffect(() => {
+        const onResize = () => setIsMobileViewport(window.innerWidth <= 500);
+        window.addEventListener("resize", onResize);
+        return () => window.removeEventListener("resize", onResize);
+    }, []);
     const [me, setMe] = useState(null);
     const [listings, setListings] = useState([]);
     const [requests, setRequests] = useState([]);
@@ -18569,6 +18577,24 @@ function BenimMeram() {
             React.createElement("style", null, fontImport),
             React.createElement(Loading, null));
     }
+    const appShellNode = (React.createElement(React.Fragment, null,
+        React.createElement(AppShell, { me: me, setMe: setMe, requireAuth: requireAuth, listings: listings, requests: requests, offers: offers, reviews: reviews, messages: messages, members: members, pricing: pricing, customBreeds: customBreeds, customSubcategories: customSubcategories, favorites: favorites, toggleFavorite: toggleFavorite, likes: likes, favoritesLog: favoritesLog, refreshAll: refreshAll, screen: screen, setScreen: setScreen, tab: tab, setTab: setTab, subTab: subTab, setSubTab: setSubTab, breedTab: breedTab, setBreedTab: setBreedTab, drawer: drawer, setDrawer: setDrawer, selected: selected, setSelected: setSelected }),
+        showAuth && (React.createElement("div", { style: { position: "absolute", inset: 0, background: COLORS.paper, zIndex: 30, display: "flex", flexDirection: "column" } },
+            React.createElement(Onboarding, { onDone: (m) => { setMe(m); setShowAuth(false); }, onCancel: () => setShowAuth(false), onEmployeeLogin: (session) => { setEmployeeSession(session); setShowAuth(false); } })))));
+    const mainAppNode = employeeSession ? (
+        React.createElement(EmployeeShell, { session: employeeSession, onLogout: async () => { await savePersonal("employeeSession", null); setEmployeeSession(null); } })
+    ) : isMobileViewport ? (React.createElement("div", { style: { width: "100vw", height: "100dvh", background: COLORS.paper, overflow: "hidden", position: "relative", display: "flex", flexDirection: "column" } },
+        React.createElement("style", null, `@keyframes pulseDot {0%{transform:scale(1);opacity:.7}70%{transform:scale(2.6);opacity:0}100%{opacity:0}}`),
+        appShellNode)) : (React.createElement("div", { style: { width: 360, height: 700, background: COLORS.paper, borderRadius: 34, border: `10px solid ${COLORS.ink}`, overflow: "hidden", position: "relative", boxShadow: "0 30px 60px rgba(0,0,0,0.35)", display: "flex", flexDirection: "column" } },
+        React.createElement("style", null, `@keyframes pulseDot {0%{transform:scale(1);opacity:.7}70%{transform:scale(2.6);opacity:0}100%{opacity:0}}`),
+        appShellNode));
+    if (isMobileViewport && effectiveView !== "admin") {
+        // Ger\u00E7ek bir mobil cihazda: sahte telefon \u00E7er\u00E7evesi / \u00F6nizleme metinleri olmadan,
+        // do\u011Frudan tam ekran ger\u00E7ek bir uygulama gibi g\u00F6r\u00FCn\u00FCr.
+        return React.createElement("div", { style: { position: "fixed", inset: 0, background: COLORS.paper, paddingTop: "env(safe-area-inset-top, 0px)", paddingBottom: "env(safe-area-inset-bottom, 0px)" } },
+            React.createElement("style", null, fontImport),
+            mainAppNode);
+    }
     return (React.createElement("div", { style: { minHeight: "100vh", background: `linear-gradient(180deg, ${COLORS.paper}, #ECE9DF)`, display: "flex", flexDirection: "column", alignItems: "center", padding: "30px 16px 60px", fontFamily: "Inter" } },
         React.createElement("style", null, fontImport),
         React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776", marginBottom: 6, textAlign: "center", maxWidth: 440 } }, "Ger\u00E7ek verilerle \u00E7al\u0131\u015Fan pazar yeri. Bu uygulamay\u0131 kullanan herkes ayn\u0131 ilanlar\u0131 ve talepleri g\u00F6r\u00FCr."),
@@ -18579,13 +18605,7 @@ function BenimMeram() {
         isAdminGateOpen && (React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 24, background: COLORS.white, padding: 4, borderRadius: 12, border: `1px solid ${COLORS.line}` } },
             React.createElement("button", { onClick: () => setView("app"), style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5, padding: "8px 16px", borderRadius: 8, border: "none", cursor: "pointer", background: view === "app" ? COLORS.pineDeep : "transparent", color: view === "app" ? COLORS.white : "#5A574C" } }, "Uygulama"),
             React.createElement("button", { onClick: () => setView("admin"), style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5, padding: "8px 16px", borderRadius: 8, border: "none", cursor: "pointer", background: view === "admin" ? COLORS.pineDeep : "transparent", color: view === "admin" ? COLORS.white : "#5A574C" } }, "Y\u00F6netim Paneli"))),
-        effectiveView === "admin" ? (adminSession ? (React.createElement(AdminPanel, { session: adminSession, onLogout: async () => { await logAdminLogin({ tcNo: adminSession.tcNo, name: adminSession.name, role: adminSession.role, success: true, reason: "çıkış yapıldı" }); await savePersonal("adminSession", null); setAdminSession(null); await refreshAll(); }, listings: listings, requests: requests, offers: offers, members: members, messages: messages, reviews: reviews, announcement: announcement, pricing: pricing, adminAccounts: adminAccounts, adminLoginLogs: adminLoginLogs, auditLog: auditLog, reports: reports, customBreeds: customBreeds, customSubcategories: customSubcategories, refreshAll: refreshAll })) : (React.createElement(AdminAuth, { adminAccounts: adminAccounts, refreshAll: refreshAll, onLogin: async (session) => { await savePersonal("adminSession", session); setAdminSession(session); } }))) : employeeSession ? (
-            React.createElement(EmployeeShell, { session: employeeSession, onLogout: async () => { await savePersonal("employeeSession", null); setEmployeeSession(null); } })
-        ) : (React.createElement("div", { style: { width: 360, height: 700, background: COLORS.paper, borderRadius: 34, border: `10px solid ${COLORS.ink}`, overflow: "hidden", position: "relative", boxShadow: "0 30px 60px rgba(0,0,0,0.35)", display: "flex", flexDirection: "column" } },
-            React.createElement("style", null, `@keyframes pulseDot {0%{transform:scale(1);opacity:.7}70%{transform:scale(2.6);opacity:0}100%{opacity:0}}`),
-            React.createElement(AppShell, { me: me, setMe: setMe, requireAuth: requireAuth, listings: listings, requests: requests, offers: offers, reviews: reviews, messages: messages, members: members, pricing: pricing, customBreeds: customBreeds, customSubcategories: customSubcategories, favorites: favorites, toggleFavorite: toggleFavorite, likes: likes, favoritesLog: favoritesLog, refreshAll: refreshAll, screen: screen, setScreen: setScreen, tab: tab, setTab: setTab, subTab: subTab, setSubTab: setSubTab, breedTab: breedTab, setBreedTab: setBreedTab, drawer: drawer, setDrawer: setDrawer, selected: selected, setSelected: setSelected }),
-            showAuth && (React.createElement("div", { style: { position: "absolute", inset: 0, background: COLORS.paper, zIndex: 30, display: "flex", flexDirection: "column" } },
-                React.createElement(Onboarding, { onDone: (m) => { setMe(m); setShowAuth(false); }, onCancel: () => setShowAuth(false), onEmployeeLogin: (session) => { setEmployeeSession(session); setShowAuth(false); } })))))));
+        effectiveView === "admin" ? (adminSession ? (React.createElement(AdminPanel, { session: adminSession, onLogout: async () => { await logAdminLogin({ tcNo: adminSession.tcNo, name: adminSession.name, role: adminSession.role, success: true, reason: "çıkış yapıldı" }); await savePersonal("adminSession", null); setAdminSession(null); await refreshAll(); }, listings: listings, requests: requests, offers: offers, members: members, messages: messages, reviews: reviews, announcement: announcement, pricing: pricing, adminAccounts: adminAccounts, adminLoginLogs: adminLoginLogs, auditLog: auditLog, reports: reports, customBreeds: customBreeds, customSubcategories: customSubcategories, refreshAll: refreshAll })) : (React.createElement(AdminAuth, { adminAccounts: adminAccounts, refreshAll: refreshAll, onLogin: async (session) => { await savePersonal("adminSession", session); setAdminSession(session); } }))) : mainAppNode));
 }
 // ---------- APP SHELL (giriş yapılmış veya misafir kullanıcı) ----------
 function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews, messages, members, pricing, customBreeds, customSubcategories, favorites, toggleFavorite, likes, favoritesLog, refreshAll, screen, setScreen, tab, setTab, subTab, setSubTab, breedTab, setBreedTab, drawer, setDrawer, selected, setSelected }) {
