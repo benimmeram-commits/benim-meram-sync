@@ -17295,11 +17295,11 @@ exports.version = "19.2.5";
       var key = name.slice(name.indexOf(":") + 1);
       localBackend.get(key, shared).then(function (local) {
         if (!local) return;
-        fetch(API_BASE_URL + "/kv/set", {
+        fetchWithTimeout(API_BASE_URL + "/kv/set", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ key: key, shared: shared, owner: getDeviceId(), value: local.value })
-        }).then(function (r) {
+        }, 35000).then(function (r) {
           if (!r.ok) throw new Error("sunucu hatası: " + r.status);
           console.info("Gecikmiş veri sunucuya senkronize edildi:", name);
         }).catch(function (e) {
@@ -17310,21 +17310,33 @@ exports.version = "19.2.5";
     });
   }
 
+  // fetch() içi tarayıcıda VARSAYILAN OLARAK bir zaman aşımı (timeout) YOKTUR — b\u00FCy\u00FCk
+  // video verisi i\u00E7eren bir istek, sunucu yava\u015F yan\u0131t verdi\u011Finde veya hi\u00E7 yan\u0131t
+  // vermedi\u011Finde SONSUZA KADAR bekleyebilir, bu da "Yay\u0131nlan\u0131yor..." yaz\u0131s\u0131n\u0131n hi\u00E7
+  // bitmemesine yol a\u00E7ar. Bu yard\u0131mc\u0131, isteği belirli bir s\u00FCre sonra iptal ederek
+  // \u00E7a\u011Fr\u0131n\u0131n normal .catch() yoluna d\u00FC\u015Fmesini (ve yerel yede\u011Fe ge\u00E7mesini) sağlar.
+  function fetchWithTimeout(url, options, timeoutMs) {
+    var controller = new AbortController();
+    var timer = setTimeout(function () { controller.abort(); }, timeoutMs);
+    return fetch(url, Object.assign({}, options, { signal: controller.signal }))
+      .finally(function () { clearTimeout(timer); });
+  }
+
   // ---- Sunucu tabanlı (çok cihazlı, paylaşımlı) depolama ----
   var remoteBackend = {
     get: function (key, shared) {
-      return fetch(API_BASE_URL + "/kv/get", {
+      return fetchWithTimeout(API_BASE_URL + "/kv/get", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key: key, shared: !!shared, owner: getDeviceId() })
-      })
+      }, 20000)
         .then(function (r) { if (!r.ok) throw new Error("sunucu hatası: " + r.status); return r.json(); })
         .then(function (data) {
           resyncDirtyKeys(); // sunucuya ulaşabildik — bekleyen yerel değişiklikler varsa gönder
           return data.value == null ? null : { key: key, value: data.value, shared: !!shared };
         })
         .catch(function (e) {
-          console.warn("Senkronizasyon sunucusuna ulaşılamadı, bu cihazda yerel depolamaya geçiliyor:", e);
+          console.warn("Senkronizasyon sunucusuna ulaşılamadı (veya zaman aşımına uğradı), bu cihazda yerel depolamaya geçiliyor:", e);
           return localBackend.get(key, shared);
         });
     },
@@ -17337,18 +17349,21 @@ exports.version = "19.2.5";
       localBackend.set(key, value, shared).catch(function (e) {
         console.warn("Yerel yedek yazılamadı (kota dolu olabilir), devam ediliyor:", key, e);
       });
-      return fetch(API_BASE_URL + "/kv/set", {
+      // Video/foto\u011Fraf i\u00E7eren b\u00FCy\u00FCk yükler i\u00E7in daha uzun bir s\u00FCre (35sn) tan\u0131n\u0131r —
+      // k\u00FC\u00E7\u00FCk bir metin g\u00FCncellemesinden \u00E7ok daha fazla veri ta\u015F\u0131yabilir.
+      var timeoutMs = value && value.length > 500000 ? 35000 : 20000;
+      return fetchWithTimeout(API_BASE_URL + "/kv/set", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key: key, shared: !!shared, owner: getDeviceId(), value: value })
-      })
+      }, timeoutMs)
         .then(function (r) { if (!r.ok) throw new Error("sunucu hatası: " + r.status); return r.json(); })
         .then(function () {
           resyncDirtyKeys();
           return { key: key, value: value, shared: !!shared };
         })
         .catch(function (e) {
-          console.warn("Senkronizasyon sunucusuna ulaşılamadı, bu cihazda yerel depolamaya geçiliyor:", e);
+          console.warn("Senkronizasyon sunucusuna ulaşılamadı (veya zaman aşımına uğradı), bu cihazda yerel depolamaya geçiliyor:", e);
           dirtyKeys[dirtyName(key, shared)] = true;
           return { key: key, value: value, shared: !!shared };
         });
