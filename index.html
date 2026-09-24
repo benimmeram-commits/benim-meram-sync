@@ -17575,9 +17575,10 @@ function fileToDataUrl(file) {
         reader.readAsDataURL(file);
     });
 }
-const MAX_VIDEO_BYTES = 5 * 1024 * 1024; // 5 MB — sunucu/Upstash istek boyutu sınırları (10MB) ve
-// base64 kodlamasının getirdiği ~%33 büyüme + biriken diğer ilanların toplam boyutu göz önüne
-// alınarak güvenli bir üst sınır seçildi.
+const MAX_VIDEO_BYTES = 6 * 1024 * 1024; // 6 MB — Upstash Redis'in TEK İSTEK için sert üst sınırı
+// 10MB'd\u0131r (resmi belgelerinden do\u011Fruland\u0131). 8MB ham video base64'e \u00E7evrilince ~10.7MB
+// olur ve bu sert s\u0131n\u0131r\u0131 tek ba\u015F\u0131na a\u015Far; bu y\u00FCzden 8MB g\u00FCvenle desteklenemez. 6MB ham
+// video ~8MB base64'e denk gelir ve di\u011Fer ilan verileri i\u00E7in makul bir pay b\u0131rak\u0131r.
 const convId = (listingId, buyerName, sellerName) => `${listingId}::${buyerName}::${sellerName}`;
 const convParts = (conversationId) => {
     const [listingId, buyerName, sellerName] = conversationId.split("::");
@@ -18887,7 +18888,7 @@ function ReelItem({ item, isFav, toggleFavorite, likeCount, favCount, isLiked, o
             React.createElement("span", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 11, color: COLORS.white, filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.55))" } }, favCount)),
         React.createElement("button", { onClick: (e) => { e.stopPropagation(); onShare(item); }, style: { position: "absolute", right: 13, bottom: 128, width: 44, height: 44, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", zIndex: 3 } },
             React.createElement(Send, { size: 26, color: COLORS.white, style: { filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.55))" } })),
-        React.createElement("div", { style: { position: "relative", padding: "0 16px 22px", width: "100%", zIndex: 2 } },
+        React.createElement("div", { style: { position: "relative", padding: "0 16px 78px", width: "100%", zIndex: 2 } },
             React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 19, color: COLORS.white } },
                 item.breed,
                 " ",
@@ -19214,15 +19215,20 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
         const files = Array.from(e.target.files || []);
         setMediaError("");
         setMediaBusy(true);
+        let count = media.length; // her dosyada güncellenen yerel sayaç — React state'in
+        // eski (stale) closure değerine değil, bu parti içindeki gerçek ilerlemeye dayanır
         for (const file of files) {
-            if (media.length >= 6) {
+            if (count >= 6) {
                 setMediaError("En fazla 6 dosya ekleyebilirsiniz.");
                 break;
             }
             if (file.type.startsWith("image/")) {
                 try {
                     const dataUrl = await resizeImageFileToReels(file);
+                    if (!dataUrl || dataUrl.length < 100)
+                        throw new Error("boş görsel üretildi");
                     setMedia(prev => [...prev, { type: "image", dataUrl, name: file.name }]);
+                    count++;
                 }
                 catch {
                     setMediaError("Fotoğraf işlenemedi: " + file.name);
@@ -19230,12 +19236,13 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
             }
             else if (file.type.startsWith("video/")) {
                 if (file.size > MAX_VIDEO_BYTES) {
-                    setMediaError(`${file.name} çok büyük (video için sınır 5 MB).`);
+                    setMediaError(`${file.name} çok büyük (video için sınır 6 MB).`);
                     continue;
                 }
                 try {
                     const dataUrl = await fileToDataUrl(file);
                     setMedia(prev => [...prev, { type: "video", dataUrl, name: file.name }]);
+                    count++;
                 }
                 catch {
                     setMediaError("Video işlenemedi: " + file.name);
@@ -19422,7 +19429,7 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
                             "Kamera ile \u00C7ek"),
                         React.createElement("label", { htmlFor: "media-input", style: { flex: 1, display: "flex", alignItems: "center", justifyContent: "center", border: `1.5px dashed ${COLORS.line}`, borderRadius: 12, padding: "14px 10px", textAlign: "center", fontFamily: "Inter", fontSize: 12, color: "#8A8776", cursor: media.length >= 6 ? "not-allowed" : "pointer" } }, "\uD83D\uDCC1 Galeriden Se\u00E7")),
                     React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776", marginTop: 6, textAlign: "center" } },
-                        mediaBusy ? "İşleniyor..." : `${media.length}/6 \u2014 video maks. 5 MB`),
+                        mediaBusy ? "İşleniyor..." : `${media.length}/6 \u2014 video maks. 6 MB`),
                     React.createElement("div", { style: { fontFamily: "Inter", fontSize: 9.5, color: "#8A8776", marginTop: 3, textAlign: "center" } }, "\uD83D\uDCF1 Fotoğraflar Reels'te tam ekran g\u00F6r\u00FCnmesi i\u00E7in dikey (9:16) formata otomatik ayarlan\u0131r \u2014 en iyi sonu\u00E7 i\u00E7in dikey \u00E7ekin."),
                     mediaError && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11, marginTop: 4 } }, mediaError),
                     media.length > 0 && (React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 } }, media.map((m, i) => (React.createElement("div", { key: i, style: { position: "relative", width: 62, height: 62, borderRadius: 8, overflow: "hidden", border: `1px solid ${COLORS.line}`, background: "#000" } },
@@ -19679,15 +19686,20 @@ function SellerListingRow({ listing, onOpen, refreshAll }) {
         const files = Array.from(e.target.files || []);
         setMediaError("");
         setMediaBusy(true);
+        let count = media.length; // her dosyada güncellenen yerel sayaç — React state'in
+        // eski (stale) closure değerine değil, bu parti içindeki gerçek ilerlemeye dayanır
         for (const file of files) {
-            if (media.length >= 6) {
+            if (count >= 6) {
                 setMediaError("En fazla 6 dosya ekleyebilirsiniz.");
                 break;
             }
             if (file.type.startsWith("image/")) {
                 try {
                     const dataUrl = await resizeImageFileToReels(file);
+                    if (!dataUrl || dataUrl.length < 100)
+                        throw new Error("boş görsel üretildi");
                     setMedia(prev => [...prev, { type: "image", dataUrl, name: file.name }]);
+                    count++;
                 }
                 catch {
                     setMediaError("Fotoğraf işlenemedi: " + file.name);
@@ -19695,12 +19707,13 @@ function SellerListingRow({ listing, onOpen, refreshAll }) {
             }
             else if (file.type.startsWith("video/")) {
                 if (file.size > MAX_VIDEO_BYTES) {
-                    setMediaError(`${file.name} çok büyük (video için sınır 5 MB).`);
+                    setMediaError(`${file.name} çok büyük (video için sınır 6 MB).`);
                     continue;
                 }
                 try {
                     const dataUrl = await fileToDataUrl(file);
                     setMedia(prev => [...prev, { type: "video", dataUrl, name: file.name }]);
+                    count++;
                 }
                 catch {
                     setMediaError("Video işlenemedi: " + file.name);
@@ -24820,15 +24833,20 @@ function MyListingCard({ listing, onOpen, refreshAll }) {
         const files = Array.from(e.target.files || []);
         setMediaError("");
         setMediaBusy(true);
+        let count = media.length; // her dosyada güncellenen yerel sayaç — React state'in
+        // eski (stale) closure değerine değil, bu parti içindeki gerçek ilerlemeye dayanır
         for (const file of files) {
-            if (media.length >= 6) {
+            if (count >= 6) {
                 setMediaError("En fazla 6 dosya ekleyebilirsiniz.");
                 break;
             }
             if (file.type.startsWith("image/")) {
                 try {
                     const dataUrl = await resizeImageFileToReels(file);
+                    if (!dataUrl || dataUrl.length < 100)
+                        throw new Error("boş görsel üretildi");
                     setMedia(prev => [...prev, { type: "image", dataUrl, name: file.name }]);
+                    count++;
                 }
                 catch {
                     setMediaError("Fotoğraf işlenemedi: " + file.name);
@@ -24836,12 +24854,13 @@ function MyListingCard({ listing, onOpen, refreshAll }) {
             }
             else if (file.type.startsWith("video/")) {
                 if (file.size > MAX_VIDEO_BYTES) {
-                    setMediaError(`${file.name} çok büyük (video için sınır 5 MB).`);
+                    setMediaError(`${file.name} çok büyük (video için sınır 6 MB).`);
                     continue;
                 }
                 try {
                     const dataUrl = await fileToDataUrl(file);
                     setMedia(prev => [...prev, { type: "video", dataUrl, name: file.name }]);
+                    count++;
                 }
                 catch {
                     setMediaError("Video işlenemedi: " + file.name);
