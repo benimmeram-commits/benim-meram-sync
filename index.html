@@ -17500,32 +17500,52 @@ const TL = (n) => Number(n || 0).toLocaleString("tr-TR") + " ₺";
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 // ---------- MEDYA (FOTOĞRAF/VİDEO) YARDIMCILARI ----------
 function resizeImageFile(file, maxDim) {
+    const nameLower = (file.name || "").toLowerCase();
+    const isHeic = file.type === "image/heic" || file.type === "image/heif" || nameLower.endsWith(".heic") || nameLower.endsWith(".heif");
+    if (isHeic) {
+        return fileToDataUrl(file);
+    }
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (e) => {
             const img = new Image();
-            img.onload = () => {
-                let width = img.width, height = img.height;
-                if (width > maxDim || height > maxDim) {
-                    if (width > height) {
-                        height = Math.round(height * maxDim / width);
-                        width = maxDim;
+            const draw = () => {
+                try {
+                    let width = img.width, height = img.height;
+                    if (!width || !height) {
+                        resolve(e.target.result);
+                        return;
                     }
-                    else {
-                        width = Math.round(width * maxDim / height);
-                        height = maxDim;
+                    if (width > maxDim || height > maxDim) {
+                        if (width > height) {
+                            height = Math.round(height * maxDim / width);
+                            width = maxDim;
+                        }
+                        else {
+                            width = Math.round(width * maxDim / height);
+                            height = maxDim;
+                        }
                     }
+                    const canvas = document.createElement("canvas");
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext("2d");
+                    ctx.fillStyle = "#FFFFFF";
+                    ctx.fillRect(0, 0, width, height);
+                    ctx.drawImage(img, 0, 0, width, height);
+                    resolve(canvas.toDataURL("image/jpeg", 0.82));
                 }
-                const canvas = document.createElement("canvas");
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext("2d");
-                ctx.fillStyle = "#FFFFFF";
-                ctx.fillRect(0, 0, width, height);
-                ctx.drawImage(img, 0, 0, width, height);
-                resolve(canvas.toDataURL("image/jpeg", 0.82));
+                catch (err) {
+                    resolve(e.target.result);
+                }
             };
-            img.onerror = () => reject(new Error("Görsel okunamadı"));
+            if (img.decode) {
+                img.decode().then(draw).catch(draw);
+            }
+            else {
+                img.onload = draw;
+            }
+            img.onerror = () => resolve(e.target.result);
             img.src = e.target.result;
         };
         reader.onerror = () => reject(new Error("Dosya okunamadı"));
@@ -17539,43 +17559,73 @@ function resizeImageFile(file, maxDim) {
 function resizeImageFileToReels(file) {
     const TARGET_W = 720, TARGET_H = 1280; // 9:16 — video için daha fazla yer bırakmak amacıyla
     // makul ama daha tutumlu bir çözünürlük (mobilde hâlâ net görünür).
+    // iPhone'larda varsay\u0131lan foto\u011Fraf format\u0131 olan HEIC/HEIF, ma\u015Faüst\u00FC taray\u0131c\u0131larda
+    // (ve baz\u0131 mobil taray\u0131c\u0131larda) <canvas>'a d\u00FCzg\u00FCn \u00E7izilemiyor \u2014 sonu\u00E7 sessizce BO\u015F/
+    // BEYAZ \u00E7\u0131k\u0131yor, hata da vermiyor. Bu format\u0131 tespit edip canvas i\u015Flemeyi tamamen
+    // atlamak, foto\u011Fraf\u0131 (dikey k\u0131rp\u0131lmam\u0131\u015F olsa da) do\u011Fru şekilde kaydetmeyi sağlar.
+    const nameLower = (file.name || "").toLowerCase();
+    const isHeic = file.type === "image/heic" || file.type === "image/heif" || nameLower.endsWith(".heic") || nameLower.endsWith(".heif");
+    if (isHeic) {
+        return fileToDataUrl(file);
+    }
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (e) => {
             const img = new Image();
-            img.onload = () => {
-                const srcRatio = img.width / img.height;
-                const targetRatio = TARGET_W / TARGET_H;
-                let sx, sy, sw, sh;
-                if (srcRatio > targetRatio) {
-                    // Kaynak daha geni\u015F \u2014 yanlardan k\u0131rp
-                    sh = img.height;
-                    sw = sh * targetRatio;
-                    sx = (img.width - sw) / 2;
-                    sy = 0;
+            const draw = () => {
+                try {
+                    const srcRatio = img.width / img.height;
+                    const targetRatio = TARGET_W / TARGET_H;
+                    let sx, sy, sw, sh;
+                    if (srcRatio > targetRatio) {
+                        // Kaynak daha geni\u015F \u2014 yanlardan k\u0131rp
+                        sh = img.height;
+                        sw = sh * targetRatio;
+                        sx = (img.width - sw) / 2;
+                        sy = 0;
+                    }
+                    else {
+                        // Kaynak daha dar/uzun \u2014 üst-alttan k\u0131rp
+                        sw = img.width;
+                        sh = sw / targetRatio;
+                        sx = 0;
+                        sy = (img.height - sh) / 2;
+                    }
+                    if (!img.width || !img.height) {
+                        // Boyutu okunamayan/boz\u0131k bir g\u00F6rsel \u2014 i\u015Flenmemi\u015F halini kullan
+                        resolve(e.target.result);
+                        return;
+                    }
+                    // \u00C7ok k\u00FC\u00E7\u00FCk kaynaklar\u0131 gereksiz b\u00FCy\u00FCtmemek i\u00E7in \u00E7\u0131k\u0131\u015F boyutunu s\u0131n\u0131rla
+                    const outW = Math.min(TARGET_W, Math.round(sw));
+                    const outH = Math.round(outW / targetRatio);
+                    const canvas = document.createElement("canvas");
+                    canvas.width = outW;
+                    canvas.height = outH;
+                    const ctx = canvas.getContext("2d");
+                    // JPEG şeffaflığı desteklemez; \u015Feffaf (PNG) kaynaklar \u00E7izilmeden \u00F6nce
+                    // arka plan doldurulmazsa şeffaf alanlar SİYAH olarak dışa aktarılır.
+                    ctx.fillStyle = "#FFFFFF";
+                    ctx.fillRect(0, 0, outW, outH);
+                    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
+                    resolve(canvas.toDataURL("image/jpeg", 0.78));
                 }
-                else {
-                    // Kaynak daha dar/uzun \u2014 üst-alttan k\u0131rp
-                    sw = img.width;
-                    sh = sw / targetRatio;
-                    sx = 0;
-                    sy = (img.height - sh) / 2;
+                catch (err) {
+                    // Canvas \u00E7izimi herhangi bir sebeple ba\u015Far\u0131s\u0131z olursa (\u00F6r. desteklenmeyen
+                    // format), bo\u015F/beyaz bir sonu\u00E7 vermek yerine i\u015Flenmemi\u015F orijinal g\u00F6rseli kullan.
+                    resolve(e.target.result);
                 }
-                // \u00C7ok k\u00FC\u00E7\u00FCk kaynaklar\u0131 gereksiz b\u00FCy\u00FCtmemek i\u00E7in \u00E7\u0131k\u0131\u015F boyutunu s\u0131n\u0131rla
-                const outW = Math.min(TARGET_W, Math.round(sw));
-                const outH = Math.round(outW / targetRatio);
-                const canvas = document.createElement("canvas");
-                canvas.width = outW;
-                canvas.height = outH;
-                const ctx = canvas.getContext("2d");
-                // JPEG şeffaflığı desteklemez; \u015Feffaf (PNG) kaynaklar \u00E7izilmeden \u00F6nce
-                // arka plan doldurulmazsa şeffaf alanlar SİYAH olarak dışa aktarılır.
-                ctx.fillStyle = "#FFFFFF";
-                ctx.fillRect(0, 0, outW, outH);
-                ctx.drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
-                resolve(canvas.toDataURL("image/jpeg", 0.78));
             };
-            img.onerror = () => reject(new Error("Görsel okunamadı"));
+            // img.decode() taray\u0131c\u0131n\u0131n g\u00F6rseli TAMAMEN \u00E7\u00F6zmesini (decode) bekler; sadece
+            // img.onload'a g\u00FCvenmekten daha g\u00FCvenilirdir \u2014 baz\u0131 taray\u0131c\u0131larda onload,
+            // piksel verisi \u00E7izime tam haz\u0131r olmadan tetiklenebiliyor.
+            if (img.decode) {
+                img.decode().then(draw).catch(draw);
+            }
+            else {
+                img.onload = draw;
+            }
+            img.onerror = () => resolve(e.target.result); // i\u015Fleme ba\u015Far\u0131s\u0131z olursa orijinali kullan
             img.src = e.target.result;
         };
         reader.onerror = () => reject(new Error("Dosya okunamadı"));
