@@ -17522,7 +17522,8 @@ function resizeImageFile(file, maxDim) {
 // tutarl\u0131, tam ekran bir g\u00F6r\u00FCn\u00FCme sahip olur. \u0130lan detay\u0131nda da object-fit:cover
 // ile ayn\u0131 g\u00F6rsel kullan\u0131l\u0131r, dolay\u0131s\u0131yla oradaki g\u00F6r\u00FCn\u00FCm de tutarl\u0131 kal\u0131r.
 function resizeImageFileToReels(file) {
-    const TARGET_W = 1080, TARGET_H = 1920; // 9:16
+    const TARGET_W = 720, TARGET_H = 1280; // 9:16 — video için daha fazla yer bırakmak amacıyla
+    // makul ama daha tutumlu bir çözünürlük (mobilde hâlâ net görünür).
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -17557,7 +17558,7 @@ function resizeImageFileToReels(file) {
                 ctx.fillStyle = "#FFFFFF";
                 ctx.fillRect(0, 0, outW, outH);
                 ctx.drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
-                resolve(canvas.toDataURL("image/jpeg", 0.85));
+                resolve(canvas.toDataURL("image/jpeg", 0.78));
             };
             img.onerror = () => reject(new Error("Görsel okunamadı"));
             img.src = e.target.result;
@@ -17574,7 +17575,7 @@ function fileToDataUrl(file) {
         reader.readAsDataURL(file);
     });
 }
-const MAX_VIDEO_BYTES = 3 * 1024 * 1024; // 3 MB — sunucu/Upstash istek boyutu sınırları (10MB) ve
+const MAX_VIDEO_BYTES = 5 * 1024 * 1024; // 5 MB — sunucu/Upstash istek boyutu sınırları (10MB) ve
 // base64 kodlamasının getirdiği ~%33 büyüme + biriken diğer ilanların toplam boyutu göz önüne
 // alınarak güvenli bir üst sınır seçildi.
 const convId = (listingId, buyerName, sellerName) => `${listingId}::${buyerName}::${sellerName}`;
@@ -19229,7 +19230,7 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
             }
             else if (file.type.startsWith("video/")) {
                 if (file.size > MAX_VIDEO_BYTES) {
-                    setMediaError(`${file.name} çok büyük (video için sınır 3 MB).`);
+                    setMediaError(`${file.name} çok büyük (video için sınır 5 MB).`);
                     continue;
                 }
                 try {
@@ -19421,7 +19422,7 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
                             "Kamera ile \u00C7ek"),
                         React.createElement("label", { htmlFor: "media-input", style: { flex: 1, display: "flex", alignItems: "center", justifyContent: "center", border: `1.5px dashed ${COLORS.line}`, borderRadius: 12, padding: "14px 10px", textAlign: "center", fontFamily: "Inter", fontSize: 12, color: "#8A8776", cursor: media.length >= 6 ? "not-allowed" : "pointer" } }, "\uD83D\uDCC1 Galeriden Se\u00E7")),
                     React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776", marginTop: 6, textAlign: "center" } },
-                        mediaBusy ? "İşleniyor..." : `${media.length}/6 \u2014 video maks. 3 MB`),
+                        mediaBusy ? "İşleniyor..." : `${media.length}/6 \u2014 video maks. 5 MB`),
                     React.createElement("div", { style: { fontFamily: "Inter", fontSize: 9.5, color: "#8A8776", marginTop: 3, textAlign: "center" } }, "\uD83D\uDCF1 Fotoğraflar Reels'te tam ekran g\u00F6r\u00FCnmesi i\u00E7in dikey (9:16) formata otomatik ayarlan\u0131r \u2014 en iyi sonu\u00E7 i\u00E7in dikey \u00E7ekin."),
                     mediaError && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11, marginTop: 4 } }, mediaError),
                     media.length > 0 && (React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 } }, media.map((m, i) => (React.createElement("div", { key: i, style: { position: "relative", width: 62, height: 62, borderRadius: 8, overflow: "hidden", border: `1px solid ${COLORS.line}`, background: "#000" } },
@@ -19694,7 +19695,7 @@ function SellerListingRow({ listing, onOpen, refreshAll }) {
             }
             else if (file.type.startsWith("video/")) {
                 if (file.size > MAX_VIDEO_BYTES) {
-                    setMediaError(`${file.name} çok büyük (video için sınır 3 MB).`);
+                    setMediaError(`${file.name} çok büyük (video için sınır 5 MB).`);
                     continue;
                 }
                 try {
@@ -24835,7 +24836,7 @@ function MyListingCard({ listing, onOpen, refreshAll }) {
             }
             else if (file.type.startsWith("video/")) {
                 if (file.size > MAX_VIDEO_BYTES) {
-                    setMediaError(`${file.name} çok büyük (video için sınır 3 MB).`);
+                    setMediaError(`${file.name} çok büyük (video için sınır 5 MB).`);
                     continue;
                 }
                 try {
