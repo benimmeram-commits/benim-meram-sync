@@ -17322,6 +17322,44 @@ exports.version = "19.2.5";
       .finally(function () { clearTimeout(timer); });
   }
 
+  // fetch() y\u00FCkleme (upload) ilerlemesini raporlayamaz \u2014 b\u00FCy\u00FCk video/foto\u011Fraf
+  // verisi g\u00F6nderilirken kullan\u0131c\u0131 hi\u00E7bir ilerleme g\u00F6rmez, sadece "bekleniyor" olur.
+  // XMLHttpRequest'in upload.onprogress olay\u0131 ger\u00E7ek y\u00FCzde ilerlemesi verir; bunu
+  // "bm-upload-progress" \u00F6zel bir taray\u0131c\u0131 olay\u0131 olarak yay\u0131nlar\u0131z, uygulama
+  // aray\u00FCz\u00FC bunu dinleyip kullan\u0131c\u0131ya g\u00F6sterebilir.
+  function xhrPostWithProgress(url, bodyObj, timeoutMs) {
+    return new Promise(function (resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", url, true);
+      xhr.setRequestHeader("Content-Type", "application/json");
+      xhr.timeout = timeoutMs;
+      xhr.upload.onprogress = function (e) {
+        if (e.lengthComputable) {
+          window.dispatchEvent(new CustomEvent("bm-upload-progress", { detail: { percent: Math.round((e.loaded / e.total) * 100) } }));
+        }
+      };
+      xhr.onload = function () {
+        window.dispatchEvent(new CustomEvent("bm-upload-progress", { detail: { percent: null } }));
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try { resolve(JSON.parse(xhr.responseText)); }
+          catch (e) { resolve({}); }
+        }
+        else {
+          reject(new Error("sunucu hatası: " + xhr.status));
+        }
+      };
+      xhr.onerror = function () {
+        window.dispatchEvent(new CustomEvent("bm-upload-progress", { detail: { percent: null } }));
+        reject(new Error("ağ hatası"));
+      };
+      xhr.ontimeout = function () {
+        window.dispatchEvent(new CustomEvent("bm-upload-progress", { detail: { percent: null } }));
+        reject(new Error("zaman aşımı"));
+      };
+      xhr.send(JSON.stringify(bodyObj));
+    });
+  }
+
   // ---- Sunucu tabanlı (çok cihazlı, paylaşımlı) depolama ----
   var remoteBackend = {
     get: function (key, shared) {
@@ -17349,15 +17387,18 @@ exports.version = "19.2.5";
       localBackend.set(key, value, shared).catch(function (e) {
         console.warn("Yerel yedek yazılamadı (kota dolu olabilir), devam ediliyor:", key, e);
       });
+      var isLarge = value && value.length > 500000;
       // Video/foto\u011Fraf i\u00E7eren b\u00FCy\u00FCk yükler i\u00E7in daha uzun bir s\u00FCre (35sn) tan\u0131n\u0131r —
       // k\u00FC\u00E7\u00FCk bir metin g\u00FCncellemesinden \u00E7ok daha fazla veri ta\u015F\u0131yabilir.
-      var timeoutMs = value && value.length > 500000 ? 35000 : 20000;
-      return fetchWithTimeout(API_BASE_URL + "/kv/set", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: key, shared: !!shared, owner: getDeviceId(), value: value })
-      }, timeoutMs)
-        .then(function (r) { if (!r.ok) throw new Error("sunucu hatası: " + r.status); return r.json(); })
+      var timeoutMs = isLarge ? 60000 : 20000;
+      var request = isLarge
+        ? xhrPostWithProgress(API_BASE_URL + "/kv/set", { key: key, shared: !!shared, owner: getDeviceId(), value: value }, timeoutMs)
+        : fetchWithTimeout(API_BASE_URL + "/kv/set", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ key: key, shared: !!shared, owner: getDeviceId(), value: value })
+          }, timeoutMs).then(function (r) { if (!r.ok) throw new Error("sunucu hatası: " + r.status); return r.json(); });
+      return request
         .then(function () {
           resyncDirtyKeys();
           return { key: key, value: value, shared: !!shared };
@@ -17499,6 +17540,27 @@ const fontImport = `@import url('https://fonts.googleapis.com/css2?family=Fraunc
 const TL = (n) => Number(n || 0).toLocaleString("tr-TR") + " ₺";
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 // ---------- MEDYA (FOTOĞRAF/VİDEO) YARDIMCILARI ----------
+// Kanvasa \u00E7izilen bir g\u00F6rselin sessizce BO\u015F (t\u00FCmüyle beyaz/saydam) \u00E7\u0131kıp
+// \u00E7\u0131kmad\u0131\u011F\u0131n\u0131 birka\u00E7 noktadan \u00F6rnekleyerek kontrol eder. Baz\u0131 mobil taray\u0131c\u0131larda
+// img.decode() ba\u015Far\u0131l\u0131 d\u00F6nse bile \u00E7izim ara s\u0131ra sessizce ba\u015Far\u0131s\u0131z olabiliyor
+// (ger\u00E7ek foto\u011Fraflarda 9 noktan\u0131n TAMAMI birebir ayn\u0131 renk \u00E7\u0131kmas\u0131 pratikte imkans\u0131zd\u0131r).
+function isCanvasSuspiciouslyBlank(ctx, w, h) {
+    if (w < 3 || h < 3)
+        return false;
+    const points = [[1, 1], [w - 2, 1], [1, h - 2], [w - 2, h - 2], [Math.floor(w / 2), Math.floor(h / 2)],
+        [Math.floor(w / 4), Math.floor(h / 4)], [Math.floor(3 * w / 4), Math.floor(h / 4)],
+        [Math.floor(w / 4), Math.floor(3 * h / 4)], [Math.floor(3 * w / 4), Math.floor(3 * h / 4)]];
+    let first = null;
+    for (const [x, y] of points) {
+        const d = ctx.getImageData(x, y, 1, 1).data;
+        const key = `${d[0]},${d[1]},${d[2]}`;
+        if (first === null)
+            first = key;
+        else if (key !== first)
+            return false; // renk farkl\u0131l\u0131\u011F\u0131 bulundu, ger\u00E7ek bir g\u00F6rsel
+    }
+    return true; // 9 nokta da birebir ayn\u0131 renk \u2014 muhtemelen bo\u015F \u00E7izim
+}
 function resizeImageFile(file, maxDim) {
     const nameLower = (file.name || "").toLowerCase();
     const isHeic = file.type === "image/heic" || file.type === "image/heif" || nameLower.endsWith(".heic") || nameLower.endsWith(".heif");
@@ -17533,6 +17595,10 @@ function resizeImageFile(file, maxDim) {
                     ctx.fillStyle = "#FFFFFF";
                     ctx.fillRect(0, 0, width, height);
                     ctx.drawImage(img, 0, 0, width, height);
+                    if (isCanvasSuspiciouslyBlank(ctx, width, height)) {
+                        resolve(e.target.result); // \u00E7izim bo\u015F \u00E7\u0131kt\u0131, orijinali kullan
+                        return;
+                    }
                     resolve(canvas.toDataURL("image/jpeg", 0.82));
                 }
                 catch (err) {
@@ -17540,7 +17606,7 @@ function resizeImageFile(file, maxDim) {
                 }
             };
             if (img.decode) {
-                img.decode().then(draw).catch(draw);
+                img.decode().then(draw).catch(() => resolve(e.target.result));
             }
             else {
                 img.onload = draw;
@@ -17608,6 +17674,10 @@ function resizeImageFileToReels(file) {
                     ctx.fillStyle = "#FFFFFF";
                     ctx.fillRect(0, 0, outW, outH);
                     ctx.drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
+                    if (isCanvasSuspiciouslyBlank(ctx, outW, outH)) {
+                        resolve(e.target.result); // \u00E7izim bo\u015F \u00E7\u0131kt\u0131, orijinali kullan
+                        return;
+                    }
                     resolve(canvas.toDataURL("image/jpeg", 0.78));
                 }
                 catch (err) {
@@ -17620,7 +17690,7 @@ function resizeImageFileToReels(file) {
             // img.onload'a g\u00FCvenmekten daha g\u00FCvenilirdir \u2014 baz\u0131 taray\u0131c\u0131larda onload,
             // piksel verisi \u00E7izime tam haz\u0131r olmadan tetiklenebiliyor.
             if (img.decode) {
-                img.decode().then(draw).catch(draw);
+                img.decode().then(draw).catch(() => resolve(e.target.result));
             }
             else {
                 img.onload = draw;
@@ -18082,97 +18152,20 @@ function Loading() {
 // bu cihazda kalıcı olur. Ayrıca "sağlıksız" durum kalıcı değildir: belirli bir
 // bekleme süresinden sonra ger\u00E7ek backend otomatik olarak tekrar denenir — Render gibi
 // \u00FCcretsiz sunucular birka\u00E7 dakika hareketsizlikten sonra "uyuyabilir" ve ilk iste\u011Fe
-// yava\u015F/hatal\u0131 yan\u0131t verebilir; bu ge\u00E7icidir, kal\u0131c\u0131 ar\u0131za de\u011Fildir.
-const UNHEALTHY_RETRY_MS = 15000;
-let unhealthySince = null;
-const dirtyFallbackKeys = new Set(); // ar\u0131za s\u0131ras\u0131nda sadece yerelde g\u00FCncellenen anahtarlar
-function fallbackKey(key, shared) { return `bm_fallback_${shared ? "shared" : "personal"}_${key}`; }
-function fallbackGet(key, shared) {
-    try {
-        const raw = localStorage.getItem(fallbackKey(key, shared));
-        return raw === null ? null : { value: raw };
-    }
-    catch { return null; }
-}
-function fallbackSet(key, value, shared) {
-    try {
-        localStorage.setItem(fallbackKey(key, shared), value);
-    }
-    catch { /* localStorage da dolu/kapal\u0131ysa yapacak bir \u015Fey yok */ }
-}
-function backendShouldBeTried() {
-    if (!window.storage)
-        return false;
-    if (!unhealthySince)
-        return true;
-    return Date.now() - unhealthySince > UNHEALTHY_RETRY_MS; // soğuma süresi doldu, tekrar dene
-}
-// Backend ar\u0131zadan d\u00F6nd\u00FC\u011F\u00FCnde, ar\u0131za s\u0131ras\u0131nda sadece yerelde g\u00FCncellenmi\u015F
-// (dirty) anahtarlar\u0131 backend'e geri yazar \u2014 aksi halde o s\u0131rada olu\u015Fturulan/
-// de\u011Fi\u015Ftirilen veri (\u00F6r. yeni bir ilan) backend d\u00FCzeldi\u011Finde "kaybolmu\u015F" gibi
-// g\u00F6r\u00FCn\u00FCr (asl\u0131nda hi\u00E7 payla\u015F\u0131lan depoya ula\u015Fmam\u0131\u015Ft\u0131r).
-async function syncDirtyKeysToBackend() {
-    if (dirtyFallbackKeys.size === 0)
-        return;
-    const keys = Array.from(dirtyFallbackKeys);
-    dirtyFallbackKeys.clear();
-    for (const compositeKey of keys) {
-        const shared = compositeKey.startsWith("shared:");
-        const key = compositeKey.slice(compositeKey.indexOf(":") + 1);
-        const local = fallbackGet(key, shared);
-        if (!local)
-            continue;
-        try {
-            await window.storage.set(key, local.value, shared);
-        }
-        catch (e) {
-            console.warn("Gecikmiş senkronizasyon başarısız, tekrar denenecek:", key, e);
-            dirtyFallbackKeys.add(compositeKey); // tekrar denenmek üzere geri ekle
-        }
-    }
-}
+// NOT: Sunucuya ula\u015F\u0131lamad\u0131\u011F\u0131nda yerel depolamaya (localStorage) d\u00FC\u015Fme, zaman
+// a\u015F\u0131m\u0131 ve ba\u011Flant\u0131 d\u00FCzeldi\u011Finde otomatik senkronizasyon mant\u0131\u011F\u0131 art\u0131k TAMAMEN
+// window.storage'\u0131n kendi i\u00E7inde (bkz. index.html'deki remoteBackend) \u2014 burada AYRI
+// bir yedekleme katman\u0131 daha TUTMUYORUZ. \u0130ki ayr\u0131 yedekleme katman\u0131n\u0131n farkl\u0131
+// anahtar isimlendirmeleri kullanmas\u0131, zamanlamaya g\u00F6re birbirini bulamamas\u0131na
+// (ve "kaydedildi ama g\u00F6r\u00FCnm\u00FCyor" hatalar\u0131na) yol a\u00E7\u0131yordu.
 async function rawGet(key, shared) {
-    if (!backendShouldBeTried()) {
-        return fallbackGet(key, shared);
-    }
-    const wasUnhealthy = !!unhealthySince;
-    try {
-        const result = await window.storage.get(key, shared);
-        unhealthySince = null; // ba\u015Far\u0131l\u0131 oldu, sa\u011Fl\u0131kl\u0131 duruma d\u00F6n
-        if (wasUnhealthy)
-            syncDirtyKeysToBackend();
-        return result;
-    }
-    catch (e) {
-        console.warn("window.storage.get başarısız, yerel yedeğe geçiliyor:", e);
-        unhealthySince = Date.now();
-        return fallbackGet(key, shared);
-    }
+    return window.storage.get(key, shared);
 }
 async function rawSet(key, value, shared) {
-    // Backend'e yaz\u0131l\u0131p yaz\u0131lamayaca\u011F\u0131ndan ba\u011F\u0131ms\u0131z olarak, veri kayb\u0131n\u0131 en aza
-    // indirmek i\u00E7in her zaman yerel yede\u011Fe de yaz\u0131l\u0131r.
-    fallbackSet(key, value, shared);
-    if (!backendShouldBeTried()) {
-        dirtyFallbackKeys.add(`${shared ? "shared" : "personal"}:${key}`);
-        return { ok: true, fallback: true };
-    }
-    const wasUnhealthy = !!unhealthySince;
-    try {
-        const result = await window.storage.set(key, value, shared);
-        if (!result)
-            throw new Error("window.storage.set null/boş yanıt döndürdü.");
-        unhealthySince = null;
-        if (wasUnhealthy)
-            syncDirtyKeysToBackend();
-        return { ok: true };
-    }
-    catch (e) {
-        console.warn("window.storage.set başarısız, yerel yedeğe geçiliyor:", e);
-        unhealthySince = Date.now();
-        dirtyFallbackKeys.add(`${shared ? "shared" : "personal"}:${key}`);
-        return { ok: true, fallback: true };
-    }
+    const result = await window.storage.set(key, value, shared);
+    if (!result)
+        throw new Error("window.storage.set null/boş yanıt döndürdü.");
+    return { ok: true };
 }
 async function loadShared(key, fallback) {
     try {
@@ -18186,6 +18179,45 @@ async function loadShared(key, fallback) {
 }
 async function saveShared(key, value) {
     return rawSet(key, JSON.stringify(value), true);
+}
+// Video verisi (foto\u011Fraflara g\u00F6re \u00E7ok daha b\u00FCy\u00FCk oldu\u011Fu i\u00E7in) t\u00FCm ilanlar\u0131n topland\u0131\u011F\u0131
+// ana "listings" bloguna G\u00D6M\u00DCLMEZ \u2014 her video kendi ba\u011F\u0131ms\u0131z anahtar\u0131nda saklan\u0131r.
+// B\u00F6ylece: (1) bir video y\u00FCklemesi ba\u015Far\u0131s\u0131z/yava\u015F olsa bile di\u011Fer T\u00DCM ilanlar\u0131
+// etkilemez, (2) ana liste her zaman k\u00FC\u00E7\u00FCk ve h\u0131zl\u0131 kal\u0131r.
+async function saveVideoMedia(ref, dataUrl) {
+    return rawSet(`media_video:${ref}`, dataUrl, true);
+}
+async function loadVideoMedia(ref) {
+    try {
+        const r = await rawGet(`media_video:${ref}`, true);
+        return r ? r.value : null;
+    }
+    catch (e) {
+        console.error("loadVideoMedia hata:", ref, e);
+        return null;
+    }
+}
+// "listings" gibi payla\u015F\u0131lan/b\u00FCy\u00FCk bloklara yaz\u0131lmadan \u00F6nce medya dizisindeki video
+// \u00F6\u011Felerinin a\u011F\u0131r dataUrl'sini \u00E7\u0131kar\u0131r \u2014 video zaten ayr\u0131 anahtar\u0131nda kay\u0131tl\u0131d\u0131r,
+// sadece k\u00FC\u00E7\u00FCk referans (ref) bilgisi yeterlidir.
+function stripVideoDataForStorage(mediaArray) {
+    return (mediaArray || []).map(m => m.type === "video" ? { type: "video", ref: m.ref, name: m.name } : m);
+}
+// Sunucudan gelen bir ilan\u0131n medya dizisinde, sadece "ref" (referans) ile tutulan
+// video \u00F6\u011Felerini ger\u00E7ek videoya \u00E7\u00F6zer \u2014 payla\u015F\u0131lan "listings" blo\u011Fu videoyu
+// do\u011Frudan i\u00E7ermedi\u011Fi i\u00E7in, g\u00F6r\u00FCnt\u00FClenmeden hemen \u00F6nce ayr\u0131ca getirilmesi gerekir.
+async function resolveMediaVideos(mediaArray) {
+    const items = mediaArray || [];
+    const needsResolve = items.some(m => m.type === "video" && m.ref && !m.dataUrl);
+    if (!needsResolve)
+        return items;
+    return Promise.all(items.map(async (m) => {
+        if (m.type === "video" && m.ref && !m.dataUrl) {
+            const dataUrl = await loadVideoMedia(m.ref);
+            return { ...m, dataUrl };
+        }
+        return m;
+    }));
 }
 async function loadPersonal(key, fallback) {
     try {
@@ -18929,7 +18961,9 @@ function SearchScreen({ listings, reviews, favorites, toggleFavorite, members, o
 }
 // ---------- REELS (kaydırmalı keşif) ----------
 function ReelItem({ item, isFav, toggleFavorite, likeCount, favCount, isLiked, onToggleLike, onShare, requireAuth, onOpen }) {
-    const mediaList = item.mediaUrls || [];
+    const [resolvedMediaUrls, setResolvedMediaUrls] = useState(item.mediaUrls || []);
+    useEffect(() => { resolveMediaVideos(item.mediaUrls).then(setResolvedMediaUrls); }, [item.id]);
+    const mediaList = resolvedMediaUrls;
     const [activeIdx, setActiveIdx] = useState(0);
     const media = mediaList[activeIdx];
     const [muted, setMuted] = useState(false); // istek üzerine varsayılan sesli
@@ -19053,7 +19087,9 @@ function DetailScreen({ item, me, requireAuth, offers, reviews, favorites, toggl
     const [activeMediaIndex, setActiveMediaIndex] = useState(0);
     const [fullscreenOpen, setFullscreenOpen] = useState(false);
     const [locationModalOpen, setLocationModalOpen] = useState(false);
-    const mediaList = item.mediaUrls || [];
+    const [resolvedMediaUrls, setResolvedMediaUrls] = useState(item.mediaUrls || []);
+    useEffect(() => { resolveMediaVideos(item.mediaUrls).then(setResolvedMediaUrls); }, [item.id]);
+    const mediaList = resolvedMediaUrls;
     const activeMedia = mediaList[activeMediaIndex];
     const sellerMember = (members || []).find(m => m.name === item.sellerName);
     const sendOffer = async () => {
@@ -19295,6 +19331,12 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
     const [budget, setBudget] = useState("");
     const [prefBreed, setPrefBreed] = useState("");
     const [saving, setSaving] = useState(false);
+    const [uploadPercent, setUploadPercent] = useState(null);
+    useEffect(() => {
+        const onProgress = (e) => setUploadPercent(e.detail.percent);
+        window.addEventListener("bm-upload-progress", onProgress);
+        return () => window.removeEventListener("bm-upload-progress", onProgress);
+    }, []);
     const [err, setErr] = useState("");
     const [wizardStep, setWizardStep] = useState(0);
     const handleFiles = async (e) => {
@@ -19327,7 +19369,12 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
                 }
                 try {
                     const dataUrl = await fileToDataUrl(file);
-                    setMedia(prev => [...prev, { type: "video", dataUrl, name: file.name }]);
+                    // Video, dev "listings" bloğuna gömülmek yerine kendi bağımsız
+                    // kaydına hemen yüklenir — böylece ilanı yayınlarken sadece küçük
+                    // bir referans gönderilir, video zaten oradadır.
+                    const videoRef = uid();
+                    await saveVideoMedia(videoRef, dataUrl);
+                    setMedia(prev => [...prev, { type: "video", ref: videoRef, dataUrl, name: file.name }]);
                     count++;
                 }
                 catch {
@@ -19389,6 +19436,7 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
             return;
         }
         setSaving(true);
+        setUploadPercent(null);
         const all = await loadShared("listings", []);
         if (me.profileType === "bireysel") {
             const now = new Date();
@@ -19414,7 +19462,7 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
             isPregnant: gender === "Dişi" ? isPregnant : null,
             dailyMilkLiters: gender === "Dişi" && dailyMilkLiters ? Number(dailyMilkLiters) : null,
             description: description.trim(),
-            mediaUrls: media, viewCount: 0,
+            mediaUrls: stripVideoDataForStorage(media), viewCount: 0,
             sellerName: me.name, profileType: me.profileType, sellerCity: me.city || null, sellerRegion: me.region || null, status: "yayinda", createdAt: Date.now(),
         });
         await saveShared("listings", all);
@@ -19553,7 +19601,7 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
                             React.createElement("textarea", { value: description, onChange: (e) => setDescription(e.target.value), placeholder: "Ek bilgi, sa\u011Fl\u0131k ge\u00E7mi\u015Fi, \u00F6zel notlar...", rows: 3, style: { ...inputStyle, marginTop: 4, resize: "vertical" } }))),
                     err && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11.5, marginBottom: 8 } }, err),
                     media.some(m => m.type === "video") && !saving && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776", marginBottom: 8, textAlign: "center" } }, "\uD83D\uDCF9 Video eklediniz \u2014 yay\u0131nlarken internet h\u0131z\u0131n\u0131za g\u00F6re birka\u00E7 saniyeden bir dakikaya kadar s\u00FCrebilir, sayfay\u0131 kapatmadan bekleyin."),
-                    React.createElement("button", { onClick: submitListing, disabled: saving, style: btnPrimary }, saving ? (media.some(m => m.type === "video") ? "Video y\u00FCkleniyor, l\u00FCtfen bekleyin..." : "Yayınlanıyor...") : "İlanı Yayınla")));
+                    React.createElement("button", { onClick: submitListing, disabled: saving, style: btnPrimary }, saving ? (uploadPercent != null ? `Y\u00FCkleniyor... %${uploadPercent}` : media.some(m => m.type === "video") ? "Video haz\u0131rlan\u0131yor..." : "Yayınlanıyor...") : "İlanı Yayınla")));
             default:
                 return null;
         }
@@ -19765,6 +19813,7 @@ function SellerListingRow({ listing, onOpen, refreshAll }) {
     const [age, setAge] = useState(listing.age);
     const [description, setDescription] = useState(listing.description || "");
     const [media, setMedia] = useState(listing.mediaUrls || []);
+    useEffect(() => { resolveMediaVideos(listing.mediaUrls).then(setMedia); }, [listing.id]);
     const [mediaBusy, setMediaBusy] = useState(false);
     const [mediaError, setMediaError] = useState("");
     const [busy, setBusy] = useState(false);
@@ -19799,7 +19848,12 @@ function SellerListingRow({ listing, onOpen, refreshAll }) {
                 }
                 try {
                     const dataUrl = await fileToDataUrl(file);
-                    setMedia(prev => [...prev, { type: "video", dataUrl, name: file.name }]);
+                    // Video, dev "listings" bloğuna gömülmek yerine kendi bağımsız
+                    // kaydına hemen yüklenir — böylece ilanı yayınlarken sadece küçük
+                    // bir referans gönderilir, video zaten oradadır.
+                    const videoRef = uid();
+                    await saveVideoMedia(videoRef, dataUrl);
+                    setMedia(prev => [...prev, { type: "video", ref: videoRef, dataUrl, name: file.name }]);
                     count++;
                 }
                 catch {
@@ -19819,7 +19873,7 @@ function SellerListingRow({ listing, onOpen, refreshAll }) {
         const all = await loadShared("listings", []);
         const idx = all.findIndex(l => l.id === listing.id);
         if (idx > -1) {
-            all[idx] = { ...all[idx], price: Number(price), age, description: description.trim(), mediaUrls: media };
+            all[idx] = { ...all[idx], price: Number(price), age, description: description.trim(), mediaUrls: stripVideoDataForStorage(media) };
             await saveShared("listings", all);
         }
         await refreshAll();
@@ -24913,6 +24967,7 @@ function MyListingCard({ listing, onOpen, refreshAll }) {
     const [age, setAge] = useState(listing.age);
     const [description, setDescription] = useState(listing.description || "");
     const [media, setMedia] = useState(listing.mediaUrls || []);
+    useEffect(() => { resolveMediaVideos(listing.mediaUrls).then(setMedia); }, [listing.id]);
     const [mediaBusy, setMediaBusy] = useState(false);
     const [mediaError, setMediaError] = useState("");
     const [busy, setBusy] = useState(false);
@@ -24946,7 +25001,12 @@ function MyListingCard({ listing, onOpen, refreshAll }) {
                 }
                 try {
                     const dataUrl = await fileToDataUrl(file);
-                    setMedia(prev => [...prev, { type: "video", dataUrl, name: file.name }]);
+                    // Video, dev "listings" bloğuna gömülmek yerine kendi bağımsız
+                    // kaydına hemen yüklenir — böylece ilanı yayınlarken sadece küçük
+                    // bir referans gönderilir, video zaten oradadır.
+                    const videoRef = uid();
+                    await saveVideoMedia(videoRef, dataUrl);
+                    setMedia(prev => [...prev, { type: "video", ref: videoRef, dataUrl, name: file.name }]);
                     count++;
                 }
                 catch {
@@ -24966,7 +25026,7 @@ function MyListingCard({ listing, onOpen, refreshAll }) {
         const all = await loadShared("listings", []);
         const idx = all.findIndex(l => l.id === listing.id);
         if (idx > -1) {
-            all[idx] = { ...all[idx], price: Number(price), age, description: description.trim(), mediaUrls: media };
+            all[idx] = { ...all[idx], price: Number(price), age, description: description.trim(), mediaUrls: stripVideoDataForStorage(media) };
             await saveShared("listings", all);
         }
         await refreshAll();
