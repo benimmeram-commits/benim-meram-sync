@@ -18312,7 +18312,9 @@ function Onboarding({ onDone, onCancel, onEmployeeLogin }) {
     const [vetTaxOffice, setVetTaxOffice] = useState("");
     const [nakliyeIlleri, setNakliyeIlleri] = useState([]);
     const [vehicleType, setVehicleType] = useState("");
+    const [vehiclePlate, setVehiclePlate] = useState("");
     const [vehicleCapacity, setVehicleCapacity] = useState("");
+    const [nakliyeDeneyim, setNakliyeDeneyim] = useState("");
     const [docPhoto, setDocPhoto] = useState(null);
     const [docPhotoBusy, setDocPhotoBusy] = useState(false);
     const [docPhotoError, setDocPhotoError] = useState("");
@@ -18393,6 +18395,10 @@ function Onboarding({ onDone, onCancel, onEmployeeLogin }) {
             setErr("Araç tipinizi seçin.");
             return;
         }
+        if (accountType === "nakliyeci" && !vehiclePlate.trim()) {
+            setErr("Araç plakasını girin.");
+            return;
+        }
         if (!/^\S+@\S+\.\S+$/.test(email)) {
             setErr("Geçerli bir e-posta adresi girin.");
             return;
@@ -18431,8 +18437,8 @@ function Onboarding({ onDone, onCancel, onEmployeeLogin }) {
         if (accountType === "nakliyeci") {
             // Nakliyeci hesapları da belge onayı gerektirmiyor — hizmet bölgesi ve araç bilgisiyle hemen aktif olur.
             setSaving(true);
-            const me = { name: name.trim(), phone, email, authMethod: "email", passwordPlain: password, profileType: "nakliyeci", subscribed: false, joinedAt: Date.now(), documentStatus: "onaylandi", nakliyeIlleri, vehicleType, vehicleCapacity: vehicleCapacity.trim() };
-            const result = await registerMember(me, { documentStatus: "onaylandi", nakliyeIlleri, vehicleType, vehicleCapacity: vehicleCapacity.trim() });
+            const me = { name: name.trim(), phone, email, authMethod: "email", passwordPlain: password, profileType: "nakliyeci", subscribed: false, joinedAt: Date.now(), documentStatus: "onaylandi", nakliyeIlleri, vehicleType, vehiclePlate: vehiclePlate.trim().toUpperCase(), vehicleCapacity: vehicleCapacity.trim(), nakliyeDeneyim: nakliyeDeneyim.trim(), nakliyeVerification: "yok" };
+            const result = await registerMember(me, { documentStatus: "onaylandi", nakliyeIlleri, vehicleType, vehiclePlate: vehiclePlate.trim().toUpperCase(), vehicleCapacity: vehicleCapacity.trim(), nakliyeDeneyim: nakliyeDeneyim.trim(), nakliyeVerification: "yok" });
             setSaving(false);
             if (!result.ok) {
                 setErr(result.error);
@@ -18574,7 +18580,7 @@ function Onboarding({ onDone, onCancel, onEmployeeLogin }) {
             clinicName: clinicName, setClinicName: setClinicName, licenseNo: licenseNo, setLicenseNo: setLicenseNo,
             vetIl: vetIl, setVetIl: setVetIl, vetIlce: vetIlce, setVetIlce: setVetIlce,
             vetTaxNo: vetTaxNo, setVetTaxNo: setVetTaxNo, vetTaxOffice: vetTaxOffice, setVetTaxOffice: setVetTaxOffice,
-            nakliyeIlleri: nakliyeIlleri, setNakliyeIlleri: setNakliyeIlleri, vehicleType: vehicleType, setVehicleType: setVehicleType, vehicleCapacity: vehicleCapacity, setVehicleCapacity: setVehicleCapacity,
+            nakliyeIlleri: nakliyeIlleri, setNakliyeIlleri: setNakliyeIlleri, vehicleType: vehicleType, setVehicleType: setVehicleType, vehiclePlate: vehiclePlate, setVehiclePlate: setVehiclePlate, vehicleCapacity: vehicleCapacity, setVehicleCapacity: setVehicleCapacity, nakliyeDeneyim: nakliyeDeneyim, setNakliyeDeneyim: setNakliyeDeneyim,
             err: err, goToDoc: goToDoc, onBackToChoice: () => { setErr(""); setStep("choice"); },
         }),
         step === "belge" && (React.createElement(React.Fragment, null,
@@ -18992,7 +18998,8 @@ function SearchScreen({ listings, reviews, favorites, toggleFavorite, members, o
         if (!searched || !query.trim())
             return [];
         const q = query.trim().toLowerCase();
-        return (members || []).filter(m => [m.name, m.clinicName, m.city, m.vetIl].some(f => f && f.toLowerCase().includes(q)));
+        return (members || []).filter(m => [m.name, m.clinicName, m.city, m.vetIl].some(f => f && f.toLowerCase().includes(q)) ||
+            (Array.isArray(m.nakliyeIlleri) && m.nakliyeIlleri.some(il => il.toLowerCase().includes(q))));
     }, [searched, query, members]);
     return (React.createElement("div", { style: { flex: 1, display: "flex", flexDirection: "column" } },
         React.createElement("div", { style: { background: COLORS.pine, padding: "14px 14px 12px", display: "flex", alignItems: "center", gap: 8 } },
@@ -19000,12 +19007,12 @@ function SearchScreen({ listings, reviews, favorites, toggleFavorite, members, o
                 React.createElement(ChevronLeft, { color: COLORS.white, size: 20 })),
             React.createElement("div", { style: { flex: 1, background: "rgba(255,255,255,0.14)", borderRadius: 10, padding: "5px 10px", display: "flex", alignItems: "center", gap: 6 } },
                 React.createElement("input", { ref: inputRef, value: query, onChange: (e) => { setQuery(e.target.value); setSearched(false); }, onKeyDown: (e) => { if (e.key === "Enter")
-                        runSearch(); }, placeholder: mode === "ilanlar" ? "Irk, konum ara..." : "Kullanıcı veya veteriner adı ara...", style: { flex: 1, background: "none", border: "none", outline: "none", color: COLORS.white, fontFamily: "Inter", fontSize: 13, padding: "5px 0" } })),
+                        runSearch(); }, placeholder: mode === "ilanlar" ? "Irk, konum ara..." : "Kullanıcı, veteriner veya nakliyeci ara...", style: { flex: 1, background: "none", border: "none", outline: "none", color: COLORS.white, fontFamily: "Inter", fontSize: 13, padding: "5px 0" } })),
             React.createElement("button", { onClick: runSearch, style: { background: "transparent", border: "none", borderRadius: 10, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 } },
                 React.createElement(IconSearch, { size: 18, color: COLORS.white }))),
-        React.createElement("div", { style: { display: "flex", gap: 6, padding: "10px 14px 0" } }, [["ilanlar", "İlanlar"], ["kullanicilar", "Kullanıcılar & Veterinerler"]].map(([k, l]) => (React.createElement("button", { key: k, onClick: () => setMode(k), style: { flex: 1, padding: "8px 6px", borderRadius: 9, border: "none", cursor: "pointer", fontFamily: "Inter", fontWeight: 600, fontSize: 11.5, background: mode === k ? COLORS.pineDeep : COLORS.paper, color: mode === k ? COLORS.white : "#5A574C" } }, l)))),
+        React.createElement("div", { style: { display: "flex", gap: 6, padding: "10px 14px 0" } }, [["ilanlar", "İlanlar"], ["kullanicilar", "Kullanıcılar, Veterinerler & Nakliyeciler"]].map(([k, l]) => (React.createElement("button", { key: k, onClick: () => setMode(k), style: { flex: 1, padding: "8px 6px", borderRadius: 9, border: "none", cursor: "pointer", fontFamily: "Inter", fontWeight: 600, fontSize: 11.5, background: mode === k ? COLORS.pineDeep : COLORS.paper, color: mode === k ? COLORS.white : "#5A574C" } }, l)))),
         React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "14px 14px 90px" } },
-            !searched && (React.createElement("div", { style: { textAlign: "center", marginTop: 30, fontFamily: "Inter", fontSize: 12.5, color: "#8A8776" } }, mode === "ilanlar" ? "Irk, kategori, konum veya satıcı adına göre arayın." : "Kullanıcı adı, veteriner kliniği veya şehre göre arayın.")),
+            !searched && (React.createElement("div", { style: { textAlign: "center", marginTop: 30, fontFamily: "Inter", fontSize: 12.5, color: "#8A8776" } }, mode === "ilanlar" ? "Irk, kategori, konum veya satıcı adına göre arayın." : "Kullanıcı adı, veteriner kliniği, şehir veya nakliyecinin hizmet iline göre arayın.")),
             mode === "ilanlar" ? (React.createElement(React.Fragment, null,
                 searched && results.length === 0 && (React.createElement("div", { style: { textAlign: "center", marginTop: 30, fontFamily: "Inter", fontSize: 12.5, color: "#8A8776" } },
                     "\"",
@@ -19025,12 +19032,14 @@ function SearchScreen({ listings, reviews, favorites, toggleFavorite, members, o
                         userResults.length,
                         " sonu\u00E7 bulundu"),
                     userResults.map((m, i) => (React.createElement("button", { key: i, onClick: () => onOpenProfile(m.name), style: { width: "100%", display: "flex", alignItems: "center", gap: 10, background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 12, marginBottom: 8, cursor: "pointer", textAlign: "left" } },
-                        React.createElement("div", { style: { width: 40, height: 40, borderRadius: "50%", background: m.profileType === "veteriner" ? COLORS.ochreSoft : "#DCEAE0", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Fraunces", fontWeight: 700, fontSize: 15, color: m.profileType === "veteriner" ? "#7A5A1E" : COLORS.pineDeep, flexShrink: 0 } }, m.name[0]),
+                        React.createElement("div", { style: { width: 40, height: 40, borderRadius: "50%", background: m.profileType === "veteriner" ? COLORS.ochreSoft : m.profileType === "nakliyeci" ? "#E4DCC8" : "#DCEAE0", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Fraunces", fontWeight: 700, fontSize: 15, color: m.profileType === "veteriner" ? "#7A5A1E" : m.profileType === "nakliyeci" ? "#7A5A1E" : COLORS.pineDeep, flexShrink: 0 } }, m.name[0]),
                         React.createElement("div", { style: { flex: 1, minWidth: 0 } },
-                            React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 13 } }, m.name),
+                            React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 4 } },
+                                React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 13 } }, m.name),
+                                m.profileType === "nakliyeci" && m.nakliyeVerification === "onaylandi" && React.createElement(VerifiedBadge, { size: 13 })),
                             React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776" } },
-                                m.profileType === "veteriner" ? `Veteriner${m.clinicName ? " · " + m.clinicName : ""}` : PROFILE_TYPE_LABELS[m.profileType] || "Kullanıcı",
-                                m.city ? ` · ${m.city}` : m.vetIl ? ` · ${m.vetIl}` : "")),
+                                m.profileType === "veteriner" ? `Veteriner${m.clinicName ? " · " + m.clinicName : ""}` : m.profileType === "nakliyeci" ? `Nakliyeci${m.vehicleType ? " · " + (VEHICLE_TYPE_LABELS[m.vehicleType] || m.vehicleType) : ""}${(m.nakliyeIlleri && m.nakliyeIlleri.length) ? " · " + m.nakliyeIlleri.slice(0, 3).join(", ") : ""}` : PROFILE_TYPE_LABELS[m.profileType] || "Kullanıcı",
+                                m.profileType !== "nakliyeci" && (m.city ? ` · ${m.city}` : m.vetIl ? ` · ${m.vetIl}` : ""))),
                         React.createElement(ChevronRight, { size: 15, color: "#8A8776" })))))))))));
 }
 // ---------- REELS (kaydırmalı keşif) ----------
@@ -19282,7 +19291,7 @@ function DetailScreen({ item, me, requireAuth, offers, reviews, favorites, toggl
                     "De\u011Ferlendirmeniz: ",
                     React.createElement(StarRow, { value: myReview.stars, size: 13 }),
                     myReview.comment && React.createElement("div", { style: { color: "#5A574C", marginTop: 4 } }, myReview.comment))) : (React.createElement(ReviewForm, { listingId: item.id, sellerName: item.sellerName, buyerName: me.name, refreshAll: refreshAll }))))))),
-        item.nakliye && React.createElement(UygunNakliyecilerSection, { item: item, members: members, me: me, onOpenChat: onOpenChat }),
+        !item.nakliye && React.createElement(UygunNakliyecilerSection, { item: item, members: members, me: me, onOpenChat: onOpenChat }),
         React.createElement(SimilarListingsSection, { item: item, listings: listings, reviews: reviews, favorites: favorites, toggleFavorite: toggleFavorite, onOpen: onOpen })));
 }
 function ReviewForm({ listingId, sellerName, buyerName, refreshAll }) {
@@ -19391,7 +19400,9 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
     const [dailyMilkLiters, setDailyMilkLiters] = useState("");
     const [description, setDescription] = useState("");
     const [earTag, setEarTag] = useState("");
-    const [nakliye, setNakliye] = useState("");
+    // Nakliyeci hesabıyla giren bir satıcının zaten kendi aracı olduğu için bu soru
+    // hiç sorulmaz — "Nakliye Var" olarak otomatik kabul edilir.
+    const [nakliye, setNakliye] = useState(me.profileType === "nakliyeci" ? "var" : "");
     const [animalIl, setAnimalIl] = useState(me.city || "");
     const [animalIlce, setAnimalIlce] = useState(me.ilce || "");
     const [animalLat, setAnimalLat] = useState(null);
@@ -19589,7 +19600,7 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
         { key: "fiyat", q: "Fiyatı nedir?", valid: () => price !== "" && Number(price) > 0, auto: false },
         { key: "medya", q: "Fotoğraf veya video ekleyin", valid: () => true, auto: false },
         { key: "ozet", q: "Son kontrol", valid: () => true, auto: false },
-    ];
+    ].filter(s => !(s.key === "nakliye" && me.profileType === "nakliyeci"));
     const total = WIZARD.length;
     const goNext = () => { if (wizardStep < total - 1)
         setWizardStep(s => s + 1); };
@@ -19655,10 +19666,12 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
                         React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "A\u00E7\u0131k Adres (opsiyonel)"),
                         React.createElement("textarea", { value: animalAddress, onChange: (e) => setAnimalAddress(e.target.value), rows: 2, placeholder: "GPS ile otomatik doldurulur, isterseniz d\u00FCzenleyebilirsiniz", style: { ...inputStyle, marginTop: 4, resize: "vertical" } }))));
             case "nakliye": {
-                const nakliyeMatches = nakliye === "var" ? matchNakliyeciler(members, [animalIl]) : [];
+                // "Nakliye Yok" seçilince — yani satıcının kendi nakliye imkanı yoksa —
+                // hemen o güzergaha uygun nakliyecileri öner: tam da bu durumda gerek duyulur.
+                const nakliyeMatches = nakliye === "yok" ? matchNakliyeciler(members, [animalIl]) : [];
                 return (React.createElement("div", null,
                     React.createElement("div", { style: { display: "flex", gap: 8 } }, [["var", "Nakliye Var"], ["yok", "Nakliye Yok"]].map(([k, l]) => (React.createElement("button", { key: k, onClick: () => setNakliye(k), style: { flex: 1, padding: "16px", borderRadius: 12, border: `1.5px solid ${nakliye === k ? COLORS.pineDeep : COLORS.line}`, background: nakliye === k ? COLORS.pineDeep : COLORS.white, color: nakliye === k ? COLORS.white : COLORS.ink, fontFamily: "Inter", fontWeight: 700, fontSize: 13.5, cursor: "pointer" } }, l)))),
-                    nakliye === "var" && (React.createElement("div", { style: { marginTop: 16 } },
+                    nakliye === "yok" && (React.createElement("div", { style: { marginTop: 16 } },
                         React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 12.5, color: COLORS.ink, marginBottom: 4 } }, "Uygun Nakliyeciler"),
                         nakliyeMatches.length === 0 ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776" } },
                             animalIl ? `${animalIl} güzergahına hizmet veren kayıtlı nakliyeci bulunamadı — ilanınız yayınlandıktan sonra da otomatik olarak gösterilmeye devam edecek.` : "İl bilgisi bulunamadı, önceki adımdan konum seçin.")) : (React.createElement(React.Fragment, null,
@@ -20377,10 +20390,13 @@ function ProfileScreen({ me, setMe, listings, members, favorites, pricing, offer
                     me.profileType === "kurumsal" && me.companyName && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776" } }, me.name),
                     React.createElement("div", { style: { display: "flex", gap: 5, marginTop: 4, flexWrap: "wrap", alignItems: "center" } },
                         React.createElement(Badge, { tone: me.profileType === "kurumsal" ? "pine" : me.profileType === "alici" ? "ochre" : "gray" }, PROFILE_TYPE_LABELS[me.profileType] || me.profileType),
-                        documentStatus === "onaylandi" && (React.createElement("span", { style: { display: "flex", alignItems: "center", gap: 3, fontFamily: "Inter", fontSize: 10.5, fontWeight: 600, color: COLORS.pineDeep } },
+                        me.profileType === "nakliyeci" ? (me.nakliyeVerification === "onaylandi" && (React.createElement("span", { style: { display: "flex", alignItems: "center", gap: 3, fontFamily: "Inter", fontSize: 10.5, fontWeight: 600, color: COLORS.pineDeep } },
                             React.createElement(VerifiedBadge, { size: 13 }),
                             " ",
-                            me.profileType === "kurumsal" ? "Onaylı Kurumsal İşletme" : me.profileType === "veteriner" ? "Onaylı Veteriner" : me.profileType === "nakliyeci" ? "Onaylı Nakliyeci" : "Onaylı Bireysel Satıcı"))))),
+                            "Doğrulanmış Nakliyeci"))) : (documentStatus === "onaylandi" && (React.createElement("span", { style: { display: "flex", alignItems: "center", gap: 3, fontFamily: "Inter", fontSize: 10.5, fontWeight: 600, color: COLORS.pineDeep } },
+                            React.createElement(VerifiedBadge, { size: 13 }),
+                            " ",
+                            me.profileType === "kurumsal" ? "Onaylı Kurumsal İşletme" : me.profileType === "veteriner" ? "Onaylı Veteriner" : "Onaylı Bireysel Satıcı")))))),
             React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 10, paddingTop: 10, borderTop: `1px solid ${COLORS.line}` } },
                 React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 5 } }, rating.count > 0 ? (React.createElement(React.Fragment, null,
                     React.createElement(StarRow, { value: rating.avg, size: 13 }),
@@ -20398,7 +20414,7 @@ function ProfileScreen({ me, setMe, listings, members, favorites, pricing, offer
                 React.createElement(StatMini, { label: "Aktif \u0130lan", value: activeListingsCount }),
                 React.createElement(StatMini, { label: "Tamamlanan Sat\u0131\u015F", value: completedSales }),
                 React.createElement(StatMini, { label: "Favorim", value: favorites.length }))),
-        me.profileType === "kurumsal" ? (React.createElement(KurumsalBilgilerCard, { me: me, setMe: setMe, myMember: myMember })) : (React.createElement(BireyselBilgilerCard, { me: me, myMember: myMember })),
+        me.profileType === "kurumsal" ? (React.createElement(KurumsalBilgilerCard, { me: me, setMe: setMe, myMember: myMember })) : me.profileType === "nakliyeci" ? null : (React.createElement(BireyselBilgilerCard, { me: me, myMember: myMember })),
         me.profileType !== "alici" && me.profileType !== "veteriner" && me.profileType !== "nakliyeci" && React.createElement(MenuGroup, { title: "\u00C7ift\u00E7i Tarafı" },
             React.createElement(MenuRow, { icon: IconBarn, label: "\u00C7iftlik Y\u00F6netimi", value: "Genel Bak\u0131\u015F", onClick: () => setScreen("farm") })),
         me.profileType === "veteriner" && React.createElement(MenuGroup, { title: "Veteriner" },
@@ -20409,7 +20425,8 @@ function ProfileScreen({ me, setMe, listings, members, favorites, pricing, offer
                 React.createElement("b", null, (me.nakliyeIlleri || []).join(", ") || "-")),
             React.createElement("div", { style: { padding: "0 14px 10px", fontFamily: "Inter", fontSize: 11.5, color: "#5A574C" } },
                 "Ara\u00E7: ",
-                React.createElement("b", null, VEHICLE_TYPE_LABELS[me.vehicleType] || me.vehicleType || "-"))),
+                React.createElement("b", null, VEHICLE_TYPE_LABELS[me.vehicleType] || me.vehicleType || "-")),
+            React.createElement(MenuRow, { icon: ShieldCheck, label: "Do\u011Frulama Rozeti", value: me.nakliyeVerification === "onaylandi" ? "Onayl\u0131 \u2713" : me.nakliyeVerification === "beklemede" ? "\u0130nceleniyor" : "Ba\u015Fvur", onClick: () => onOpenSection("nakliyeDogrulama") })),
         React.createElement(MenuGroup, { title: "Hizmetler" },
             React.createElement(MenuRow, { icon: Truck, label: "Nakliyeciler", value: "T\u00FCm\u00FCn\u00FC g\u00F6r", onClick: () => setScreen("nakliyeciler") })),
         React.createElement(MenuGroup, { title: "\u0130lan Y\u00F6netimi" },
@@ -20632,6 +20649,43 @@ function PendingDocRow({ member, refreshAll, session }) {
                     member.companyIl && `${member.companyIl}${member.companyIlce ? "/" + member.companyIlce : ""} · `,
                     member.taxOffice && `Vergi D.: ${member.taxOffice}`,
                     member.authorizedTc && ` · Yetkili TC: ***${member.authorizedTc.slice(-4)}`)))),
+        React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 8 } },
+            React.createElement("button", { disabled: busy, onClick: () => decide("onaylandi"), style: { ...btnGhost, borderColor: COLORS.pine, color: COLORS.pineDeep } },
+                React.createElement(Check, { size: 12, style: { marginRight: 3 } }),
+                "Onayla"),
+            React.createElement("button", { disabled: busy, onClick: () => decide("reddedildi"), style: { ...btnGhost, borderColor: COLORS.red, color: COLORS.red } },
+                React.createElement(X, { size: 12, style: { marginRight: 3 } }),
+                "Reddet"))));
+}
+function PendingNakliyeVerificationRow({ member, refreshAll, session }) {
+    const [busy, setBusy] = useState(false);
+    const decide = async (status) => {
+        setBusy(true);
+        const all = await loadShared("members", []);
+        const idx = all.findIndex(m => m.name === member.name && m.joinedAt === member.joinedAt);
+        if (idx > -1) {
+            all[idx].nakliyeVerification = status;
+            await saveShared("members", all);
+        }
+        await logAudit(session.name, session.role, `Nakliyeci doğrulaması ${status === "onaylandi" ? "onaylandı" : "reddedildi"}`, member.name);
+        await refreshAll();
+        setBusy(false);
+    };
+    return (React.createElement("div", { style: { background: COLORS.paper, border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: 10, marginBottom: 8 } },
+        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } },
+            member.nakliyeVerificationPhoto && (React.createElement("img", { src: member.nakliyeVerificationPhoto, onClick: () => window.open(member.nakliyeVerificationPhoto, "_blank"), style: { width: 52, height: 52, objectFit: "cover", borderRadius: 8, border: `1px solid ${COLORS.line}`, cursor: "pointer", flexShrink: 0 } })),
+            React.createElement("div", { style: { flex: 1 } },
+                React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5 } }, member.name),
+                React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776" } },
+                    VEHICLE_TYPE_LABELS[member.vehicleType] || member.vehicleType || "Nakliyeci",
+                    member.vehiclePlate ? ` · Plaka: ${member.vehiclePlate}` : "",
+                    " · ",
+                    member.phone || "telefon yok",
+                    !member.nakliyeVerificationPhoto && React.createElement("span", { style: { color: COLORS.ochre } }, " · fotoğraf yok")),
+                React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10, color: "#8A8776", marginTop: 2 } },
+                    member.kBelgesiNo && `K Belgesi: ${member.kBelgesiNo}`,
+                    member.ehliyetNo && ` · Ehliyet: ${member.ehliyetNo}`,
+                    member.nakliyeIlleri && member.nakliyeIlleri.length > 0 && ` · Hizmet: ${member.nakliyeIlleri.join(", ")}`))),
         React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 8 } },
             React.createElement("button", { disabled: busy, onClick: () => decide("onaylandi"), style: { ...btnGhost, borderColor: COLORS.pine, color: COLORS.pineDeep } },
                 React.createElement(Check, { size: 12, style: { marginRight: 3 } }),
@@ -20948,6 +21002,8 @@ function UserEditRow({ member, session, refreshAll }) {
 }
 function KullaniciYonetimiPanel({ members, session, refreshAll }) {
     const isSuper = session.role === "super";
+    const [query, setQuery] = useState("");
+    const [typeFilter, setTypeFilter] = useState("hepsi");
     const toggle = async (m) => {
         const all = await loadShared("members", []);
         const idx = all.findIndex(x => x.name === m.name && x.joinedAt === m.joinedAt);
@@ -20958,15 +21014,33 @@ function KullaniciYonetimiPanel({ members, session, refreshAll }) {
         await logAudit(session.name, session.role, `Kullanıcı ${m.suspended ? "engeli kaldırıldı" : "engellendi"}`, m.name);
         await refreshAll();
     };
+    const filtered = members.filter(m => {
+        if (typeFilter !== "hepsi" && m.profileType !== typeFilter)
+            return false;
+        if (!query.trim())
+            return true;
+        const q = query.trim().toLowerCase();
+        return [m.name, m.phone, m.email, m.companyName, m.vehiclePlate].some(f => f && f.toLowerCase().includes(q)) ||
+            (Array.isArray(m.nakliyeIlleri) && m.nakliyeIlleri.some(il => il.toLowerCase().includes(q)));
+    });
     return (React.createElement("div", null,
         isSuper && (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: COLORS.ochre, marginBottom: 10 } }, "\u26A0 S\u00FCper Admin olarak kullan\u0131c\u0131 bilgilerini d\u00FCzenleyebilir veya hesab\u0131 kal\u0131c\u0131 olarak silebilirsiniz. Bu, kullan\u0131c\u0131n\u0131n kendi cihaz\u0131ndaki oturumunu (ki\u015Fisel verisini) etkilemez \u2014 sadece uygulama genelindeki ortak kayd\u0131n\u0131 de\u011Fi\u015Ftirir/kald\u0131r\u0131r.")),
-        members.map(m => (React.createElement("div", { key: m.name + m.joinedAt, style: { background: COLORS.paper, border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: 10, marginBottom: 8 } },
+        React.createElement("input", { value: query, onChange: (e) => setQuery(e.target.value), placeholder: "İsim, telefon, e-posta, plaka veya hizmet iline göre ara…", style: { ...inputStyle, marginBottom: 8 } }),
+        React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 } }, [["hepsi", "Hepsi"], ["bireysel", "Bireysel"], ["kurumsal", "Kurumsal"], ["veteriner", "Veteriner"], ["nakliyeci", "Nakliyeci"], ["alici", "Sadece Alıcı"]].map(([k, l]) => (React.createElement("button", { key: k, onClick: () => setTypeFilter(k), style: { padding: "5px 10px", borderRadius: 20, border: `1.5px solid ${typeFilter === k ? COLORS.pineDeep : COLORS.line}`, background: typeFilter === k ? COLORS.pineDeep : COLORS.white, color: typeFilter === k ? COLORS.white : "#5A574C", fontFamily: "Inter", fontWeight: 600, fontSize: 10.5, cursor: "pointer" } }, l)))),
+        React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776", marginBottom: 8 } },
+            filtered.length,
+            " kullanıcı gösteriliyor"),
+        filtered.map(m => (React.createElement("div", { key: m.name + m.joinedAt, style: { background: COLORS.paper, border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: 10, marginBottom: 8 } },
             React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 } },
                 React.createElement("div", null,
-                    React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5 } }, m.name),
+                    React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 4 } },
+                        React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5 } }, m.name),
+                        m.profileType === "nakliyeci" && m.nakliyeVerification === "onaylandi" && React.createElement(VerifiedBadge, { size: 12 })),
                     React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776" } },
                         PROFILE_TYPE_LABELS[m.profileType] || m.profileType,
-                        " \u00B7 ",
+                        m.profileType === "nakliyeci" && m.vehiclePlate ? ` · ${m.vehiclePlate}` : "",
+                        m.profileType === "nakliyeci" && m.nakliyeIlleri && m.nakliyeIlleri.length > 0 ? ` · ${m.nakliyeIlleri.slice(0, 3).join(", ")}` : "",
+                        " · ",
                         m.phone || "telefon yok",
                         m.suspended ? " · ASKIYA ALINDI" : "")),
                 React.createElement("div", { style: { display: "flex", gap: 6, flexShrink: 0 } },
@@ -21573,6 +21647,7 @@ function AdminPanel({ session, onLogout, listings, requests, offers, members, me
     const subscribedCount = members.filter(m => m.subscribed).length;
     const revenue = subscribedCount * pricing.subscriptionPrice;
     const pendingDocs = members.filter(m => m.documentStatus === "beklemede");
+    const pendingNakliyeVerifications = members.filter(m => m.profileType === "nakliyeci" && m.nakliyeVerification === "beklemede");
     return (React.createElement("div", { style: { width: 760, maxWidth: "96vw", background: COLORS.white, borderRadius: 18, border: `1px solid ${COLORS.line}`, overflow: "hidden", boxShadow: "0 20px 50px rgba(0,0,0,0.12)", display: "flex", flexDirection: "column" } },
         React.createElement("div", { style: { background: COLORS.pineDeep, padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 } },
             React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } },
@@ -21608,8 +21683,13 @@ function AdminPanel({ session, onLogout, listings, requests, offers, members, me
                 activeSection === "yonetici" && React.createElement(YoneticiPanel, { adminAccounts: adminAccounts, session: session, refreshAll: refreshAll }),
                 activeSection === "ilan" && React.createElement(IlanModerasyonPanel, { listings: listings, session: session, refreshAll: refreshAll }),
                 activeSection === "kullanici" && React.createElement(KullaniciYonetimiPanel, { members: members, session: session, refreshAll: refreshAll }),
-                activeSection === "belge" && (pendingDocs.length === 0 ? React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Bekleyen belge yok.")
-                    : pendingDocs.map(m => React.createElement(PendingDocRow, { key: m.name + m.joinedAt, member: m, session: session, refreshAll: refreshAll }))),
+                activeSection === "belge" && (React.createElement(React.Fragment, null,
+                    React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 12.5, color: COLORS.ink, marginBottom: 8 } }, "Hesap Onayı Bekleyen Belgeler"),
+                    pendingDocs.length === 0 ? React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776", marginBottom: 16 } }, "Bekleyen belge yok.")
+                        : pendingDocs.map(m => React.createElement(PendingDocRow, { key: m.name + m.joinedAt, member: m, session: session, refreshAll: refreshAll })),
+                    React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 12.5, color: COLORS.ink, margin: "18px 0 8px" } }, "Nakliyeci Doğrulama Başvuruları"),
+                    pendingNakliyeVerifications.length === 0 ? React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Bekleyen doğrulama başvurusu yok.")
+                        : pendingNakliyeVerifications.map(m => React.createElement(PendingNakliyeVerificationRow, { key: m.name + m.joinedAt, member: m, session: session, refreshAll: refreshAll })))),
                 activeSection === "epostaTalepleri" && React.createElement(EpostaTalepleriPanel, { session: session, refreshAll: refreshAll }),
                 activeSection === "sikayet" && React.createElement(SikayetPanel, { reports: reports, session: session, refreshAll: refreshAll }),
                 activeSection === "kategori" && React.createElement(KategoriPanel, { customBreeds: customBreeds, customSubcategories: customSubcategories, session: session, refreshAll: refreshAll }),
@@ -21812,10 +21892,13 @@ function PublicProfileScreen({ targetName, members, listings, offers, reviews, m
                     member.profileType === "kurumsal" && member.companyName && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776" } }, member.name),
                     React.createElement("div", { style: { display: "flex", gap: 5, marginTop: 4, flexWrap: "wrap", alignItems: "center" } },
                         React.createElement(Badge, { tone: member.profileType === "kurumsal" ? "pine" : member.profileType === "alici" ? "ochre" : "gray" }, PROFILE_TYPE_LABELS[member.profileType] || member.profileType),
-                        member.documentStatus === "onaylandi" && (React.createElement("span", { style: { display: "flex", alignItems: "center", gap: 3, fontFamily: "Inter", fontSize: 10.5, fontWeight: 600, color: COLORS.pineDeep } },
+                        member.profileType === "nakliyeci" ? (member.nakliyeVerification === "onaylandi" && (React.createElement("span", { style: { display: "flex", alignItems: "center", gap: 3, fontFamily: "Inter", fontSize: 10.5, fontWeight: 600, color: COLORS.pineDeep } },
                             React.createElement(VerifiedBadge, { size: 13 }),
                             " ",
-                            member.profileType === "kurumsal" ? "Onaylı Kurumsal İşletme" : member.profileType === "veteriner" ? "Onaylı Veteriner" : member.profileType === "nakliyeci" ? "Onaylı Nakliyeci" : "Onaylı Bireysel Satıcı"))))),
+                            "Doğrulanmış Nakliyeci"))) : (member.documentStatus === "onaylandi" && (React.createElement("span", { style: { display: "flex", alignItems: "center", gap: 3, fontFamily: "Inter", fontSize: 10.5, fontWeight: 600, color: COLORS.pineDeep } },
+                            React.createElement(VerifiedBadge, { size: 13 }),
+                            " ",
+                            member.profileType === "kurumsal" ? "Onaylı Kurumsal İşletme" : member.profileType === "veteriner" ? "Onaylı Veteriner" : "Onaylı Bireysel Satıcı")))))),
             React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 10, paddingTop: 10, borderTop: `1px solid ${COLORS.line}` } },
                 React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 5 } }, rating.count > 0 ? (React.createElement(React.Fragment, null,
                     React.createElement(StarRow, { value: rating.avg, size: 13 }),
@@ -22496,6 +22579,7 @@ function ProfileSubScreen({ section, me, setMe, refreshAll, onBack }) {
         hesapturu: "Hesap Türünü Değiştir",
         bildirim: "Bildirim Tercihlerim",
         destek: "Destek / Anlaşmazlık Bildir",
+        nakliyeDogrulama: "Doğrulama Rozeti Başvurusu",
     };
     return (React.createElement("div", { style: { flex: 1, display: "flex", flexDirection: "column" } },
         React.createElement("div", { style: { background: COLORS.pine, padding: "14px 14px 10px", display: "flex", alignItems: "center", gap: 10 } },
@@ -22507,7 +22591,86 @@ function ProfileSubScreen({ section, me, setMe, refreshAll, onBack }) {
             section === "sifre" && me.authMethod === "email" && React.createElement(PasswordChangeFlow, { me: me, setMe: setMe }),
             section === "hesapturu" && React.createElement(AccountTypeSwitch, { me: me, setMe: setMe }),
             section === "bildirim" && React.createElement(NotificationPrefsCard, { me: me, setMe: setMe }),
-            section === "destek" && React.createElement(SupportRequestCard, { me: me }))));
+            section === "destek" && React.createElement(SupportRequestCard, { me: me }),
+            section === "nakliyeDogrulama" && React.createElement(NakliyeciVerificationCard, { me: me, setMe: setMe }))));
+}
+function NakliyeciVerificationCard({ me, setMe }) {
+    const [kBelgesiNo, setKBelgesiNo] = useState(me.kBelgesiNo || "");
+    const [ehliyetNo, setEhliyetNo] = useState(me.ehliyetNo || "");
+    const [docPhoto, setDocPhoto] = useState(me.nakliyeVerificationPhoto || null);
+    const [docBusy, setDocBusy] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [err, setErr] = useState("");
+    const status = me.nakliyeVerification || "yok";
+    const handlePhoto = async (e) => {
+        const file = (e.target.files || [])[0];
+        if (!file)
+            return;
+        if (!file.type.startsWith("image/")) {
+            setErr("Lütfen bir fotoğraf dosyası seçin.");
+            return;
+        }
+        setDocBusy(true);
+        try {
+            const dataUrl = await resizeImageFile(file, 1000);
+            setDocPhoto(dataUrl);
+            setErr("");
+        }
+        catch {
+            setErr("Fotoğraf işlenemedi, tekrar deneyin.");
+        }
+        setDocBusy(false);
+        e.target.value = "";
+    };
+    const submit = async () => {
+        if (!kBelgesiNo.trim()) {
+            setErr("K Belgesi / Yetki Belgesi numarasını girin.");
+            return;
+        }
+        if (!ehliyetNo.trim()) {
+            setErr("Sürücü ehliyet numaranızı girin.");
+            return;
+        }
+        if (!docPhoto) {
+            setErr("Belge fotoğrafı yükleyin.");
+            return;
+        }
+        setErr("");
+        setSaving(true);
+        const updatedMe = { ...me, kBelgesiNo: kBelgesiNo.trim(), ehliyetNo: ehliyetNo.trim(), nakliyeVerificationPhoto: docPhoto, nakliyeVerification: "beklemede" };
+        await savePersonal("me", updatedMe);
+        const all = await loadShared("members", []);
+        const idx = all.findIndex(m => m.name === me.name && m.joinedAt === me.joinedAt);
+        if (idx > -1) {
+            all[idx] = { ...all[idx], kBelgesiNo: kBelgesiNo.trim(), ehliyetNo: ehliyetNo.trim(), nakliyeVerificationPhoto: docPhoto, nakliyeVerification: "beklemede" };
+            await saveShared("members", all);
+        }
+        setMe(updatedMe);
+        setSaving(false);
+    };
+    if (status === "onaylandi") {
+        return (React.createElement("div", { style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 16, textAlign: "center" } },
+            React.createElement(VerifiedBadge, { size: 26 }),
+            React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 13.5, color: COLORS.pineDeep, marginTop: 8 } }, "Doğrulanmış Nakliyeci"),
+            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#8A8776", marginTop: 4 } }, "Profiliniz platformda \"Doğrulandı\" rozetiyle görünüyor.")));
+    }
+    if (status === "beklemede") {
+        return (React.createElement("div", { style: { background: COLORS.ochreSoft, borderRadius: 12, padding: 16 } },
+            React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 13, color: "#7A5A1E" } }, "Başvurunuz inceleniyor"),
+            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#7A5A1E", marginTop: 4 } }, "Yönetim ekibi belgelerinizi onayladığında profilinizde \"Doğrulandı\" rozeti görünecek.")));
+    }
+    return (React.createElement("div", null,
+        React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#8A8776", marginBottom: 14 } }, "Doğrulanmış nakliyeci rozeti almak için taşımacılık yetki belgenizin (K1/K2/K3 vb.) numarasını, ehliyet numaranızı ve belge fotoğrafınızı gönderin. Süper Admin incelemesinden sonra profilinizde rozet görünür."),
+        React.createElement(FormField, { label: "K Belgesi / Yetki Belgesi No", value: kBelgesiNo, onChange: setKBelgesiNo, placeholder: "Örn. K1-000000" }),
+        React.createElement("div", { style: { marginTop: 10 } },
+            React.createElement(FormField, { label: "Sürücü Ehliyet No", value: ehliyetNo, onChange: setEhliyetNo, placeholder: "Ehliyet numaranız" })),
+        React.createElement("div", { style: { marginTop: 12 } },
+            React.createElement("input", { id: "nakliye-doc-input", type: "file", accept: "image/*", onChange: handlePhoto, style: { display: "none" } }),
+            docPhoto ? (React.createElement("div", { style: { position: "relative", width: 120 } },
+                React.createElement("img", { src: docPhoto, style: { width: 120, height: 120, objectFit: "cover", borderRadius: 10, border: `1px solid ${COLORS.line}` } }),
+                React.createElement("button", { onClick: () => setDocPhoto(null), style: { position: "absolute", top: 4, right: 4, background: "rgba(0,0,0,0.65)", color: "#fff", border: "none", borderRadius: "50%", width: 20, height: 20, fontSize: 11, cursor: "pointer" } }, "✕"))) : (React.createElement("label", { htmlFor: "nakliye-doc-input", style: { display: "block", border: `1.5px dashed ${COLORS.line}`, borderRadius: 12, padding: 16, textAlign: "center", fontFamily: "Inter", fontSize: 11, color: "#8A8776", cursor: "pointer" } }, docBusy ? "İşleniyor..." : "+ Yetki belgesi / ehliyet fotoğrafı yükle"))),
+        err && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11.5, marginTop: 10 } }, err),
+        React.createElement("button", { onClick: submit, disabled: saving, style: { ...btnPrimary, width: "100%", marginTop: 14, opacity: saving ? 0.6 : 1 } }, saving ? "Gönderiliyor..." : "Doğrulama İçin Başvur")));
 }
 
 function daysUntil(dateStr) {
@@ -24847,12 +25010,12 @@ function VetSuruSagligiTab({ myVetLinks, allAnimalsByFarm, vetName }) {
             totalAnimals === 0 ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776" } }, "Bu \u00E7iftlikte kay\u0131tl\u0131 hayvan yok.")) : (React.createElement("button", { onClick: downloadPdf, style: { ...btnPrimary, width: "100%" } }, "\uD83D\uDCC4 PDF Olarak \u0130ndir"))))));
 }
 
-function ProfileWizardStep({ accountType, profileStep, setProfileStep, name, setName, email, setEmail, password, setPassword, pwChecks, companyName, setCompanyName, companyType, setCompanyType, companyIl, setCompanyIl, companyIlce, setCompanyIlce, taxOffice, setTaxOffice, authorizedTc, setAuthorizedTc, clinicName, setClinicName, licenseNo, setLicenseNo, vetIl, setVetIl, vetIlce, setVetIlce, vetTaxNo, setVetTaxNo, vetTaxOffice, setVetTaxOffice, nakliyeIlleri, setNakliyeIlleri, vehicleType, setVehicleType, vehicleCapacity, setVehicleCapacity, err, goToDoc, onBackToChoice, }) {
+function ProfileWizardStep({ accountType, profileStep, setProfileStep, name, setName, email, setEmail, password, setPassword, pwChecks, companyName, setCompanyName, companyType, setCompanyType, companyIl, setCompanyIl, companyIlce, setCompanyIlce, taxOffice, setTaxOffice, authorizedTc, setAuthorizedTc, clinicName, setClinicName, licenseNo, setLicenseNo, vetIl, setVetIl, vetIlce, setVetIlce, vetTaxNo, setVetTaxNo, vetTaxOffice, setVetTaxOffice, nakliyeIlleri, setNakliyeIlleri, vehicleType, setVehicleType, vehiclePlate, setVehiclePlate, vehicleCapacity, setVehicleCapacity, nakliyeDeneyim, setNakliyeDeneyim, err, goToDoc, onBackToChoice, }) {
     const STEP_DEFS = {
         bireysel: ["name", "email", "password"],
         kurumsal: ["companyName", "companyType", "companyLocation", "taxOffice", "name", "authorizedTc", "email", "password"],
         veteriner: ["clinicName", "licenseNo", "vetLocation", "vetTaxNo", "vetTaxOffice", "name", "email", "password"],
-        nakliyeci: ["nakliyeIlleri", "vehicleType", "vehicleCapacity", "name", "email", "password"],
+        nakliyeci: ["nakliyeIlleri", "vehicleType", "vehiclePlate", "vehicleCapacity", "nakliyeDeneyim", "name", "email", "password"],
     };
     const keys = STEP_DEFS[accountType];
     const key = keys[profileStep];
@@ -24913,6 +25076,7 @@ function ProfileWizardStep({ accountType, profileStep, setProfileStep, name, set
             case "vetTaxOffice": return vetTaxOffice.trim().length > 0;
             case "nakliyeIlleri": return nakliyeIlleri.length > 0;
             case "vehicleType": return !!vehicleType;
+            case "vehiclePlate": return vehiclePlate.trim().length > 0;
             default: return true;
         }
     };
@@ -24941,7 +25105,9 @@ function ProfileWizardStep({ accountType, profileStep, setProfileStep, name, set
         vetTaxOffice: "Vergi Daireniz Nedir?",
         nakliyeIlleri: "Hangi İllere Hizmet Veriyorsunuz?",
         vehicleType: "Araç Tipiniz Nedir?",
+        vehiclePlate: "Araç Plakanız Nedir?",
         vehicleCapacity: "Araç Kapasitesi (Baş)",
+        nakliyeDeneyim: "Kaç Yıldır Hayvan Nakliyesi Yapıyorsunuz?",
     };
     const renderInput = () => {
         switch (key) {
@@ -25039,8 +25205,12 @@ function ProfileWizardStep({ accountType, profileStep, setProfileStep, name, set
                         " il seçildi")));
             case "vehicleType":
                 return (React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, [["pickup", "Pickup / Kamyonet"], ["kamyon", "Kamyon"], ["tir", "Tır (Çoklu Baş)"]].map(([k, l]) => (React.createElement("button", { key: k, onClick: () => pickAndAdvance(setVehicleType, k), style: { padding: "14px 16px", borderRadius: 12, border: `1.5px solid ${vehicleType === k ? COLORS.pineDeep : COLORS.line}`, background: vehicleType === k ? COLORS.pineDeep : COLORS.white, color: vehicleType === k ? COLORS.white : COLORS.ink, fontFamily: "Inter", fontWeight: 600, fontSize: 14, cursor: "pointer", textAlign: "left" } }, l)))));
+            case "vehiclePlate":
+                return React.createElement(FormField, { label: "Araç Plakası", value: vehiclePlate, onChange: (v) => setVehiclePlate(v.toUpperCase()), placeholder: "Örn. 34 ABC 123" });
             case "vehicleCapacity":
                 return React.createElement(FormField, { label: "Araç Kapasitesi (baş sayısı, opsiyonel)", value: vehicleCapacity, onChange: setVehicleCapacity, placeholder: "Örn. 8", type: "number" });
+            case "nakliyeDeneyim":
+                return React.createElement(FormField, { label: "Deneyim (yıl, opsiyonel)", value: nakliyeDeneyim, onChange: setNakliyeDeneyim, placeholder: "Örn. 5", type: "number" });
             default:
                 return null;
         }
@@ -25079,7 +25249,9 @@ function NakliyeciCard({ m, matchCities, onOpenChat, me }) {
         React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } },
             React.createElement("div", { style: { width: 38, height: 38, borderRadius: "50%", background: "#DCEAE0", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Fraunces", fontWeight: 700, fontSize: 14, color: COLORS.pineDeep, flexShrink: 0 } }, m.name[0]),
             React.createElement("div", { style: { flex: 1, minWidth: 0 } },
-                React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 13.5 } }, m.name),
+                React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 4 } },
+                    React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 13.5 } }, m.name),
+                    m.nakliyeVerification === "onaylandi" && React.createElement(VerifiedBadge, { size: 14 })),
                 React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776" } },
                     VEHICLE_TYPE_LABELS[m.vehicleType] || m.vehicleType || "Nakliyeci",
                     m.vehicleCapacity ? ` · ${m.vehicleCapacity} baş kapasite` : ""))),
