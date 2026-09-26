@@ -5,6 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Benim Meram</title>
 
+<!-- PWA: telefonda "Ana Ekrana Ekle / Yükle" ile gerçek bir uygulama gibi açılabilmesi için -->
+<link rel="manifest" href="/manifest.json" />
+<meta name="theme-color" content="#1A3D2D" />
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Benim Meram" />
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("/sw.js").catch(function () { /* PWA olmadan da uygulama normal çalışmaya devam eder */ });
+    });
+  }
+</script>
+
 <div id="error-box" style="display:none; position:fixed; top:0; left:0; right:0; max-height:40vh; background:#fff8f6; border-bottom:2px solid #B3432B; padding:12px 16px; font-family:monospace; font-size:11px; color:#B3432B; overflow:auto; z-index:9999; white-space:pre-wrap; box-shadow:0 4px 12px rgba(0,0,0,0.15);"></div>
 <script>
   function showError(msg) {
