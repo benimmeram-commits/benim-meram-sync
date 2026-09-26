@@ -18078,6 +18078,19 @@ function VideoPlayer({ src, style, autoPlay, loop, muted, onToggleMute, showMute
     const barRef = React.useRef(null);
     const [playing, setPlaying] = useState(!!autoPlay);
     const [progress, setProgress] = useState(0); // 0-1
+    // src prop'u ba\u015Flang\u0131\u00E7ta bo\u015F olup sonradan (video verisi \u00E7\u00F6z\u00FCmlendi\u011Finde) dolabilir.
+    // Taray\u0131c\u0131lar, zaten monte edilmi\u015F bir <video> element\u0131n\u0131n src'si de\u011Fi\u015Fti\u011Finde
+    // a\u00E7\u0131k\u00E7a .load() \u00E7a\u011Fr\u0131lmadan otomatik olarak yeni kayna\u011F\u0131 \u00E7\u00F6zmeyebiliyor \u2014 bu
+    // da video verisi ger\u00E7ekten gelmi\u015F olsa bile ekran\u0131n donuk/siyah kalmas\u0131na yol a\u00E7\u0131yordu.
+    useEffect(() => {
+        const v = videoRef.current;
+        if (!v || !src)
+            return;
+        v.load();
+        if (autoPlay) {
+            v.play().catch(() => { });
+        }
+    }, [src]);
     const toggle = () => {
         const v = videoRef.current;
         if (!v)
@@ -18648,10 +18661,12 @@ function BenimMeram() {
             if (willBeFavorited && idx === -1) {
                 all.push({ id: uid(), listingId, userName: me.name, createdAt: Date.now() });
                 await saveShared("favoritesLog", all);
+                setFavoritesLog(all); // ekran\u0131 hemen g\u00FCncelle \u2014 bir sonraki refreshAll'\u0131 beklemeden
             }
             else if (!willBeFavorited && idx > -1) {
                 all.splice(idx, 1);
                 await saveShared("favoritesLog", all);
+                setFavoritesLog(all);
             }
         }
     }, [me]);
@@ -19338,6 +19353,7 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
         return () => window.removeEventListener("bm-upload-progress", onProgress);
     }, []);
     const [err, setErr] = useState("");
+    const [errStepKey, setErrStepKey] = useState(null);
     const [wizardStep, setWizardStep] = useState(0);
     const handleFiles = async (e) => {
         const files = Array.from(e.target.files || []);
@@ -19437,6 +19453,7 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
         }
         setSaving(true);
         setUploadPercent(null);
+        setErrStepKey(null);
         const all = await loadShared("listings", []);
         if (me.profileType === "bireysel") {
             const now = new Date();
@@ -19451,6 +19468,7 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
         if (duplicate) {
             setSaving(false);
             setErr(`Bu küpe numarası (${earTag.trim()}) sistemde zaten kayıtlı — ${duplicate.sellerName} adlı kullanıcının "${duplicate.breed} ${duplicate.subCategory}" ilanında bulundu. Aynı hayvan için birden fazla ilan verilemez.`);
+            setErrStepKey("kupe");
             return;
         }
         all.push({
@@ -19599,7 +19617,9 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
                         React.createElement("div", null,
                             React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "A\u00E7\u0131klama"),
                             React.createElement("textarea", { value: description, onChange: (e) => setDescription(e.target.value), placeholder: "Ek bilgi, sa\u011Fl\u0131k ge\u00E7mi\u015Fi, \u00F6zel notlar...", rows: 3, style: { ...inputStyle, marginTop: 4, resize: "vertical" } }))),
-                    err && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11.5, marginBottom: 8 } }, err),
+                    err && React.createElement("div", { style: { marginBottom: 8 } },
+                        React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11.5 } }, err),
+                        errStepKey && React.createElement("button", { onClick: () => { const idx = WIZARD.findIndex(s => s.key === errStepKey); if (idx > -1) { setWizardStep(idx); setErr(""); setErrStepKey(null); } }, style: { background: "none", border: "none", color: COLORS.pineDeep, fontFamily: "Inter", fontWeight: 700, fontSize: 11.5, textDecoration: "underline", cursor: "pointer", padding: "4px 0 0", display: "block" } }, "\u2192 Bu bilgiyi d\u00FCzeltmek i\u00E7in ilgili ad\u0131ma git")),
                     media.some(m => m.type === "video") && !saving && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776", marginBottom: 8, textAlign: "center" } }, "\uD83D\uDCF9 Video eklediniz \u2014 yay\u0131nlarken internet h\u0131z\u0131n\u0131za g\u00F6re birka\u00E7 saniyeden bir dakikaya kadar s\u00FCrebilir, sayfay\u0131 kapatmadan bekleyin."),
                     React.createElement("button", { onClick: submitListing, disabled: saving, style: btnPrimary }, saving ? (uploadPercent != null ? `Y\u00FCkleniyor... %${uploadPercent}` : media.some(m => m.type === "video") ? "Video haz\u0131rlan\u0131yor..." : "Yayınlanıyor...") : "İlanı Yayınla")));
             default:
