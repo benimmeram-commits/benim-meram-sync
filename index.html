@@ -19495,6 +19495,17 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
             setGpsBusy(false);
         }, () => { setGpsError("Konum alınamadı — tarayıcı izni reddedilmiş olabilir. İl/ilçeyi elle seçebilirsiniz."); setGpsBusy(false); }, { enableHighAccuracy: true, timeout: 8000 });
     };
+    const autoGpsTried = React.useRef(false);
+    useEffect(() => {
+        // "Konum" adımına ilk gelindiğinde, kullanıcının bir butona dokunmasını
+        // beklemeden konumu otomatik bulmayı dene — izin reddedilirse veya
+        // başarısız olursa mevcut manuel seçenekler zaten görünür kalıyor.
+        if (WIZARD[wizardStep] && WIZARD[wizardStep].key === "konum" && !autoGpsTried.current && !animalLat) {
+            autoGpsTried.current = true;
+            setAddressMode("gps");
+            findGps();
+        }
+    }, [wizardStep]);
     const submitListing = async () => {
         if (!isApprovedSeller) {
             setErr("Belgeniz onaylanmadan ilan veremezsiniz.");
@@ -19574,7 +19585,7 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
         { key: "cinsiyet", q: "Cinsiyeti nedir?", valid: () => !!gender, auto: true },
         { key: "kupe", q: "Küpe numarası nedir?", valid: () => earTag.trim().length > 0, auto: false },
         { key: "konum", q: "Hayvan nerede bulunuyor?", valid: () => animalIl.trim().length > 0, auto: false },
-        { key: "nakliye", q: "Nakliye imkanınız var mı?", valid: () => !!nakliye, auto: true },
+        { key: "nakliye", q: "Nakliye imkanınız var mı?", valid: () => !!nakliye, auto: false },
         { key: "fiyat", q: "Fiyatı nedir?", valid: () => price !== "" && Number(price) > 0, auto: false },
         { key: "medya", q: "Fotoğraf veya video ekleyin", valid: () => true, auto: false },
         { key: "ozet", q: "Son kontrol", valid: () => true, auto: false },
@@ -19643,8 +19654,17 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
                     React.createElement("div", null,
                         React.createElement("label", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#5A574C", fontWeight: 600 } }, "A\u00E7\u0131k Adres (opsiyonel)"),
                         React.createElement("textarea", { value: animalAddress, onChange: (e) => setAnimalAddress(e.target.value), rows: 2, placeholder: "GPS ile otomatik doldurulur, isterseniz d\u00FCzenleyebilirsiniz", style: { ...inputStyle, marginTop: 4, resize: "vertical" } }))));
-            case "nakliye":
-                return (React.createElement("div", { style: { display: "flex", gap: 8 } }, [["var", "Nakliye Var"], ["yok", "Nakliye Yok"]].map(([k, l]) => (React.createElement("button", { key: k, onClick: () => pickAndAdvance(setNakliye, k), style: { flex: 1, padding: "16px", borderRadius: 12, border: `1.5px solid ${nakliye === k ? COLORS.pineDeep : COLORS.line}`, background: nakliye === k ? COLORS.pineDeep : COLORS.white, color: nakliye === k ? COLORS.white : COLORS.ink, fontFamily: "Inter", fontWeight: 700, fontSize: 13.5, cursor: "pointer" } }, l)))));
+            case "nakliye": {
+                const nakliyeMatches = nakliye === "var" ? matchNakliyeciler(members, [animalIl]) : [];
+                return (React.createElement("div", null,
+                    React.createElement("div", { style: { display: "flex", gap: 8 } }, [["var", "Nakliye Var"], ["yok", "Nakliye Yok"]].map(([k, l]) => (React.createElement("button", { key: k, onClick: () => setNakliye(k), style: { flex: 1, padding: "16px", borderRadius: 12, border: `1.5px solid ${nakliye === k ? COLORS.pineDeep : COLORS.line}`, background: nakliye === k ? COLORS.pineDeep : COLORS.white, color: nakliye === k ? COLORS.white : COLORS.ink, fontFamily: "Inter", fontWeight: 700, fontSize: 13.5, cursor: "pointer" } }, l)))),
+                    nakliye === "var" && (React.createElement("div", { style: { marginTop: 16 } },
+                        React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 12.5, color: COLORS.ink, marginBottom: 4 } }, "Uygun Nakliyeciler"),
+                        nakliyeMatches.length === 0 ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776" } },
+                            animalIl ? `${animalIl} güzergahına hizmet veren kayıtlı nakliyeci bulunamadı — ilanınız yayınlandıktan sonra da otomatik olarak gösterilmeye devam edecek.` : "İl bilgisi bulunamadı, önceki adımdan konum seçin.")) : (React.createElement(React.Fragment, null,
+                            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776", marginBottom: 8 } }, `${animalIl} güzergahına hizmet veren ${nakliyeMatches.length} nakliyeci bulundu:`),
+                            nakliyeMatches.slice(0, 4).map((m, i) => React.createElement(NakliyeciCard, { key: i, m: m, matchCities: [animalIl] }))))))));
+            }
             case "fiyat":
                 return React.createElement(FormField, { label: "Fiyat (TL)", value: price, onChange: setPrice, placeholder: "\u00D6rn. 92000", type: "number" });
             case "medya":
