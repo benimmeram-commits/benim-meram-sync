@@ -18086,17 +18086,29 @@ function VideoPlayer({ src, style, autoPlay, loop, muted, onToggleMute, showMute
         const v = videoRef.current;
         if (!v || !src)
             return;
-        v.load();
-        if (autoPlay) {
-            v.play().catch(() => { });
+        try {
+            v.load();
         }
-    }, [src]);
+        catch (e) { /* öğe kaldırılmışsa yoksay */ }
+        if (autoPlay) {
+            // play() bir Promise döner; öğe hemen ardından DOM'dan
+            // kaldırılırsa (ör. Reels'te hızlı kaydırma) bu Promise
+            // reddedilir — .catch olmadan bu "unhandled rejection"
+            // olarak ekrandaki hata bannerına düşer, gerçek bir
+          // bozukluk olmasa da.
+            const p = v.play();
+            if (p && typeof p.catch === "function")
+                p.catch(() => { });
+        }
+    }, [src, autoPlay]);
     const toggle = () => {
         const v = videoRef.current;
         if (!v)
             return;
         if (v.paused) {
-            v.play();
+            const p = v.play();
+            if (p && typeof p.catch === "function")
+                p.catch(() => { });
             setPlaying(true);
         }
         else {
@@ -18123,7 +18135,7 @@ function VideoPlayer({ src, style, autoPlay, loop, muted, onToggleMute, showMute
     };
     return (React.createElement("div", { style: { position: "relative", width: "100%", height: "100%", ...style }, onClick: toggle },
         React.createElement("style", null, `@keyframes bm-spin{to{transform:rotate(360deg)}}`),
-        React.createElement("video", { ref: videoRef, src: src, autoPlay: autoPlay, loop: loop, muted: muted, playsInline: true, controlsList: "nodownload noremoteplayback", disablePictureInPicture: true, onContextMenu: (e) => e.preventDefault(), onTimeUpdate: onTimeUpdate, style: { width: "100%", height: "100%", objectFit: "cover", background: "#000" } }),
+        React.createElement("video", { ref: videoRef, src: src, loop: loop, muted: muted, playsInline: true, controlsList: "nodownload noremoteplayback", disablePictureInPicture: true, onContextMenu: (e) => e.preventDefault(), onTimeUpdate: onTimeUpdate, onPlay: () => setPlaying(true), onPause: () => setPlaying(false), style: { width: "100%", height: "100%", objectFit: "cover", background: "#000" } }),
         // src henüz çözümlenmemişse (sunucudan getiriliyor), siyah/donuk ekran yerine
         // açıkça bir yükleniyor göstergesi göster — kullanıcı videonun bozuk
         // olmadığını, sadece geldiğini anlasın.
@@ -19609,9 +19621,12 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
                         React.createElement("button", { onClick: () => removeMedia(i), style: { position: "absolute", top: 2, right: 2, background: "rgba(0,0,0,0.65)", color: "#fff", border: "none", borderRadius: "50%", width: 16, height: 16, fontSize: 10, cursor: "pointer", lineHeight: 1 } }, "\u2715"))))))));
             case "ozet":
                 return (React.createElement("div", null,
-                    React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 } }, [["Kategori", `${mainCategory === "buyukbas" ? "Büyükbaş" : "Küçükbaş"} · ${subCategory}`], ["Irk", breed], ["Yaş", age], ["Cinsiyet", gender], ["Küpe No", earTag], ["Konum", `${animalIl}${animalIlce ? "/" + animalIlce : ""}`], ["Nakliye", nakliye === "var" ? "Var" : "Yok"], ["Fiyat", price ? TL(Number(price)) : "—"], ["Medya", `${media.length} dosya`]].map(([k, v]) => (React.createElement("div", { key: k, style: { display: "flex", justifyContent: "space-between", fontFamily: "Inter", fontSize: 12.5, borderBottom: `1px solid ${COLORS.line}`, paddingBottom: 6 } },
+                    React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776", marginBottom: 6 } }, "Bir bilgiyi değiştirmek için üzerine dokunun"),
+                    React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 2, marginBottom: 14 } }, [["Kategori", `${mainCategory === "buyukbas" ? "Büyükbaş" : "Küçükbaş"} · ${subCategory}`, "kategori"], ["Irk", breed, "irk"], ["Yaş", age, "yas"], ["Cinsiyet", gender, "cinsiyet"], ["Küpe No", earTag, "kupe"], ["Konum", `${animalIl}${animalIlce ? "/" + animalIlce : ""}`, "konum"], ["Nakliye", nakliye === "var" ? "Var" : "Yok", "nakliye"], ["Fiyat", price ? TL(Number(price)) : "—", "fiyat"], ["Medya", `${media.length} dosya`, "medya"]].map(([k, v, stepKey]) => (React.createElement("button", { key: k, type: "button", onClick: () => { const idx = WIZARD.findIndex(s => s.key === stepKey); if (idx > -1) { setErr(""); setErrStepKey(null); setWizardStep(idx); } }, style: { display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", background: "none", border: "none", borderBottom: `1px solid ${COLORS.line}`, padding: "8px 2px", fontFamily: "Inter", fontSize: 12.5, cursor: "pointer", textAlign: "left" } },
                         React.createElement("span", { style: { color: "#8A8776" } }, k),
-                        React.createElement("span", { style: { fontWeight: 600 } }, v))))),
+                        React.createElement("span", { style: { display: "flex", alignItems: "center", gap: 5 } },
+                            React.createElement("span", { style: { fontWeight: 600, color: COLORS.ink } }, v),
+                            React.createElement(ChevronRight, { size: 14, color: "#8A8776" })))))),
                     React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12, color: "#8A8776", marginBottom: 8 } }, "Opsiyonel Ek Bilgiler"),
                     React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8, marginBottom: 10 } },
                         React.createElement(FormField, { label: "A\u011F\u0131rl\u0131k (kg)", value: weight, onChange: setWeight, placeholder: "\u00D6rn. 380", type: "number" }),
