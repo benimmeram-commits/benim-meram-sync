@@ -18122,8 +18122,15 @@ function VideoPlayer({ src, style, autoPlay, loop, muted, onToggleMute, showMute
         setProgress(ratio);
     };
     return (React.createElement("div", { style: { position: "relative", width: "100%", height: "100%", ...style }, onClick: toggle },
+        React.createElement("style", null, `@keyframes bm-spin{to{transform:rotate(360deg)}}`),
         React.createElement("video", { ref: videoRef, src: src, autoPlay: autoPlay, loop: loop, muted: muted, playsInline: true, controlsList: "nodownload noremoteplayback", disablePictureInPicture: true, onContextMenu: (e) => e.preventDefault(), onTimeUpdate: onTimeUpdate, style: { width: "100%", height: "100%", objectFit: "cover", background: "#000" } }),
-        !playing && (React.createElement("div", { style: { position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.25)" } },
+        // src henüz çözümlenmemişse (sunucudan getiriliyor), siyah/donuk ekran yerine
+        // açıkça bir yükleniyor göstergesi göster — kullanıcı videonun bozuk
+        // olmadığını, sadece geldiğini anlasın.
+        !src && (React.createElement("div", { style: { position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.55)", gap: 10 } },
+            React.createElement("div", { style: { width: 34, height: 34, borderRadius: "50%", border: "3px solid rgba(255,255,255,0.3)", borderTopColor: COLORS.white, animation: "bm-spin 0.8s linear infinite" } }),
+            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11.5, color: "rgba(255,255,255,0.85)" } }, "Video yükleniyor…"))),
+        !!src && !playing && (React.createElement("div", { style: { position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.25)" } },
             React.createElement("div", { style: { width: 54, height: 54, borderRadius: "50%", background: "rgba(255,255,255,0.92)", display: "flex", alignItems: "center", justifyContent: "center" } },
                 React.createElement("div", { style: { width: 0, height: 0, borderTop: "10px solid transparent", borderBottom: "10px solid transparent", borderLeft: `16px solid ${COLORS.pineDeep}`, marginLeft: 4 } })))),
         showMuteButton && (React.createElement("button", { onClick: (e) => { e.stopPropagation(); onToggleMute(); }, style: { position: "absolute", right: 10, top: 10, width: 30, height: 30, borderRadius: "50%", background: "rgba(0,0,0,0.45)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14 } }, muted ? "🔇" : "🔊")),
@@ -18197,13 +18204,26 @@ async function saveShared(key, value) {
 // ana "listings" bloguna G\u00D6M\u00DCLMEZ \u2014 her video kendi ba\u011F\u0131ms\u0131z anahtar\u0131nda saklan\u0131r.
 // B\u00F6ylece: (1) bir video y\u00FCklemesi ba\u015Far\u0131s\u0131z/yava\u015F olsa bile di\u011Fer T\u00DCM ilanlar\u0131
 // etkilemez, (2) ana liste her zaman k\u00FC\u00E7\u00FCk ve h\u0131zl\u0131 kal\u0131r.
+// Bir video verisi bir kez çözümlendiğinde (yüklenirken ya da görüntülenirken)
+// bu oturum boyunca bellekte tutulur — aynı video ikinci kez istendiğinde
+// (örn. bir ilan yayınlandıktan hemen sonra izlenmek istendiğinde) sunucuya
+// tekrar gidip beklemek gerekmez, anında gösterilir.
+const _videoMediaCache = new Map();
 async function saveVideoMedia(ref, dataUrl) {
+    // Veri elimizdeyken hemen önbelleğe al — sunucuya yazma isteği başarısız
+    // olsa/uzun sürse bile bu oturumda aynı referansı anında çözebiliriz.
+    _videoMediaCache.set(ref, dataUrl);
     return rawSet(`media_video:${ref}`, dataUrl, true);
 }
 async function loadVideoMedia(ref) {
+    if (_videoMediaCache.has(ref))
+        return _videoMediaCache.get(ref);
     try {
         const r = await rawGet(`media_video:${ref}`, true);
-        return r ? r.value : null;
+        const value = r ? r.value : null;
+        if (value)
+            _videoMediaCache.set(ref, value);
+        return value;
     }
     catch (e) {
         console.error("loadVideoMedia hata:", ref, e);
