@@ -481,7 +481,10 @@ app.use((req, res, next) => {
   }
   next();
 });
-app.use(express.static(__dirname));
+// dotfiles: "allow" olmazsa Express, adı "." ile başlayan klasörleri (örn.
+// /.well-known/assetlinks.json — Android'in "bu site gerçekten senin"
+// doğrulaması için gereken dosya) gizli sayıp 404 döndürür.
+app.use(express.static(__dirname, { dotfiles: "allow" }));
 
 app.get("/health", (req, res) => res.json({ ok: true, storage: USE_UPSTASH ? "upstash" : "local-file" }));
 
