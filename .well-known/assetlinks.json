@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.onrender.benim_meram_sync.twa",
+        "sha256_cert_fingerprints": ["D6:8D:49:10:1E:42:53:10:C0:21:C1:4A:8D:D8:62:D0:4F:B3:C8:E4:3B:41:2A:79:2C:6B:7E:80:7A:9A:F0:72"]
+      }
+    }]
