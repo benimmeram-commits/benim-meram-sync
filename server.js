@@ -498,6 +498,34 @@ app.post("/push/unsubscribe", async (req, res) => {
   }
 });
 
+// Kullanıcının "Bildirimleri Aç" sonrası hemen kendi kendine test edebilmesi
+// için: bu cihaza (owner) kayıtlı gerçek bir abonelik varsa ona anında bir
+// test bildirimi gönderir. Böylece sorunun aboneliğin kendisinde mi
+// (sunucuda kayıt yok) yoksa cihaz/tarayıcı tarafında mı olduğu hemen anlaşılır.
+app.post("/push/test", async (req, res) => {
+  try {
+    if (!webpush) return res.status(503).json({ error: "bildirimler yapılandırılmamış" });
+    const { owner } = req.body || {};
+    if (!owner) return res.status(400).json({ error: "owner gerekli" });
+    const all = await getSharedJSON("pushSubscriptions", []);
+    const target = all.find((s) => s.owner === owner);
+    if (!target) return res.json({ ok: true, sent: false });
+    try {
+      await webpush.sendNotification(target.subscription, JSON.stringify({ title: "Test Bildirimi", body: "Bildirimler çalışıyor! 🎉", url: "/" }));
+      return res.json({ ok: true, sent: true });
+    } catch (e) {
+      console.error("Test bildirimi gönderilemedi:", e && e.statusCode, e && e.message);
+      if (e && (e.statusCode === 404 || e.statusCode === 410)) {
+        await setSharedJSON("pushSubscriptions", all.filter((s) => s.owner !== owner));
+      }
+      return res.status(500).json({ error: (e && e.message) || "gönderilemedi", statusCode: e && e.statusCode });
+    }
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "sunucu hatası" });
+  }
+});
+
 // Belirli bir üyeye (isme) kayıtlı tüm cihazlarına bildirim gönderir.
 // Artık geçerli olmayan (404/410) abonelikler otomatik temizlenir.
 async function sendPushToMember(memberName, payload) {

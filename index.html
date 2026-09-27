@@ -17716,16 +17716,42 @@ async function subscribeToPush(me) {
                 return false;
             sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) });
         }
-        await fetch("/push/subscribe", {
+        // ÖNEMLİ: bu isteğin gerçekten başarılı olup olmadığı kontrol edilmezse,
+        // tarayıcı izni verilmiş olsa bile sunucuya kayıt başarısız olduğunda
+        // arıza sessizce yutuluyor ve ekranda "Açık" yazıyordu — oysa sunucu bu
+        // cihazı hiç tanımıyordu ve bildirim hiçbir zaman gelmiyordu.
+        const subRes = await fetch("/push/subscribe", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ owner: getPushDeviceId(), memberName: me.name, subscription: sub.toJSON ? sub.toJSON() : sub }),
         });
+        if (!subRes.ok) {
+            console.warn("Abonelik sunucuya kaydedilemedi:", subRes.status);
+            return false;
+        }
         return true;
     }
     catch (e) {
         console.warn("Bildirim aboneliği başarısız:", e);
         return false;
+    }
+}
+// Kullanıcının kendi abonelik durumunu hemen test edebilmesi için: sunucuya
+// "bu cihaza bir test bildirimi gönder" isteği atar. Bir şey gelmiyorsa,
+// sorunun aboneliğin kendisinde mi yoksa telefon/tarayıcı tarafında mı
+// olduğunu ayırt etmeye yarar.
+async function sendTestPush() {
+    try {
+        const r = await fetch("/push/test", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ owner: getPushDeviceId() }),
+        });
+        const data = await r.json().catch(() => ({}));
+        return { ok: r.ok, ...data };
+    }
+    catch (e) {
+        return { ok: false, error: e && e.message };
     }
 }
 async function unsubscribeFromPush() {
@@ -20626,26 +20652,54 @@ function NotificationPrefsCard({ me, setMe }) {
         setMe(updatedMe);
         setSaving(false);
     };
+    const [testMsg, setTestMsg] = useState("");
+    const [testBusy, setTestBusy] = useState(false);
     const enablePush = async () => {
         setPushBusy(true);
+        setTestMsg("");
         const ok = await subscribeToPush(me);
         setPushStatus(typeof Notification !== "undefined" ? Notification.permission : "unsupported");
         setPushBusy(false);
-        if (!ok && Notification.permission === "denied") {
-            alert("Bildirimlere izin verilmedi. Telefonunuzun/tarayıcınızın ayarlarından bu site için bildirim izni açmanız gerekir.");
+        if (!ok) {
+            if (Notification.permission === "denied") {
+                alert("Bildirimlere izin verilmedi. Telefonunuzun/tarayıcınızın ayarlarından bu site için bildirim izni açmanız gerekir.");
+            }
+            else {
+                alert("Bildirim izni verildi ama abonelik sunucuya kaydedilemedi (bağlantı sorunu olabilir). Lütfen tekrar deneyin.");
+            }
         }
     };
     const disablePush = async () => {
         setPushBusy(true);
+        setTestMsg("");
         await unsubscribeFromPush();
         setPushBusy(false);
+    };
+    const testPush = async () => {
+        setTestBusy(true);
+        setTestMsg("");
+        const result = await sendTestPush();
+        setTestBusy(false);
+        if (result.ok && result.sent) {
+            setTestMsg("✓ Test bildirimi gönderildi — bildirim çekmecenize bakın (birkaç saniye sürebilir).");
+        }
+        else if (result.ok && !result.sent) {
+            setTestMsg("Sunucuda bu cihaza ait kayıtlı bir abonelik bulunamadı. \"Bildirimleri Aç\"a tekrar basmayı deneyin.");
+        }
+        else {
+            setTestMsg("Test bildirimi gönderilemedi: " + (result.error || "sunucu hatası"));
+        }
     };
     return (React.createElement("div", { style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 14, marginBottom: 14 } },
         React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 12.5, color: COLORS.ink, marginBottom: 10 } }, "Bildirim Tercihleri"),
         React.createElement("div", { style: { background: COLORS.paper, borderRadius: 10, padding: 10, marginBottom: 12 } },
             React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 11.5, color: COLORS.ink, marginBottom: 4 } }, "Telefonuma Anlık Bildirim"),
             React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776", marginBottom: 8 } }, "Uygulama kapalıyken de (favori ilan fiyatı düştüğünde, nakliyeci konum bildirdiğinde) telefonunuza bildirim gelsin."),
-            pushStatus === "granted" ? (React.createElement("button", { onClick: disablePush, disabled: pushBusy, style: { ...btnGhost, borderColor: COLORS.line, color: COLORS.red || "#B3413A", padding: "7px 12px" } }, pushBusy ? "..." : "✓ Açık — Kapat")) : pushStatus === "denied" ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#B3413A" } }, "Bildirimler engellenmiş — tarayıcı/telefon ayarlarından bu site için izin vermeniz gerekir.")) : pushStatus === "unsupported" ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776" } }, "Bu cihaz/tarayıcı anlık bildirimleri desteklemiyor.")) : (React.createElement("button", { onClick: enablePush, disabled: pushBusy, style: { ...btnPrimary, padding: "7px 14px" } }, pushBusy ? "Açılıyor..." : "Bildirimleri Aç"))),
+            pushStatus === "granted" ? (React.createElement(React.Fragment, null,
+                React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } },
+                    React.createElement("button", { onClick: disablePush, disabled: pushBusy, style: { ...btnGhost, borderColor: COLORS.line, color: COLORS.red || "#B3413A", padding: "7px 12px" } }, pushBusy ? "..." : "✓ İzin Açık — Kapat"),
+                    React.createElement("button", { onClick: testPush, disabled: testBusy, style: { ...btnGhost, borderColor: COLORS.line, color: COLORS.pineDeep, padding: "7px 12px" } }, testBusy ? "Gönderiliyor..." : "Test Bildirimi Gönder")),
+                testMsg && React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: testMsg.startsWith("✓") ? COLORS.pineDeep : "#B3413A", marginTop: 6 } }, testMsg))) : pushStatus === "denied" ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#B3413A" } }, "Bildirimler engellenmiş — tarayıcı/telefon ayarlarından bu site için izin vermeniz gerekir.")) : pushStatus === "unsupported" ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776" } }, "Bu cihaz/tarayıcı anlık bildirimleri desteklemiyor.")) : (React.createElement("button", { onClick: enablePush, disabled: pushBusy, style: { ...btnPrimary, padding: "7px 14px" } }, pushBusy ? "Açılıyor..." : "Bildirimleri Aç"))),
         [["yeniTeklif", "İlanıma yeni teklif geldiğinde"], ["teklifDurumu", "Teklifim kabul/red edildiğinde"], ["fiyatDususu", "Favorilediğim ilanda fiyat düşünce"], ["mesaj", "Yeni mesaj geldiğinde"], ["nakliyeKonum", "Nakliyeci konum bildirince"], ["randevu", "Randevu teklif edildiğinde/güncellenince"], ["belgeOnay", "Belge/doğrulama onaylanınca veya reddedilince"]].map(([k, l]) => (React.createElement("label", { key: k, style: { display: "flex", alignItems: "center", gap: 8, fontFamily: "Inter", fontSize: 12, color: "#5A574C", marginBottom: 6, cursor: "pointer" } },
             React.createElement("input", { type: "checkbox", checked: prefs[k], onChange: () => toggle(k) }),
             " ",
