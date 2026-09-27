@@ -17461,14 +17461,14 @@ const ICON_GLYPHS = {
     X: "✕", Check: "✓", TrendingUp: "📈", Lock: "🔒", Filter: "≡", Heart: "♥",
     Bell: "🔔", CreditCard: "💳", LifeBuoy: "🛟", Users: "👥", BarChart3: "📊",
     Settings: "⚙", Ban: "🚫", Flag: "🚩", DollarSign: "₺", ChevronRight: "›",
-    Repeat: "↻", Loader2: "⏳", Inbox: "📥", Send: "➤", Globe2: "🌐", Film: "🎬", Camera: "📷", Truck: "🚚",
+    Repeat: "↻", Loader2: "⏳", Inbox: "📥", Send: "➤", Globe2: "🌐", Film: "🎬", Camera: "📷", Truck: "🚚", Share2: "📤",
 };
 function makeIcon(glyph) {
     return function IconComp({ size = 16, color, fill, style, strokeWidth, className, ...rest }) {
         return (React.createElement("span", { ...rest, style: { fontSize: size, lineHeight: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", color: fill && fill !== "none" ? fill : color, width: size, height: size, ...style } }, glyph));
     };
 }
-const Menu = makeIcon(ICON_GLYPHS.Menu), Search = makeIcon(ICON_GLYPHS.Search), MessageCircle = makeIcon(ICON_GLYPHS.MessageCircle), Home = makeIcon(ICON_GLYPHS.Home), PlusCircle = makeIcon(ICON_GLYPHS.PlusCircle), User = makeIcon(ICON_GLYPHS.User), MapPin = makeIcon(ICON_GLYPHS.MapPin), ChevronLeft = makeIcon(ICON_GLYPHS.ChevronLeft), Star = makeIcon(ICON_GLYPHS.Star), ShieldCheck = makeIcon(ICON_GLYPHS.ShieldCheck), X = makeIcon(ICON_GLYPHS.X), Check = makeIcon(ICON_GLYPHS.Check), TrendingUp = makeIcon(ICON_GLYPHS.TrendingUp), Lock = makeIcon(ICON_GLYPHS.Lock), Filter = makeIcon(ICON_GLYPHS.Filter), Heart = makeIcon(ICON_GLYPHS.Heart), Bell = makeIcon(ICON_GLYPHS.Bell), CreditCard = makeIcon(ICON_GLYPHS.CreditCard), LifeBuoy = makeIcon(ICON_GLYPHS.LifeBuoy), Users = makeIcon(ICON_GLYPHS.Users), BarChart3 = makeIcon(ICON_GLYPHS.BarChart3), Settings = makeIcon(ICON_GLYPHS.Settings), Ban = makeIcon(ICON_GLYPHS.Ban), Flag = makeIcon(ICON_GLYPHS.Flag), DollarSign = makeIcon(ICON_GLYPHS.DollarSign), ChevronRight = makeIcon(ICON_GLYPHS.ChevronRight), Repeat = makeIcon(ICON_GLYPHS.Repeat), Loader2 = makeIcon(ICON_GLYPHS.Loader2), Inbox = makeIcon(ICON_GLYPHS.Inbox), Send = makeIcon(ICON_GLYPHS.Send), Globe2 = makeIcon(ICON_GLYPHS.Globe2), Film = makeIcon(ICON_GLYPHS.Film), Camera = makeIcon(ICON_GLYPHS.Camera), Truck = makeIcon(ICON_GLYPHS.Truck);
+const Menu = makeIcon(ICON_GLYPHS.Menu), Search = makeIcon(ICON_GLYPHS.Search), MessageCircle = makeIcon(ICON_GLYPHS.MessageCircle), Home = makeIcon(ICON_GLYPHS.Home), PlusCircle = makeIcon(ICON_GLYPHS.PlusCircle), User = makeIcon(ICON_GLYPHS.User), MapPin = makeIcon(ICON_GLYPHS.MapPin), ChevronLeft = makeIcon(ICON_GLYPHS.ChevronLeft), Star = makeIcon(ICON_GLYPHS.Star), ShieldCheck = makeIcon(ICON_GLYPHS.ShieldCheck), X = makeIcon(ICON_GLYPHS.X), Check = makeIcon(ICON_GLYPHS.Check), TrendingUp = makeIcon(ICON_GLYPHS.TrendingUp), Lock = makeIcon(ICON_GLYPHS.Lock), Filter = makeIcon(ICON_GLYPHS.Filter), Heart = makeIcon(ICON_GLYPHS.Heart), Bell = makeIcon(ICON_GLYPHS.Bell), CreditCard = makeIcon(ICON_GLYPHS.CreditCard), LifeBuoy = makeIcon(ICON_GLYPHS.LifeBuoy), Users = makeIcon(ICON_GLYPHS.Users), BarChart3 = makeIcon(ICON_GLYPHS.BarChart3), Settings = makeIcon(ICON_GLYPHS.Settings), Ban = makeIcon(ICON_GLYPHS.Ban), Flag = makeIcon(ICON_GLYPHS.Flag), DollarSign = makeIcon(ICON_GLYPHS.DollarSign), ChevronRight = makeIcon(ICON_GLYPHS.ChevronRight), Repeat = makeIcon(ICON_GLYPHS.Repeat), Loader2 = makeIcon(ICON_GLYPHS.Loader2), Inbox = makeIcon(ICON_GLYPHS.Inbox), Send = makeIcon(ICON_GLYPHS.Send), Globe2 = makeIcon(ICON_GLYPHS.Globe2), Film = makeIcon(ICON_GLYPHS.Film), Camera = makeIcon(ICON_GLYPHS.Camera), Truck = makeIcon(ICON_GLYPHS.Truck), Share2 = makeIcon(ICON_GLYPHS.Share2);
 // Alt navigasyon için tek renkli (monokrom) çizgi ikonlar — emoji değil,
 // "color" özelliğinden renk alan basit SVG'ler.
 function NavIconHome({ size = 20, color }) {
@@ -17556,6 +17556,28 @@ const COLORS = {
 const fontImport = `@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');`;
 const TL = (n) => Number(n || 0).toLocaleString("tr-TR") + " ₺";
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+// Bir ilanı WhatsApp, Instagram vb. dış mecralarda paylaşmak için kullanılan
+// yardımcı fonksiyon — cihazda paylaşım menüsü varsa (navigator.share) onu
+// açar, yoksa bağlantıyı panoya kopyalar. Bağlantı, uygulama açıldığında
+// ilgili ilanı otomatik açan ?ilan=<id> parametresini taşır.
+async function shareListingLink(item, onCopied) {
+    const url = `${window.location.origin}${window.location.pathname}?ilan=${item.id}`;
+    const text = `${item.breed} ${item.subCategory} — ${TL(item.price)} — Benim Meram'da incele:`;
+    try {
+        if (navigator.share) {
+            await navigator.share({ title: "Benim Meram", text, url });
+            return;
+        }
+    }
+    catch { return; /* kullanıcı paylaşımı iptal etmiş olabilir */ }
+    try {
+        await navigator.clipboard.writeText(`${text} ${url}`);
+        onCopied && onCopied("Bağlantı panoya kopyalandı");
+    }
+    catch {
+        onCopied && onCopied("Paylaşım desteklenmiyor");
+    }
+}
 // ---------- MEDYA (FOTOĞRAF/VİDEO) YARDIMCILARI ----------
 // Kanvasa \u00E7izilen bir g\u00F6rselin sessizce BO\u015F (t\u00FCmüyle beyaz/saydam) \u00E7\u0131kıp
 // \u00E7\u0131kmad\u0131\u011F\u0131n\u0131 birka\u00E7 noktadan \u00F6rnekleyerek kontrol eder. Baz\u0131 mobil taray\u0131c\u0131larda
@@ -18856,6 +18878,27 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
             if (idx > -1) { all[idx].viewCount = (all[idx].viewCount || 0) + 1; saveShared("listings", all).then(() => refreshAll()); }
         });
     };
+    // Paylaşılan bir ilan bağlantısıyla (?ilan=<id>) uygulama açıldığında,
+    // ilanlar yüklendikten sonra doğrudan o ilanın detay sayfasına gidilir —
+    // böylece bir ilan başka bir mecrada (WhatsApp, Instagram vb.) paylaşıldığında
+    // tıklayan kişi direkt o ilanı görür.
+    useEffect(() => {
+        if (listings.length === 0)
+            return;
+        try {
+            const params = new URLSearchParams(window.location.search);
+            const ilanId = params.get("ilan");
+            if (ilanId) {
+                const target = listings.find(l => l.id === ilanId);
+                if (target)
+                    open(target);
+                params.delete("ilan");
+                const rest = params.toString();
+                window.history.replaceState({}, "", window.location.pathname + (rest ? `?${rest}` : ""));
+            }
+        }
+        catch { /* URL parametreleri okunamadı, sorun değil */ }
+    }, [listings.length > 0]);
     const openChat = (conversationId, otherName, listingLabel) => { setChatTarget({ conversationId, otherName, listingLabel }); setScreen("chat"); };
     const goToProtected = (s) => { if (requireAuth())
         setScreen(s); };
@@ -19158,23 +19201,10 @@ function ReelsScreen({ listings, favorites, toggleFavorite, likes, favoritesLog,
         await refreshAll();
     };
     const share = async (item) => {
-        const text = `${item.breed} ${item.subCategory} — ${TL(item.price)} — Benim Meram'da incele.`;
-        try {
-            if (navigator.share) {
-                await navigator.share({ title: "Benim Meram", text });
-                return;
-            }
-        }
-        catch { /* kullanıcı paylaşımı iptal etmiş olabilir */ }
-        try {
-            await navigator.clipboard.writeText(text);
-            setToast("Panoya kopyalandı");
+        await shareListingLink(item, (msg) => {
+            setToast(msg);
             setTimeout(() => setToast(""), 2000);
-        }
-        catch {
-            setToast("Paylaşım desteklenmiyor");
-            setTimeout(() => setToast(""), 2000);
-        }
+        });
     };
     return (React.createElement("div", { style: { flex: 1, position: "relative", background: "#000" } },
         React.createElement("button", { onClick: onBack, style: { position: "absolute", top: 14, left: 14, zIndex: 20, background: "transparent", border: "none", width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", touchAction: "manipulation" } },
@@ -19205,6 +19235,13 @@ function DetailScreen({ item, me, requireAuth, offers, reviews, favorites, toggl
     const [fullscreenOpen, setFullscreenOpen] = useState(false);
     const [locationModalOpen, setLocationModalOpen] = useState(false);
     const [resolvedMediaUrls, setResolvedMediaUrls] = useState(item.mediaUrls || []);
+    const [shareToast, setShareToast] = useState("");
+    const shareItem = async () => {
+        await shareListingLink(item, (msg) => {
+            setShareToast(msg);
+            setTimeout(() => setShareToast(""), 2000);
+        });
+    };
     useEffect(() => { resolveMediaVideos(item.mediaUrls).then(setResolvedMediaUrls); }, [item.id]);
     const mediaList = resolvedMediaUrls;
     const activeMedia = mediaList[activeMediaIndex];
@@ -19228,9 +19265,10 @@ function DetailScreen({ item, me, requireAuth, offers, reviews, favorites, toggl
         item.earTag ? ["Küpe No", item.earTag] : null,
         typeof item.nakliye === "boolean" ? ["Nakliye", item.nakliye ? "Var" : "Yok"] : null,
     ].filter(Boolean);
-    return (React.createElement("div", { style: { flex: 1, overflowY: "auto", paddingBottom: 20 } },
+    return (React.createElement("div", { style: { flex: 1, overflowY: "auto", paddingBottom: 20, position: "relative" } },
         fullscreenOpen && React.createElement(FullscreenMediaViewer, { mediaList: mediaList, startIndex: activeMediaIndex, onClose: () => setFullscreenOpen(false) }),
         locationModalOpen && React.createElement(LocationViewModal, { il: item.animalIl, ilce: item.animalIlce, lat: item.animalLat, lng: item.animalLng, onClose: () => setLocationModalOpen(false) }),
+        shareToast && React.createElement("div", { style: { position: "fixed", bottom: 90, left: "50%", transform: "translateX(-50%)", background: "rgba(0,0,0,0.8)", color: "#fff", padding: "8px 16px", borderRadius: 20, fontFamily: "Inter", fontSize: 12, zIndex: 50 } }, shareToast),
         React.createElement("div", { onClick: () => mediaList.length > 0 && setFullscreenOpen(true), style: { background: activeMedia ? "#000" : "#DFF0E4", height: 190, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 84, position: "relative", cursor: mediaList.length > 0 ? "pointer" : "default" } },
             React.createElement("button", { onClick: (e) => { e.stopPropagation(); onBack(); }, style: { position: "absolute", top: 14, left: 14, background: "rgba(255,255,255,0.85)", border: "none", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", zIndex: 2 } },
                 React.createElement(ChevronLeft, { size: 18 })),
@@ -19249,8 +19287,11 @@ function DetailScreen({ item, me, requireAuth, offers, reviews, favorites, toggl
                         item.age,
                         " \u00B7 ",
                         item.gender)),
-                React.createElement("button", { onClick: () => toggleFavorite(item.id), style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: "50%", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 } },
-                    React.createElement(Heart, { size: 16, fill: isFav ? COLORS.red : "none", color: isFav ? COLORS.red : COLORS.pineDeep }))),
+                React.createElement("div", { style: { display: "flex", gap: 8, flexShrink: 0 } },
+                    React.createElement("button", { onClick: shareItem, title: "Paylaş", style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: "50%", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 } },
+                        React.createElement(Share2, { size: 15, color: COLORS.pineDeep })),
+                    React.createElement("button", { onClick: () => toggleFavorite(item.id), style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: "50%", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 } },
+                        React.createElement(Heart, { size: 16, fill: isFav ? COLORS.red : "none", color: isFav ? COLORS.red : COLORS.pineDeep })))),
             React.createElement("div", { style: { fontFamily: "IBM Plex Mono", fontWeight: 700, fontSize: 24, color: COLORS.pineDeep, marginBottom: 8 } }, TL(item.price)),
             React.createElement("div", { style: { display: "flex", gap: 14, marginBottom: 12 } },
                 React.createElement("span", { style: { display: "flex", alignItems: "center", gap: 4, fontFamily: "Inter", fontSize: 11, color: "#8A8776" } },
@@ -19849,6 +19890,9 @@ function ChatHub({ me, messages, listings, region, onOpenChat, onOpenRegion, onO
 function ChatScreen({ title, subtitle, conversationId, me, messages, refreshAll, onBack, isGroup, onStartCall, onOpenProfile }) {
     const [text, setText] = useState("");
     const [sending, setSending] = useState(false);
+    const [locMode, setLocMode] = useState(false);
+    const [locText, setLocText] = useState("");
+    const [sendingLoc, setSendingLoc] = useState(false);
     useEffect(() => {
         const interval = setInterval(() => { refreshAll(); }, 3000); // "canlı" his için kısa aralıklı yenileme
         return () => clearInterval(interval);
@@ -19864,6 +19908,30 @@ function ChatScreen({ title, subtitle, conversationId, me, messages, refreshAll,
         await refreshAll();
         setSending(false);
     };
+    const sendLocation = async () => {
+        if (!locText.trim())
+            return;
+        setSendingLoc(true);
+        const all = await loadShared("messages", []);
+        all.push({ id: uid(), conversationId, sender: me.name, type: "location", text: locText.trim(), createdAt: Date.now() });
+        await saveShared("messages", all);
+        setLocText("");
+        setLocMode(false);
+        await refreshAll();
+        setSendingLoc(false);
+    };
+    const composer = locMode
+        ? React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6, padding: "10px 14px 16px", borderTop: `1.5px solid ${COLORS.ink}`, background: COLORS.white } },
+            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776" } }, "Örn. \"14:30 - Kırıkkale'den geçiyorum\" veya \"16:00'da teslimat noktasında olacağım\""),
+            React.createElement("div", { style: { display: "flex", gap: 8 } },
+                React.createElement("input", { value: locText, onChange: (e) => setLocText(e.target.value), onKeyDown: (e) => { if (e.key === "Enter") sendLocation(); }, placeholder: "Konum / saat bilgisi yazın...", autoFocus: true, style: { flex: 1, fontFamily: "Inter", fontSize: 13, padding: "10px 12px", borderRadius: 8, border: `1px solid ${COLORS.line}`, outline: "none" } }),
+                React.createElement("button", { onClick: sendLocation, disabled: sendingLoc || !locText.trim(), style: { padding: "0 14px", borderRadius: 8, background: COLORS.ochre, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, opacity: sendingLoc || !locText.trim() ? 0.5 : 1, fontFamily: "Inter", fontWeight: 600, fontSize: 12.5, color: COLORS.white } }, "📍 Gönder"),
+                React.createElement("button", { onClick: () => { setLocMode(false); setLocText(""); }, style: { padding: "0 12px", borderRadius: 8, background: "none", border: `1px solid ${COLORS.line}`, cursor: "pointer", flexShrink: 0, fontFamily: "Inter", fontWeight: 600, fontSize: 12, color: "#8A8776" } }, "Vazgeç")))
+        : React.createElement("div", { style: { display: "flex", gap: 8, padding: "10px 14px 16px", borderTop: `1.5px solid ${COLORS.ink}`, background: COLORS.white } },
+            me.profileType === "nakliyeci" && !isGroup && React.createElement("button", { onClick: () => setLocMode(true), title: "Konum Bildir", style: { padding: "0 12px", borderRadius: 8, background: COLORS.ochreSoft, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 } },
+                React.createElement(MapPin, { size: 17, color: "#7A5A1E" })),
+            React.createElement("input", { value: text, onChange: (e) => setText(e.target.value), onKeyDown: (e) => { if (e.key === "Enter") send(); }, placeholder: "Mesaj yazın...", style: { flex: 1, fontFamily: "Inter", fontSize: 13, padding: "10px 12px", borderRadius: 8, border: `1px solid ${COLORS.line}`, outline: "none" } }),
+            React.createElement("button", { onClick: send, disabled: sending || !text.trim(), style: { padding: "0 16px", borderRadius: 8, background: COLORS.pineDeep, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, opacity: sending || !text.trim() ? 0.5 : 1, fontFamily: "Inter", fontWeight: 600, fontSize: 12.5, color: COLORS.white } }, "Gönder"));
     return (React.createElement("div", { style: { flex: 1, display: "flex", flexDirection: "column" } },
         React.createElement("div", { style: { background: COLORS.pine, padding: "14px 14px 10px", display: "flex", alignItems: "center", gap: 10 } },
             React.createElement("button", { onClick: onBack, style: { background: "none", border: "none", cursor: "pointer" } },
@@ -19885,16 +19953,21 @@ function ChatScreen({ title, subtitle, conversationId, me, messages, refreshAll,
                     return (React.createElement("div", { key: m.id, style: { display: "flex", flexDirection: "column", alignItems: mine ? "flex-end" : "flex-start" } },
                         React.createElement(AppointmentMessageCard, { message: m, me: me, refreshAll: refreshAll })));
                 }
+                if (m.type === "location") {
+                    return (React.createElement("div", { key: m.id, style: { display: "flex", flexDirection: "column", alignItems: mine ? "flex-end" : "flex-start" } },
+                        React.createElement("div", { style: { background: mine ? COLORS.pineDeep : COLORS.ochreSoft, color: mine ? COLORS.white : "#7A5A1E", borderRadius: 10, padding: "8px 12px", maxWidth: "82%" } },
+                            React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 4, fontFamily: "Inter", fontSize: 10.5, fontWeight: 700, marginBottom: 3, opacity: 0.9 } },
+                                React.createElement(MapPin, { size: 12, color: mine ? COLORS.white : "#7A5A1E" }), "Konum Güncellemesi"),
+                            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12.5, lineHeight: 1.4 } }, m.text),
+                            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 9, opacity: 0.75, marginTop: 3 } }, new Date(m.createdAt).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })))));
+                }
                 return (React.createElement("div", { key: m.id, style: { borderLeft: `3px solid ${mine ? COLORS.pineDeep : COLORS.ochre}`, paddingLeft: 10, paddingTop: 1, paddingBottom: 1 } },
                     React.createElement("div", { style: { display: "flex", alignItems: "baseline", gap: 7 } },
                         React.createElement("span", { style: { fontFamily: "Fraunces", fontWeight: 600, fontSize: 12, color: mine ? COLORS.pineDeep : "#7A5A1E" } }, mine ? "Siz" : m.sender),
                         React.createElement("span", { style: { fontFamily: "Inter", fontSize: 9.5, color: "#B7B4A6" } }, new Date(m.createdAt).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }))),
                     React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12.5, color: COLORS.ink, lineHeight: 1.45 } }, m.text)));
             })),
-        React.createElement("div", { style: { display: "flex", gap: 8, padding: "10px 14px 16px", borderTop: `1.5px solid ${COLORS.ink}`, background: COLORS.white } },
-            React.createElement("input", { value: text, onChange: (e) => setText(e.target.value), onKeyDown: (e) => { if (e.key === "Enter")
-                    send(); }, placeholder: "Mesaj yaz\u0131n...", style: { flex: 1, fontFamily: "Inter", fontSize: 13, padding: "10px 12px", borderRadius: 8, border: `1px solid ${COLORS.line}`, outline: "none" } }),
-            React.createElement("button", { onClick: send, disabled: sending || !text.trim(), style: { padding: "0 16px", borderRadius: 8, background: COLORS.pineDeep, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, opacity: sending || !text.trim() ? 0.5 : 1, fontFamily: "Inter", fontWeight: 600, fontSize: 12.5, color: COLORS.white } }, "G\u00F6nder"))));
+        composer));
 }
 // ---------- PROFILE ----------
 function PasswordChangeFlow({ me, setMe }) {
@@ -22054,7 +22127,13 @@ function AccountTypeSwitch({ me, setMe }) {
                 setNviErrorDetail(data.detail || data.error || "");
                 throw new Error(data.error || "hata");
             }
-            setNviStatus(data.verified ? "verified" : "mismatch");
+            if (data.serviceUnavailable) {
+                setNviErrorDetail(data.detail || "");
+                setNviStatus("pending_review");
+            }
+            else {
+                setNviStatus(data.verified ? "verified" : "mismatch");
+            }
             setNviCheckedTc(authorizedTc);
         }
         catch (e) {
@@ -22087,7 +22166,7 @@ function AccountTypeSwitch({ me, setMe }) {
             setErr("Tüm alanları eksiksiz doldurun.");
             return;
         }
-        if (nviStatus !== "verified" || nviCheckedTc !== authorizedTc) {
+        if ((nviStatus !== "verified" && nviStatus !== "pending_review") || nviCheckedTc !== authorizedTc) {
             setErr("Önce NVİ ile kimlik doğrulaması yapın.");
             return;
         }
@@ -22101,7 +22180,7 @@ function AccountTypeSwitch({ me, setMe }) {
             return;
         }
         setSaving(false);
-        applySwitch("kurumsal", { companyName: companyName.trim(), companyType, companyIl, companyIlce: companyIlce.trim(), taxOffice: taxOffice.trim(), authorizedTc });
+        applySwitch("kurumsal", { companyName: companyName.trim(), companyType, companyIl, companyIlce: companyIlce.trim(), taxOffice: taxOffice.trim(), authorizedTc, nviVerification: nviStatus === "verified" ? "onaylandi" : "beklemede" });
     };
     if (!open) {
         return (React.createElement("button", { onClick: () => setOpen(true), style: { width: "100%", background: "none", border: "none", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 0", cursor: "pointer" } },
@@ -22151,6 +22230,7 @@ function AccountTypeSwitch({ me, setMe }) {
                     React.createElement("button", { onClick: verifyNvi, disabled: !isValidTcFormat(authorizedTc) || nviBirthYear.trim().length !== 4 || !nviAd.trim() || !nviSoyad.trim() || nviStatus === "checking", style: { ...btnGhost, width: "100%", justifyContent: "center", marginTop: 8, borderColor: COLORS.pineDeep, color: COLORS.pineDeep, opacity: (!isValidTcFormat(authorizedTc) || nviBirthYear.trim().length !== 4 || !nviAd.trim() || !nviSoyad.trim()) ? 0.5 : 1 } }, nviStatus === "checking" ? "NV\u0130 sorgulan\u0131yor..." : "\uD83D\uDEE1\uFE0F NV\u0130 ile Kimlik Do\u011Frula"),
                     nviStatus === "verified" && React.createElement("div", { style: { marginTop: 8, fontFamily: "Inter", fontSize: 11.5, color: COLORS.pineDeep, fontWeight: 600 } }, "\u2713 NV\u0130 ile kimlik do\u011Fruland\u0131"),
                     nviStatus === "mismatch" && React.createElement("div", { style: { marginTop: 8, fontFamily: "Inter", fontSize: 11.5, color: COLORS.red, fontWeight: 600 } }, "\u2715 Bilgiler NV\u0130 kay\u0131tlar\u0131yla e\u015Fle\u015Fmedi."),
+                    nviStatus === "pending_review" && React.createElement("div", { style: { marginTop: 8, fontFamily: "Inter", fontSize: 11, color: COLORS.ochre, fontWeight: 600 } }, "\u23F3 NV\u0130 servisine \u015Fu anda ula\u015F\u0131lam\u0131yor. Devam edebilirsiniz, bilgileriniz y\u00F6netici taraf\u0131ndan manuel incelenecek."),
                     nviStatus === "error" && React.createElement("div", { style: { marginTop: 8, fontFamily: "Inter", fontSize: 11, color: COLORS.ochre, fontWeight: 600 } }, "\u26A0 NV\u0130 servisine ula\u015F\u0131lamad\u0131, birazdan tekrar deneyin."))),
             err && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11, marginTop: 6 } }, err),
             React.createElement("button", { onClick: submitKurumsal, disabled: saving, style: { ...btnPrimary, marginTop: 10 } }, saving ? "Kaydediliyor..." : "Kurumsal Hesaba Geç"))),
@@ -25149,7 +25229,13 @@ function ProfileWizardStep({ accountType, profileStep, setProfileStep, name, set
                 setNviErrorDetail(data.detail || data.error || "");
                 throw new Error(data.error || "hata");
             }
-            setNviStatus(data.verified ? "verified" : "mismatch");
+            if (data.serviceUnavailable) {
+                setNviErrorDetail(data.detail || "");
+                setNviStatus("pending_review");
+            }
+            else {
+                setNviStatus(data.verified ? "verified" : "mismatch");
+            }
             setNviCheckedTc(authorizedTc);
         }
         catch (e) {
@@ -25167,7 +25253,7 @@ function ProfileWizardStep({ accountType, profileStep, setProfileStep, name, set
             case "companyType": return !!companyType;
             case "companyLocation": return companyIl.trim().length > 0 && companyIlce.trim().length > 0;
             case "taxOffice": return taxOffice.trim().length > 0;
-            case "authorizedTc": return isValidTcFormat(authorizedTc) && nviStatus === "verified" && nviCheckedTc === authorizedTc;
+            case "authorizedTc": return isValidTcFormat(authorizedTc) && (nviStatus === "verified" || nviStatus === "pending_review") && nviCheckedTc === authorizedTc;
             case "clinicName": return clinicName.trim().length > 0;
             case "licenseNo": return licenseNo.trim().length > 0;
             case "vetLocation": return vetIl.trim().length > 0 && vetIlce.trim().length > 0;
@@ -25265,6 +25351,7 @@ function ProfileWizardStep({ accountType, profileStep, setProfileStep, name, set
                     React.createElement("button", { onClick: verifyNvi, disabled: !isValidTcFormat(authorizedTc) || nviBirthYear.trim().length !== 4 || !nviAd.trim() || !nviSoyad.trim() || nviStatus === "checking", style: { ...btnGhost, width: "100%", justifyContent: "center", marginTop: 10, borderColor: COLORS.pineDeep, color: COLORS.pineDeep, opacity: (!isValidTcFormat(authorizedTc) || nviBirthYear.trim().length !== 4 || !nviAd.trim() || !nviSoyad.trim()) ? 0.5 : 1 } }, nviStatus === "checking" ? "NV\u0130 sorgulan\u0131yor..." : "\uD83D\uDEE1\uFE0F NV\u0130 ile Kimlik Do\u011Frula"),
                     nviStatus === "verified" && React.createElement("div", { style: { marginTop: 8, display: "flex", alignItems: "center", gap: 5, fontFamily: "Inter", fontSize: 11.5, color: COLORS.pineDeep, fontWeight: 600 } }, "\u2713 NV\u0130 ile kimlik do\u011Fruland\u0131"),
                     nviStatus === "mismatch" && React.createElement("div", { style: { marginTop: 8, fontFamily: "Inter", fontSize: 11.5, color: COLORS.red, fontWeight: 600 } }, "\u2715 Bilgiler NV\u0130 kay\u0131tlar\u0131yla e\u015Fle\u015Fmedi \u2014 ad, soyad, TC ve do\u011Fum y\u0131l\u0131n\u0131 kontrol edin."),
+                    nviStatus === "pending_review" && React.createElement("div", { style: { marginTop: 8, fontFamily: "Inter", fontSize: 11, color: COLORS.ochre, fontWeight: 600 } }, "\u23F3 NV\u0130 servisine \u015Fu anda ula\u015F\u0131lam\u0131yor. Devam edebilirsiniz, bilgileriniz y\u00F6netici taraf\u0131ndan manuel incelenecek."),
                     nviStatus === "error" && React.createElement("div", { style: { marginTop: 8 } },
                         React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11.5, color: COLORS.ochre, fontWeight: 600 } }, "\u26A0 NV\u0130 servisine ula\u015F\u0131lamad\u0131, birazdan tekrar deneyin."),
                         nviErrorDetail && React.createElement("div", { style: { fontFamily: "IBM Plex Mono", fontSize: 9.5, color: "#8A8776", marginTop: 3, wordBreak: "break-all" } }, nviErrorDetail)),

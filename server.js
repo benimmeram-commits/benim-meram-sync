@@ -364,20 +364,15 @@ const NVI_SOAP_URL = "https://tckimlik.nvi.gov.tr/Service/KPSPublic.asmx";
 
 // NVİ'nin genel kullanıma açık ücretsiz TCKimlikNoDogrula servisi resmi
 // kurumlar dışında sık sık erişilemez hale geliyor (kapatıldı/kısıtlandı).
-// Bu yüzden gerçek servise ulaşılamadığında TC Kimlik No'nun kendi
-// algoritmik sağlama (checksum) kuralına göre geçerli olup olmadığına
-// bakılarak bir yedek (simülasyon) doğrulaması yapılır — böylece kayıt
-// akışı, devletin servisi kesintili olsa bile tamamen kilitlenmez.
-function isValidTcChecksum(tc) {
-  if (!/^[1-9][0-9]{10}$/.test(tc || "")) return false;
-  const d = tc.split("").map(Number);
-  const oddSum = d[0] + d[2] + d[4] + d[6] + d[8];
-  const evenSum = d[1] + d[3] + d[5] + d[7];
-  const d10 = ((oddSum * 7) - evenSum) % 10;
-  const d11 = (d.slice(0, 10).reduce((a, b) => a + b, 0)) % 10;
-  return d10 === d[9] && d11 === d[10];
-}
-
+// ÖNEMLİ: Gerçek servise ulaşılamadığında "verified: true" DÖNDÜRÜLMEZ —
+// çünkü TC Kimlik No'nun checksum (sağlama) kuralına uyması, o kimlik
+// numarasının GİRİLEN ad/soyad ile eşleştiği anlamına gelmez; sadece
+// numaranın biçimsel olarak geçerli olduğunu gösterir. Bu yüzden yanlış
+// bilgiyle de "doğrulandı" görünmesine yol açan önceki davranış kaldırıldı.
+// Gerçek servise ulaşılamazsa, kullanıcı kilitlenmesin diye kayda devam
+// etmesine izin verilir ama "serviceUnavailable: true" ile işaretlenir ve
+// bu hesap Süper Admin panelinde manuel incelemeye düşer (bkz. app.js
+// pendingNviReviews / nviVerification alanı).
 app.post("/api/nvi-verify", async (req, res) => {
   const { tcKimlikNo, ad, soyad, dogumYili } = req.body || {};
   if (!tcKimlikNo || !ad || !soyad || !dogumYili) {
@@ -393,10 +388,9 @@ app.post("/api/nvi-verify", async (req, res) => {
   if (yilNum < 1900 || yilNum > nowYear) {
     return res.status(400).json({ error: "geçersiz doğum yılı" });
   }
-  const fallbackToSimulation = (reason) => {
-    console.warn("NVİ gerçek servise ulaşılamadı, checksum tabanlı yedek doğrulamaya düşülüyor:", reason);
-    const ok = isValidTcChecksum(tcNum) && ad.trim().length > 0 && soyad.trim().length > 0;
-    return res.json({ verified: ok, simulated: true, detail: "NVİ resmi servisi şu anda ulaşılamıyor; TC Kimlik No'nun sağlama algoritmasına göre geçici doğrulama yapıldı." });
+  const respondUnavailable = (reason) => {
+    console.warn("NVİ gerçek servisine ulaşılamadı, manuel incelemeye düşürülüyor:", reason);
+    return res.json({ verified: false, serviceUnavailable: true, detail: "NVİ resmi doğrulama servisine şu anda ulaşılamıyor. Bilgileriniz kaydedilecek ve yönetici tarafından manuel olarak incelenecek." });
   };
   const adUpper = String(ad).toLocaleUpperCase("tr-TR").trim();
   const soyadUpper = String(soyad).toLocaleUpperCase("tr-TR").trim();
@@ -429,25 +423,25 @@ app.post("/api/nvi-verify", async (req, res) => {
   } catch (e) {
     clearTimeout(timeoutId);
     const detail = e.cause ? `${e.message} (${e.cause.code || e.cause.message || e.cause})` : (e.name === "AbortError" ? "zaman aşımı" : e.message);
-    return fallbackToSimulation(detail);
+    return respondUnavailable(detail);
   }
   clearTimeout(timeoutId);
   let text;
   try {
     text = await r.text();
   } catch (e) {
-    return fallbackToSimulation("yanıt gövdesi okunamadı: " + e.message);
+    return respondUnavailable("yanıt gövdesi okunamadı: " + e.message);
   }
   if (!r.ok) {
-    return fallbackToSimulation(`HTTP ${r.status}: ${text.slice(0, 300)}`);
+    return respondUnavailable(`HTTP ${r.status}: ${text.slice(0, 300)}`);
   }
   const faultMatch = text.match(/<faultstring>([\s\S]*?)<\/faultstring>/i);
   if (faultMatch) {
-    return fallbackToSimulation("SOAP Fault: " + faultMatch[1]);
+    return respondUnavailable("SOAP Fault: " + faultMatch[1]);
   }
   const match = text.match(/<TCKimlikNoDogrulaResult>(true|false)<\/TCKimlikNoDogrulaResult>/i);
   if (!match) {
-    return fallbackToSimulation("beklenmedik yanıt formatı: " + text.slice(0, 300));
+    return respondUnavailable("beklenmedik yanıt formatı: " + text.slice(0, 300));
   }
   res.json({ verified: match[1].toLowerCase() === "true" });
 });
