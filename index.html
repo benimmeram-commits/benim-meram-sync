@@ -19092,9 +19092,15 @@ function BenimMeram() {
         React.createElement(EmployeeShell, { session: employeeSession, onLogout: async () => { await savePersonal("employeeSession", null); setEmployeeSession(null); } })
     ) : isMobileViewport ? (React.createElement("div", { style: { width: "100vw", height: "100dvh", background: COLORS.paper, overflow: "hidden", position: "relative", display: "flex", flexDirection: "column" } },
         React.createElement("style", null, `@keyframes pulseDot {0%{transform:scale(1);opacity:.7}70%{transform:scale(2.6);opacity:0}100%{opacity:0}}`),
-        appShellNode)) : (React.createElement("div", { style: { width: 360, height: 700, background: COLORS.paper, borderRadius: 34, border: `10px solid ${COLORS.ink}`, overflow: "hidden", position: "relative", boxShadow: "0 30px 60px rgba(0,0,0,0.35)", display: "flex", flexDirection: "column" } },
+        appShellNode)) : (
+        // Masaüstü: eskiden sabit 360x700'lük küçük bir "telefon çerçevesi"
+        // kutusu gösteriliyordu — şimdi ekranın büyük kısmını kullanan,
+        // gerçek bir web sitesi gibi geniş bir alan içinde açılıyor. Mobil
+        // dalı (yukarıdaki isMobileViewport bloğu) hiç değişmedi.
+        React.createElement("div", { style: { width: "100%", minHeight: "100dvh", background: COLORS.paper, display: "flex", justifyContent: "center" } },
+        React.createElement("div", { style: { width: "100%", maxWidth: 1280, minHeight: "100dvh", background: COLORS.paper, position: "relative", display: "flex", flexDirection: "column", boxShadow: "0 0 0 1px rgba(0,0,0,0.04)" } },
         React.createElement("style", null, `@keyframes pulseDot {0%{transform:scale(1);opacity:.7}70%{transform:scale(2.6);opacity:0}100%{opacity:0}}`),
-        appShellNode));
+        appShellNode)));
     if (isMobileViewport && !isAdminGateOpen) {
         // Ger\u00E7ek bir mobil cihazda: sahte telefon \u00E7er\u00E7evesi / \u00F6nizleme metinleri olmadan,
         // do\u011Frudan tam ekran ger\u00E7ek bir uygulama gibi g\u00F6r\u00FCn\u00FCr.
@@ -19219,7 +19225,7 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
                 React.createElement("button", { onClick: () => setDrawer(true), style: { fontFamily: "Inter", fontSize: 10.5, color: COLORS.pineDeep, background: "none", border: "none", textDecoration: "underline", cursor: "pointer" } }, "de\u011Fi\u015Ftir"),
                 (subTab !== "tumu" || breedTab !== "tumu") && React.createElement("button", { onClick: () => { setSubTab("tumu"); setBreedTab("tumu"); }, style: { fontFamily: "Inter", fontSize: 10.5, color: COLORS.red, background: "none", border: "none", textDecoration: "underline", cursor: "pointer" } }, "filtreyi temizle"))),
             React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "10px 14px 90px" } }, filtered.length === 0 ? (React.createElement("div", { style: { textAlign: "center", marginTop: 40, color: "#8A8776", fontFamily: "Inter", fontSize: 12.5 } },
-                "Hen\u00FCz ilan yok.")) : (React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 } }, filtered.map(item => React.createElement(ListingCard, { key: item.id, item: item, reviews: reviews, favorites: favorites, toggleFavorite: toggleFavorite, onOpen: open }))))))),
+                "Hen\u00FCz ilan yok.")) : (React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 10 } }, filtered.map(item => React.createElement(ListingCard, { key: item.id, item: item, reviews: reviews, favorites: favorites, toggleFavorite: toggleFavorite, onOpen: open }))))))),
         screen === "detail" && selected && (React.createElement(DetailScreen, { item: listings.find(l => l.id === selected.id) || selected, me: me, requireAuth: requireAuth, offers: offers, reviews: reviews, favorites: favorites, toggleFavorite: toggleFavorite, favoritesLog: favoritesLog, members: members, listings: listings, onOpen: open, onOpenChat: openChat, onOpenProfile: openProfile, onStartCall: (otherName, type, conversationId) => setPendingCallRequest({ otherName, type, conversationId, nonce: Date.now() }), refreshAll: refreshAll, onBack: () => setScreen("home") })),
         screen === "create" && React.createElement(CreateScreen, { me: me, members: members, customSubcategories: customSubcategories, refreshAll: refreshAll, onDone: () => setScreen("home") }),
         screen === "requests" && (React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "16px 18px 100px" } },
@@ -19280,7 +19286,7 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
         screen === "search" && (React.createElement(SearchScreen, { listings: listings, reviews: reviews, favorites: favorites, toggleFavorite: toggleFavorite, members: members, onOpenProfile: openProfile, onOpen: open, onBack: () => setScreen("home") })),
         screen === "favorites" && (React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "16px 18px 100px" } },
             React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 19, marginBottom: 12 } }, "Favorilerim"),
-            listings.filter(l => favorites.includes(l.id)).length === 0 ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12.5, color: "#8A8776" } }, "Hen\u00FCz favori ilan\u0131n\u0131z yok \u2014 bir ilan kart\u0131ndaki kalp ikonuna dokunun.")) : (React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 } }, listings.filter(l => favorites.includes(l.id)).map(item => (React.createElement(ListingCard, { key: item.id, item: item, reviews: reviews, favorites: favorites, toggleFavorite: toggleFavorite, onOpen: open }))))))),
+            listings.filter(l => favorites.includes(l.id)).length === 0 ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12.5, color: "#8A8776" } }, "Hen\u00FCz favori ilan\u0131n\u0131z yok \u2014 bir ilan kart\u0131ndaki kalp ikonuna dokunun.")) : (React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 10 } }, listings.filter(l => favorites.includes(l.id)).map(item => (React.createElement(ListingCard, { key: item.id, item: item, reviews: reviews, favorites: favorites, toggleFavorite: toggleFavorite, onOpen: open }))))))),
         screen === "chatHub" && (React.createElement(ChatHub, { me: me, messages: messages, listings: listings, region: me.region, onOpenChat: openChat, onOpenRegion: (r) => { setChatRegion(r); setScreen("regionChat"); }, onOpenProfile: openProfile, myConversationIds: myConversationIds })),
         screen === "chat" && chatTarget && (React.createElement(ChatScreen, { key: chatTarget.conversationId, title: chatTarget.otherName, subtitle: chatTarget.listingLabel, conversationId: chatTarget.conversationId, me: me, messages: messages.filter(m => m.conversationId === chatTarget.conversationId), refreshAll: refreshAll, onBack: () => setScreen("chatHub"), onStartCall: (type) => setPendingCallRequest({ otherName: chatTarget.otherName, type, conversationId: chatTarget.conversationId, nonce: Date.now() }), onOpenProfile: openProfile })),
         screen === "regionChat" && chatRegion && (React.createElement(ChatScreen, { key: chatRegion, title: chatRegion, subtitle: "B\u00F6lge Sohbeti \u2014 herkese a\u00E7\u0131k", conversationId: regionChatKey(chatRegion), me: me, messages: messages.filter(m => m.conversationId === regionChatKey(chatRegion)), refreshAll: refreshAll, onBack: () => setScreen("chatHub"), isGroup: true })),
@@ -19374,7 +19380,7 @@ function SearchScreen({ listings, reviews, favorites, toggleFavorite, members, o
                     React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#8A8776", marginBottom: 8 } },
                         results.length,
                         " sonu\u00E7 bulundu"),
-                    React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 } }, results.map(item => React.createElement(ListingCard, { key: item.id, item: item, reviews: reviews, favorites: favorites, toggleFavorite: toggleFavorite, onOpen: onOpen }))))))) : (React.createElement(React.Fragment, null,
+                    React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 10 } }, results.map(item => React.createElement(ListingCard, { key: item.id, item: item, reviews: reviews, favorites: favorites, toggleFavorite: toggleFavorite, onOpen: onOpen }))))))) : (React.createElement(React.Fragment, null,
                 searched && userResults.length === 0 && (React.createElement("div", { style: { textAlign: "center", marginTop: 30, fontFamily: "Inter", fontSize: 12.5, color: "#8A8776" } },
                     "\"",
                     query,
@@ -22379,7 +22385,7 @@ function PublicProfileScreen({ targetName, members, listings, offers, reviews, m
             "Yay\u0131ndaki \u0130lanlar\u0131 (",
             theirListings.length,
             ")"),
-        theirListings.length === 0 ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#8A8776" } }, "\u015Eu an yay\u0131nda ilan\u0131 yok.")) : (React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 } }, theirListings.map(item => React.createElement(ListingCard, { key: item.id, item: item, reviews: reviews, favorites: [], toggleFavorite: () => { }, onOpen: onOpen }))))));
+        theirListings.length === 0 ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11.5, color: "#8A8776" } }, "\u015Eu an yay\u0131nda ilan\u0131 yok.")) : (React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 10 } }, theirListings.map(item => React.createElement(ListingCard, { key: item.id, item: item, reviews: reviews, favorites: [], toggleFavorite: () => { }, onOpen: onOpen }))))));
 }
 
 function nearestCity(lat, lng) {
@@ -25358,7 +25364,7 @@ function MyListingsScreen({ me, listings, onOpen, refreshAll, onBack }) {
                 myListings.length,
                 ")")),
         React.createElement("div", { style: { display: "flex", gap: 6, padding: "10px 14px 0" } }, [["aktif", `Aktif (${activeListings.length})`], ["tamamlanan", `Tamamlanan (${completedListings.length})`]].map(([k, l]) => (React.createElement("button", { key: k, onClick: () => setTab(k), style: { flex: 1, padding: "8px 6px", borderRadius: 9, border: "none", cursor: "pointer", fontFamily: "Inter", fontWeight: 600, fontSize: 11.5, background: tab === k ? COLORS.pineDeep : COLORS.paper, color: tab === k ? COLORS.white : "#5A574C" } }, l)))),
-        React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "16px 18px 100px" } }, shown.length === 0 ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12.5, color: "#8A8776" } }, tab === "aktif" ? "Aktif ilanınız yok." : "Tamamlanan ilanınız yok.")) : (React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 } }, shown.map(l => React.createElement(MyListingCard, { key: l.id, listing: l, onOpen: onOpen, refreshAll: refreshAll })))))));
+        React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "16px 18px 100px" } }, shown.length === 0 ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12.5, color: "#8A8776" } }, tab === "aktif" ? "Aktif ilanınız yok." : "Tamamlanan ilanınız yok.")) : (React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 10 } }, shown.map(l => React.createElement(MyListingCard, { key: l.id, listing: l, onOpen: onOpen, refreshAll: refreshAll })))))));
 }
 
 function VetProfilTab({ me, setMe }) {
@@ -25740,7 +25746,7 @@ function SimilarListingsSection({ item, listings, reviews, favorites, toggleFavo
         return null;
     return (React.createElement("div", { style: { marginTop: 20, paddingTop: 16, borderTop: `1px solid ${COLORS.line}` } },
         React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 15, marginBottom: 10 } }, "Benzer \u0130lanlar"),
-        React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 } }, similar.map(s => React.createElement(ListingCard, { key: s.id, item: s, reviews: reviews, favorites: favorites, toggleFavorite: toggleFavorite, onOpen: onOpen })))));
+        React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 10 } }, similar.map(s => React.createElement(ListingCard, { key: s.id, item: s, reviews: reviews, favorites: favorites, toggleFavorite: toggleFavorite, onOpen: onOpen })))));
 }
 
 function ReelsFilterSheet({ filters, setFilters, onClose }) {
