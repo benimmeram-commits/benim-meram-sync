@@ -19074,7 +19074,7 @@ function BenimMeram() {
             // ekranından), her uygulama açılışında sessizce (izin sormadan)
             // aboneliği tazeler — böylece telefon değiştiğinde veya izin zaten
             // verilmişken tekrar tekrar sormaya gerek kalmaz.
-            if (savedMe && typeof Notification !== "undefined" && Notification.permission === "granted") {
+            if (savedMe && !savedMe.pushOptOut && typeof Notification !== "undefined" && Notification.permission === "granted") {
                 subscribeToPush(savedMe).catch(() => { });
             }
         })();
@@ -20733,9 +20733,10 @@ function NotificationPrefsCard({ me, setMe }) {
     // "Kapat" ile silinmiş olabilir. İkisini ayrı takip ederiz ki kullanıcı
     // asla "izin zaten açık ama tekrar abone olacak buton yok" durumuna düşmesin.
     const [subActive, setSubActive] = useState(null); // null=bilinmiyor, true/false
-    // Bildirimler artık manuel aç/kapat gerektirmiyor — ekran açılır açılmaz
-    // otomatik olarak abone olunmaya çalışılır (izin daha önce verilmişse sessizce,
-    // verilmemişse tarayıcının kendi izin penceresini açarak).
+    const [pushToggleBusy, setPushToggleBusy] = useState(false);
+    // Ekran açılır açılmaz, kullanıcı daha önce kendi isteğiyle kapatmadıysa
+    // (me.pushOptOut) otomatik olarak abone olunmaya çalışılır (izin daha önce
+    // verilmişse sessizce, verilmemişse tarayıcının kendi izin penceresini açarak).
     useEffect(() => {
         (async () => {
             if (!("serviceWorker" in navigator) || typeof Notification === "undefined" || Notification.permission === "unsupported") {
@@ -20747,11 +20748,41 @@ function NotificationPrefsCard({ me, setMe }) {
                 setSubActive(false);
                 return;
             }
+            if (me.pushOptOut) {
+                setPushStatus(Notification.permission);
+                setSubActive(false);
+                return;
+            }
             const ok = await subscribeToPush(me);
             setPushStatus(typeof Notification !== "undefined" ? Notification.permission : "unsupported");
             setSubActive(ok);
         })();
     }, []);
+    // Bildirimleri açıp kapatma anahtarı: tarayıcı bir kez verilen izni geri
+    // alamadığımız için "kapat" aslında sunucudaki aboneliği siler (bildirim
+    // artık gönderilmez) ve bunu hatırlar (me.pushOptOut) — uygulama tekrar
+    // açıldığında kendiliğinden yeniden abone OLMAZ. "Aç" ise tekrar abone eder.
+    const togglePush = async () => {
+        setPushToggleBusy(true);
+        if (subActive) {
+            await unsubscribeFromPush();
+            const updatedMe = { ...me, pushOptOut: true };
+            await savePersonal("me", updatedMe);
+            setMe(updatedMe);
+            setSubActive(false);
+        }
+        else {
+            const ok = await subscribeToPush(me);
+            setPushStatus(typeof Notification !== "undefined" ? Notification.permission : "unsupported");
+            if (ok) {
+                const updatedMe = { ...me, pushOptOut: false };
+                await savePersonal("me", updatedMe);
+                setMe(updatedMe);
+            }
+            setSubActive(ok);
+        }
+        setPushToggleBusy(false);
+    };
     const toggle = (k) => setPrefs(p => ({ ...p, [k]: !p[k] }));
     const save = async () => {
         setSaving(true);
@@ -20771,9 +20802,13 @@ function NotificationPrefsCard({ me, setMe }) {
     return (React.createElement("div", { style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 14, marginBottom: 14 } },
         React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 12.5, color: COLORS.ink, marginBottom: 10 } }, "Bildirim Tercihleri"),
         React.createElement("div", { style: { background: COLORS.paper, borderRadius: 10, padding: 10, marginBottom: 12 } },
-            React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 11.5, color: COLORS.ink, marginBottom: 4 } }, "Telefonuma Anlık Bildirim"),
+            React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 4 } },
+                React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 11.5, color: COLORS.ink } }, "Telefonuma Anlık Bildirim"),
+                pushStatus !== "denied" && pushStatus !== "unsupported" && (
+                    React.createElement("button", { onClick: togglePush, disabled: pushToggleBusy || subActive === null, "aria-label": "Bildirimleri aç/kapat", style: { position: "relative", width: 40, height: 23, borderRadius: 20, border: "none", cursor: pushToggleBusy ? "default" : "pointer", background: subActive ? COLORS.pineDeep : "#D8D5C8", padding: 0, opacity: pushToggleBusy || subActive === null ? 0.6 : 1, flexShrink: 0, transition: "background 0.15s" } },
+                        React.createElement("span", { style: { position: "absolute", top: 2, left: subActive ? 19 : 2, width: 19, height: 19, borderRadius: "50%", background: COLORS.white, boxShadow: "0 1px 3px rgba(0,0,0,0.3)", transition: "left 0.15s" } })))),
             React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776", marginBottom: 8 } }, "Uygulama kapalıyken de (favori ilan fiyatı düştüğünde, nakliyeci konum bildirdiğinde) telefonunuza bildirim gelsin. Aşağıdaki bildirim türlerinden hangilerini almak istediğinizi seçebilirsiniz."),
-            pushStatus === "denied" ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#B3413A" } }, "Bildirimler engellenmiş — tarayıcı/telefon ayarlarından bu site için izin vermeniz gerekir.")) : pushStatus === "unsupported" ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776" } }, "Bu cihaz/tarayıcı anlık bildirimleri desteklemiyor.")) : (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, fontWeight: 600, color: subActive ? COLORS.pineDeep : "#8A8776" } }, subActive === null ? "Durum kontrol ediliyor..." : subActive ? "✓ Bildirimler açık" : "Etkinleştiriliyor..."))),
+            pushStatus === "denied" ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#B3413A" } }, "Bildirimler engellenmiş — tarayıcı/telefon ayarlarından bu site için izin vermeniz gerekir.")) : pushStatus === "unsupported" ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776" } }, "Bu cihaz/tarayıcı anlık bildirimleri desteklemiyor.")) : (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, fontWeight: 600, color: subActive ? COLORS.pineDeep : "#8A8776" } }, subActive === null ? "Durum kontrol ediliyor..." : subActive ? "✓ Bildirimler açık" : "Bildirimler kapalı"))),
         [["yeniTeklif", "İlanıma yeni teklif geldiğinde"], ["teklifDurumu", "Teklifim kabul/red edildiğinde"], ["fiyatDususu", "Favorilediğim ilanda fiyat düşünce"], ["mesaj", "Yeni mesaj geldiğinde"], ["nakliyeKonum", "Nakliyeci konum bildirince"], ["randevu", "Randevu teklif edildiğinde/güncellenince"], ["belgeOnay", "Belge/doğrulama onaylanınca veya reddedilince"]].map(([k, l]) => (React.createElement("label", { key: k, style: { display: "flex", alignItems: "center", gap: 8, fontFamily: "Inter", fontSize: 12, color: "#5A574C", marginBottom: 6, cursor: "pointer" } },
             React.createElement("input", { type: "checkbox", checked: prefs[k], onChange: () => toggle(k) }),
             " ",
