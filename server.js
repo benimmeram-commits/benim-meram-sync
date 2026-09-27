@@ -22,6 +22,7 @@ const express = require("express");
 const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 
 const app = express();
 app.use(cors());
@@ -130,6 +131,41 @@ async function setSharedJSON(key, value) {
 }
 function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+// ---------------------------------------------------------------------
+// Hesap kimlik doğrulama: şifreler ASLA düz metin olarak saklanmaz — rastgele
+// bir "salt" ile birlikte tek yönlü (geri döndürülemez) olarak karıştırılır
+// (scrypt). Bu sayede sunucuya biri erişse bile gerçek şifreler okunamaz.
+// ---------------------------------------------------------------------
+function normalizeIdentifier(s) {
+  return (s || "").toString().trim().toLowerCase();
+}
+function normalizePhone(s) {
+  return (s || "").toString().replace(/\s+/g, "");
+}
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.scryptSync(password, salt, 64).toString("hex");
+  return `${salt}:${hash}`;
+}
+function verifyPassword(password, stored) {
+  if (!stored || typeof stored !== "string" || stored.indexOf(":") === -1) return false;
+  const [salt, hash] = stored.split(":");
+  try {
+    const check = crypto.scryptSync(password, salt, 64).toString("hex");
+    const a = Buffer.from(hash, "hex");
+    const b = Buffer.from(check, "hex");
+    return a.length === b.length && crypto.timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
+// "accounts" anahtarı şifre özetlerini (hash) içerir — genel kv/get ve kv/set
+// uçlarından bilerek engellenir, sadece /auth/register ve /auth/login üzerinden
+// (sunucu tarafında kontrollü şekilde) erişilebilir.
+function isReservedAccountsKey(key, shared) {
+  return !!shared && key === "accounts";
 }
 
 // ---------------------------------------------------------------------
@@ -454,6 +490,7 @@ app.post("/kv/get", async (req, res) => {
   try {
     const { key, shared, owner } = req.body || {};
     if (!key) return res.status(400).json({ error: "key gerekli" });
+    if (isReservedAccountsKey(key, shared)) return res.status(403).json({ error: "Bu anahtara doğrudan erişim kapalı." });
     const value = await rawGet(flatten(key, shared, owner));
     res.json({ value: value === undefined ? null : value });
   } catch (e) {
@@ -674,6 +711,7 @@ app.post("/kv/set", async (req, res) => {
   try {
     const { key, shared, owner, value } = req.body || {};
     if (!key) return res.status(400).json({ error: "key gerekli" });
+    if (isReservedAccountsKey(key, shared)) return res.status(403).json({ error: "Bu anahtara doğrudan erişim kapalı." });
     if (!shared && !owner) return res.status(400).json({ error: "personal veri için owner gerekli" });
 
     // Bildirim tetikleyicileri için, veri yazılmadan ÖNCE eski hali okunur
@@ -701,6 +739,80 @@ app.post("/kv/set", async (req, res) => {
     }
   } catch (e) {
     console.error(e);
+    res.status(500).json({ error: "sunucu hatası" });
+  }
+});
+
+// ---------------------------------------------------------------------
+// Hesap kayıt / giriş: "accounts" listesi şifre özetlerini (hash) içerdiği
+// için asla doğrudan istemciye gönderilmez — sadece bu iki uç, tek tek
+// hesap eşleştirmesi yaparak "evet/hayır" ve (girişte) o kişinin kendi
+// profilini döndürür.
+// ---------------------------------------------------------------------
+app.post("/auth/register", async (req, res) => {
+  try {
+    const { me, extra } = req.body || {};
+    if (!me || !me.name || !me.name.trim()) return res.status(400).json({ error: "Ad soyad gerekli." });
+    const phone = normalizePhone(me.phone);
+    const email = normalizeIdentifier(me.email);
+    const password = me.passwordPlain || me.password || "";
+    if (!phone || phone.length < 10) return res.status(400).json({ error: "Geçerli bir telefon numarası girin." });
+    if (!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ error: "Geçerli bir e-posta adresi girin." });
+    if (!password || password.length < 6) return res.status(400).json({ error: "Şifre en az 6 karakter olmalı." });
+
+    const accounts = await getSharedJSON("accounts", []);
+    const dupPhone = accounts.find((a) => normalizePhone(a.phone) === phone);
+    if (dupPhone) return res.status(409).json({ error: `Bu telefon numarasıyla platformda zaten bir hesap var (${dupPhone.name}). Aynı telefon numarasıyla ikinci bir hesap açılamaz.` });
+    const dupEmail = accounts.find((a) => normalizeIdentifier(a.email) === email);
+    if (dupEmail) return res.status(409).json({ error: `Bu e-posta adresiyle platformda zaten bir hesap var (${dupEmail.name}). Aynı e-posta ile ikinci bir hesap açılamaz.` });
+    if (me.profileType === "kurumsal" && extra && extra.documentRef) {
+      const dupDoc = accounts.find((a) => a.profileType === "kurumsal" && a.documentRef && a.documentRef.trim() === String(extra.documentRef).trim());
+      if (dupDoc) return res.status(409).json({ error: `Bu vergi numarası platformda zaten kayıtlı (${dupDoc.companyName || dupDoc.name}). Aynı şirket için birden fazla hesap açılamaz.` });
+    }
+
+    const cleanMe = { ...me, phone, email };
+    delete cleanMe.passwordPlain;
+    delete cleanMe.password;
+
+    const account = {
+      id: uid(),
+      phone,
+      email,
+      passwordHash: hashPassword(password),
+      name: cleanMe.name,
+      profileType: cleanMe.profileType,
+      documentRef: (extra && extra.documentRef) || null,
+      companyName: cleanMe.companyName || null,
+      me: cleanMe,
+      createdAt: Date.now(),
+    };
+    accounts.push(account);
+    await setSharedJSON("accounts", accounts);
+
+    const members = await getSharedJSON("members", []);
+    members.push({ name: cleanMe.name, profileType: cleanMe.profileType, subscribed: false, joinedAt: cleanMe.joinedAt, phone, ...(extra || {}) });
+    await setSharedJSON("members", members);
+
+    res.json({ ok: true, me: cleanMe });
+  } catch (e) {
+    console.error("Kayıt hatası:", e);
+    res.status(500).json({ error: "sunucu hatası" });
+  }
+});
+
+app.post("/auth/login", async (req, res) => {
+  try {
+    const { identifier, password } = req.body || {};
+    if (!identifier || !password) return res.status(400).json({ error: "Telefon/e-posta ve şifre gerekli." });
+    const idNorm = normalizeIdentifier(identifier);
+    const phoneNorm = normalizePhone(identifier);
+    const accounts = await getSharedJSON("accounts", []);
+    const account = accounts.find((a) => (a.email && normalizeIdentifier(a.email) === idNorm) || (a.phone && normalizePhone(a.phone) === phoneNorm));
+    if (!account) return res.status(404).json({ error: "Bu bilgilerle bir hesap bulunamadı." });
+    if (!verifyPassword(password, account.passwordHash)) return res.status(401).json({ error: "Şifre hatalı." });
+    res.json({ ok: true, me: account.me });
+  } catch (e) {
+    console.error("Giriş hatası:", e);
     res.status(500).json({ error: "sunucu hatası" });
   }
 });

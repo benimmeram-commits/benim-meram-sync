@@ -18583,6 +18583,9 @@ function Onboarding({ onDone, onCancel, onEmployeeLogin }) {
     const [err, setErr] = useState("");
     const [saving, setSaving] = useState(false);
     const [profileStep, setProfileStep] = useState(0);
+    const [loginId, setLoginId] = useState("");
+    const [loginPw, setLoginPw] = useState("");
+    const [loginBusy, setLoginBusy] = useState(false);
     const [passwordPolicy, setPasswordPolicy] = useState(DEFAULT_PASSWORD_POLICY);
     useEffect(() => {
         loadShared("passwordPolicy", DEFAULT_PASSWORD_POLICY).then(setPasswordPolicy);
@@ -18688,7 +18691,7 @@ function Onboarding({ onDone, onCancel, onEmployeeLogin }) {
                 setErr(result.error);
                 return;
             }
-            onDone(me);
+            onDone(result.me);
             return;
         }
         if (accountType === "veteriner") {
@@ -18701,7 +18704,7 @@ function Onboarding({ onDone, onCancel, onEmployeeLogin }) {
                 setErr(result.error);
                 return;
             }
-            onDone(me);
+            onDone(result.me);
             return;
         }
         if (accountType === "nakliyeci") {
@@ -18714,27 +18717,70 @@ function Onboarding({ onDone, onCancel, onEmployeeLogin }) {
                 setErr(result.error);
                 return;
             }
-            onDone(me);
+            onDone(result.me);
             return;
         }
         setStep("belge");
     };
+    // Kayıt artık sunucudaki /auth/register ucundan geçer: telefon/e-posta
+    // tekilliği sunucuda kontrol edilir, şifre asla düz metin olarak
+    // saklanmaz (tek yönlü olarak karıştırılır/hash'lenir). Böylece aynı
+    // bilgilerle (isim hariç) ikinci bir hesap açılamaz ve kullanıcı daha
+    // sonra başka bir cihazdan da "Giriş Yap" ile bu hesaba erişebilir.
     const registerMember = async (me, extra) => {
-        const members = await loadShared("members", []);
-        const normalizedPhone = (me.phone || "").replace(/\s/g, "");
-        const dupPhone = normalizedPhone && members.find(m => (m.phone || "").replace(/\s/g, "") === normalizedPhone);
-        if (dupPhone) {
-            return { ok: false, error: `Bu telefon numarasıyla platformda zaten bir hesap var (${dupPhone.name}). Aynı telefon numarasıyla ikinci bir hesap açılamaz.` };
+        try {
+            const res = await fetch("/auth/register", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ me, extra }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || !data.ok) {
+                return { ok: false, error: (data && data.error) || "Kayıt başarısız, tekrar deneyin." };
+            }
+            const saveMeResult = await savePersonal("me", data.me);
+            if (!saveMeResult.ok)
+                return { ok: false, error: "Hesap oluşturuldu ama bu cihaza kaydedilemedi: " + saveMeResult.error };
+            return { ok: true, me: data.me };
         }
-        const saveMeResult = await savePersonal("me", me);
-        if (!saveMeResult.ok)
-            return { ok: false, error: "Kayıt başarısız: " + saveMeResult.error };
-        const saveMembersResult = await saveShared("members", [...members, {
-                name: me.name, profileType: me.profileType, subscribed: false, joinedAt: me.joinedAt, phone: me.phone, ...extra,
-            }]);
-        if (!saveMembersResult.ok)
-            return { ok: false, error: "Üye listesi kaydedilemedi: " + saveMembersResult.error };
-        return { ok: true };
+        catch (e) {
+            return { ok: false, error: "Sunucuya ulaşılamadı, internetinizi kontrol edip tekrar deneyin." };
+        }
+    };
+    // Daha önce kayıt olmuş birinin, telefon/e-posta + şifresiyle bu hesaba
+    // BAŞKA bir cihazdan (veya uygulama silinip yeniden kurulduğunda) tekrar
+    // girebilmesini sağlar — önceden bu ekran yalnızca kayıt yapıyordu.
+    const doLogin = async () => {
+        if (!loginId.trim() || !loginPw) {
+            setErr("Telefon numaranızı veya e-postanızı ve şifrenizi girin.");
+            return;
+        }
+        setErr("");
+        setLoginBusy(true);
+        try {
+            const res = await fetch("/auth/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ identifier: loginId.trim(), password: loginPw }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || !data.ok) {
+                setErr((data && data.error) || "Giriş yapılamadı.");
+                setLoginBusy(false);
+                return;
+            }
+            const saveMeResult = await savePersonal("me", data.me);
+            setLoginBusy(false);
+            if (!saveMeResult.ok) {
+                setErr("Giriş başarılı ama bu cihaza kaydedilemedi: " + saveMeResult.error);
+                return;
+            }
+            onDone(data.me);
+        }
+        catch (e) {
+            setLoginBusy(false);
+            setErr("Sunucuya ulaşılamadı, internetinizi kontrol edip tekrar deneyin.");
+        }
     };
     const handleDocPhoto = async (e) => {
         const file = (e.target.files || [])[0];
@@ -18766,17 +18812,10 @@ function Onboarding({ onDone, onCancel, onEmployeeLogin }) {
             return;
         }
         setSaving(true);
-        // Not: bu sadece PLATFORM İÇİNDE aynı vergi no'nun tekrar kullanılmasını engeller —
-        // şirketin gerçekten var olup olmadığını resmi olarak (Ticaret Sicili/MERSİS) doğrulamaz.
-        if (accountType === "kurumsal") {
-            const members = await loadShared("members", []);
-            const dup = members.find(m => m.profileType === "kurumsal" && m.documentRef && m.documentRef.trim() === docRef.trim());
-            if (dup) {
-                setSaving(false);
-                setErr(`Bu vergi numarası platformda zaten kayıtlı (${dup.companyName || dup.name}). Aynı şirket için birden fazla hesap açılamaz.`);
-                return;
-            }
-        }
+        // Not: vergi no / telefon / e-posta tekilliği artık sunucuda
+        // (/auth/register) kontrol ediliyor — bu sadece PLATFORM İÇİNDE aynı
+        // bilgilerin tekrar kullanılmasını engeller, şirketin gerçekten var
+        // olup olmadığını resmi olarak (Ticaret Sicili/MERSİS) doğrulamaz.
         const me = {
             name: name.trim(), phone, email, authMethod: "email", passwordPlain: password, profileType: accountType,
             subscribed: false, joinedAt: Date.now(), documentStatus: "beklemede",
@@ -18791,7 +18830,7 @@ function Onboarding({ onDone, onCancel, onEmployeeLogin }) {
             setErr(result.error);
             return;
         }
-        onDone(me);
+        onDone(result.me);
     };
     const pwChecks = [
         { ok: password.length >= passwordPolicy.minLength, label: `En az ${passwordPolicy.minLength} karakter` },
@@ -18808,6 +18847,7 @@ function Onboarding({ onDone, onCancel, onEmployeeLogin }) {
             React.createElement("label", { style: { fontFamily: "Inter", fontSize: 12, fontWeight: 600, color: COLORS.ink, marginBottom: 6, display: "block" } }, "Telefon Numaras\u0131"),
             React.createElement("input", { value: phone, onChange: (e) => setPhone(e.target.value), placeholder: "05XX XXX XX XX", style: { width: "100%", padding: "13px 14px", borderRadius: 10, border: `1.5px solid ${COLORS.line}`, fontFamily: "Inter", fontSize: 14, outline: "none", marginBottom: 14, boxSizing: "border-box" } }),
             React.createElement("button", { onClick: () => startFlow("bireysel"), style: { width: "100%", padding: "13px", borderRadius: 10, border: "none", background: phone.length >= 10 ? COLORS.pineDeep : "#D8D5C8", color: COLORS.white, fontFamily: "Inter", fontWeight: 700, fontSize: 14, cursor: "pointer" } }, "Devam Et"),
+            React.createElement("button", { onClick: () => { setErr(""); setStep("login"); }, style: { width: "100%", padding: "10px", background: "none", border: "none", color: COLORS.pineDeep, fontFamily: "Inter", fontWeight: 700, fontSize: 12.5, cursor: "pointer", marginTop: 4 } }, "Zaten hesabım var, giriş yap"),
             err && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11.5, marginTop: 6 } }, err),
             React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, margin: "22px 0" } },
                 React.createElement("div", { style: { flex: 1, height: 1, background: COLORS.line } }),
@@ -18831,6 +18871,15 @@ function Onboarding({ onDone, onCancel, onEmployeeLogin }) {
                         React.createElement("span", { style: { display: "flex", alignItems: "center", gap: 3, fontFamily: "Inter", fontWeight: 700, fontSize: 12.5, color: COLORS.pineDeep } }, action, React.createElement(ChevronRight, { size: 14, color: COLORS.pineDeep })))
                 ))))),
         step === "employeeLogin" && React.createElement(EmployeeLoginScreen, { onLogin: onEmployeeLogin, onCancel: () => setStep("choice") }),
+        step === "login" && (React.createElement(React.Fragment, null,
+            React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 19, color: COLORS.ink, marginBottom: 20 } }, "Giriş Yap"),
+            React.createElement("label", { style: { fontFamily: "Inter", fontSize: 12, fontWeight: 600, color: COLORS.ink, marginBottom: 6, display: "block" } }, "Telefon Numarası veya E-posta"),
+            React.createElement("input", { value: loginId, onChange: (e) => setLoginId(e.target.value), placeholder: "05XX XXX XX XX veya e-posta", style: { width: "100%", padding: "13px 14px", borderRadius: 10, border: `1.5px solid ${COLORS.line}`, fontFamily: "Inter", fontSize: 14, outline: "none", marginBottom: 14, boxSizing: "border-box" } }),
+            React.createElement("label", { style: { fontFamily: "Inter", fontSize: 12, fontWeight: 600, color: COLORS.ink, marginBottom: 6, display: "block" } }, "Şifre"),
+            React.createElement("input", { type: "password", value: loginPw, onChange: (e) => setLoginPw(e.target.value), placeholder: "Şifreniz", style: { width: "100%", padding: "13px 14px", borderRadius: 10, border: `1.5px solid ${COLORS.line}`, fontFamily: "Inter", fontSize: 14, outline: "none", marginBottom: 14, boxSizing: "border-box" } }),
+            err && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11.5, marginBottom: 10 } }, err),
+            React.createElement("button", { onClick: doLogin, disabled: loginBusy, style: { width: "100%", padding: "13px", borderRadius: 10, border: "none", background: COLORS.pineDeep, color: COLORS.white, fontFamily: "Inter", fontWeight: 700, fontSize: 14, cursor: "pointer", opacity: loginBusy ? 0.7 : 1 } }, loginBusy ? "Giriş yapılıyor..." : "Giriş Yap"),
+            React.createElement("button", { onClick: () => { setErr(""); setStep("choice"); }, style: { background: "none", border: "none", color: "#8A8776", fontFamily: "Inter", fontSize: 11.5, marginTop: 14, cursor: "pointer" } }, "← Geri"))),
         step === "phone" && (React.createElement(React.Fragment, null,
             React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12, color: "#8A8776", marginBottom: 16 } },
                 accountType === "kurumsal" ? "Kurumsal hesap için" : "",
