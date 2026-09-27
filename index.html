@@ -19084,8 +19084,9 @@ function BenimMeram() {
             React.createElement("style", null, fontImport),
             React.createElement(Loading, null));
     }
+    const isDesktop = !isMobileViewport;
     const appShellNode = (React.createElement(React.Fragment, null,
-        React.createElement(AppShell, { me: me, setMe: setMe, requireAuth: requireAuth, listings: listings, requests: requests, offers: offers, reviews: reviews, messages: messages, members: members, pricing: pricing, customBreeds: customBreeds, customSubcategories: customSubcategories, favorites: favorites, toggleFavorite: toggleFavorite, likes: likes, favoritesLog: favoritesLog, refreshAll: refreshAll, screen: screen, setScreen: setScreen, tab: tab, setTab: setTab, subTab: subTab, setSubTab: setSubTab, breedTab: breedTab, setBreedTab: setBreedTab, drawer: drawer, setDrawer: setDrawer, selected: selected, setSelected: setSelected }),
+        React.createElement(AppShell, { me: me, setMe: setMe, requireAuth: requireAuth, listings: listings, requests: requests, offers: offers, reviews: reviews, messages: messages, members: members, pricing: pricing, customBreeds: customBreeds, customSubcategories: customSubcategories, favorites: favorites, toggleFavorite: toggleFavorite, likes: likes, favoritesLog: favoritesLog, refreshAll: refreshAll, screen: screen, setScreen: setScreen, tab: tab, setTab: setTab, subTab: subTab, setSubTab: setSubTab, breedTab: breedTab, setBreedTab: setBreedTab, drawer: drawer, setDrawer: setDrawer, selected: selected, setSelected: setSelected, isDesktop: isDesktop }),
         showAuth && (React.createElement("div", { style: { position: "absolute", inset: 0, background: COLORS.paper, zIndex: 30, display: "flex", flexDirection: "column" } },
             React.createElement(Onboarding, { onDone: (m) => { setMe(m); setShowAuth(false); }, onCancel: () => setShowAuth(false), onEmployeeLogin: (session) => { setEmployeeSession(session); setShowAuth(false); } })))));
     const mainAppNode = employeeSession ? (
@@ -19100,6 +19101,7 @@ function BenimMeram() {
         React.createElement("div", { style: { width: "100%", minHeight: "100dvh", background: COLORS.paper, display: "flex", justifyContent: "center" } },
         React.createElement("div", { style: { width: "100%", maxWidth: 1280, minHeight: "100dvh", background: COLORS.paper, position: "relative", display: "flex", flexDirection: "column", boxShadow: "0 0 0 1px rgba(0,0,0,0.04)" } },
         React.createElement("style", null, `@keyframes pulseDot {0%{transform:scale(1);opacity:.7}70%{transform:scale(2.6);opacity:0}100%{opacity:0}}`),
+        !employeeSession && React.createElement(DesktopTopNav, { me: me, screen: screen, setScreen: setScreen, tab: tab, setTab: setTab, setSubTab: setSubTab, setBreedTab: setBreedTab, requireAuth: requireAuth, setShowAuth: setShowAuth }),
         appShellNode)));
     if (isMobileViewport && !isAdminGateOpen) {
         // Ger\u00E7ek bir mobil cihazda: sahte telefon \u00E7er\u00E7evesi / \u00F6nizleme metinleri olmadan,
@@ -19118,8 +19120,45 @@ function BenimMeram() {
             React.createElement("button", { onClick: () => setView("admin"), style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5, padding: "8px 16px", borderRadius: 8, border: "none", cursor: "pointer", background: view === "admin" ? COLORS.pineDeep : "transparent", color: view === "admin" ? COLORS.white : "#5A574C" } }, "Y\u00F6netim Paneli"))),
         effectiveView === "admin" ? (adminSession ? (React.createElement(AdminPanel, { session: adminSession, onLogout: async () => { await logAdminLogin({ tcNo: adminSession.tcNo, name: adminSession.name, role: adminSession.role, success: true, reason: "çıkış yapıldı" }); await savePersonal("adminSession", null); setAdminSession(null); await refreshAll(); }, listings: listings, requests: requests, offers: offers, members: members, messages: messages, reviews: reviews, announcement: announcement, pricing: pricing, adminAccounts: adminAccounts, adminLoginLogs: adminLoginLogs, auditLog: auditLog, reports: reports, customBreeds: customBreeds, customSubcategories: customSubcategories, refreshAll: refreshAll })) : (React.createElement(AdminAuth, { adminAccounts: adminAccounts, refreshAll: refreshAll, onLogin: async (session) => { await savePersonal("adminSession", session); setAdminSession(session); } }))) : mainAppNode));
 }
+// Masaüstü için mobildekinden tamamen farklı, geniş ekranlı bir üst menü:
+// logo, kategori/sekme linkleri, arama ve profil/giriş — mobildeki alt
+// sekme çubuğu ile üst çubuğun yerini alır (AppShell'e isDesktop=true
+// verildiğinde o ikisi gizlenir).
+function DesktopTopNav({ me, screen, setScreen, tab, setTab, setSubTab, setBreedTab, requireAuth, setShowAuth }) {
+    const goCategory = (t) => { setTab(t); setSubTab("tumu"); setBreedTab("tumu"); setScreen("home"); };
+    const goProtected = (s) => { if (requireAuth()) setScreen(s); };
+    const navLinks = [
+        ["home", "Ana Sayfa", () => setScreen("home")],
+        ["reels", "Aktif", () => setScreen("reels")],
+        ["create", "İlan Ver", () => goProtected("create")],
+        ["chatHub", "Sohbet", () => goProtected("chatHub")],
+        ["myoffers", "Tekliflerim", () => goProtected("myoffers")],
+    ];
+    return React.createElement("div", { style: { background: COLORS.pine, display: "flex", alignItems: "center", gap: 22, padding: "0 26px", height: 62, flexShrink: 0 } },
+        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }, onClick: () => setScreen("home") },
+            React.createElement(Logo, { size: 30, iconOnly: true }),
+            React.createElement("span", { style: { fontFamily: "Fraunces", fontWeight: 700, fontSize: 16, color: COLORS.white } }, "Benim Meram")),
+        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 4, background: "rgba(255,255,255,0.12)", borderRadius: 10, padding: 3 } },
+            [["buyukbas", "Büyükbaş"], ["kucukbas", "Küçükbaş"]].map(([t, label]) => (
+                React.createElement("button", { key: t, onClick: () => goCategory(t), style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5, padding: "7px 14px", borderRadius: 8, border: "none", cursor: "pointer", background: screen === "home" && tab === t ? COLORS.white : "transparent", color: screen === "home" && tab === t ? COLORS.pineDeep : COLORS.white } }, label)
+            ))),
+        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 18, flex: 1 } },
+            navLinks.map(([s, label, onClick]) => {
+                const active = s === "chatHub" ? ["chatHub", "chat", "regionChat"].includes(screen) : screen === s;
+                return React.createElement("button", { key: s, onClick: onClick, style: { fontFamily: "Inter", fontWeight: 600, fontSize: 13, background: "none", border: "none", cursor: "pointer", color: active ? COLORS.white : "rgba(255,255,255,0.68)", borderBottom: active ? `2px solid ${COLORS.white}` : "2px solid transparent", padding: "6px 2px" } }, label);
+            })),
+        React.createElement("button", { onClick: () => setScreen("search"), title: "Ara", style: { background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center" } },
+            React.createElement(Search, { size: 19, color: COLORS.white })),
+        me ? (
+            React.createElement("button", { onClick: () => goProtected("profile"), style: { display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.12)", border: "none", borderRadius: 20, padding: "6px 14px 6px 6px", cursor: "pointer" } },
+                React.createElement("span", { style: { width: 26, height: 26, borderRadius: "50%", background: COLORS.white, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Inter", fontWeight: 700, fontSize: 12, color: COLORS.pineDeep } }, (me.name || "?").trim().charAt(0).toUpperCase()),
+                React.createElement("span", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 12.5, color: COLORS.white, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, me.name))
+        ) : (
+            React.createElement("button", { onClick: () => setShowAuth(true), style: { fontFamily: "Inter", fontWeight: 700, fontSize: 12.5, background: COLORS.white, color: COLORS.pineDeep, border: "none", borderRadius: 20, padding: "8px 18px", cursor: "pointer" } }, "Giriş Yap")
+        ));
+}
 // ---------- APP SHELL (giriş yapılmış veya misafir kullanıcı) ----------
-function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews, messages, members, pricing, customBreeds, customSubcategories, favorites, toggleFavorite, likes, favoritesLog, refreshAll, screen, setScreen, tab, setTab, subTab, setSubTab, breedTab, setBreedTab, drawer, setDrawer, selected, setSelected }) {
+function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews, messages, members, pricing, customBreeds, customSubcategories, favorites, toggleFavorite, likes, favoritesLog, refreshAll, screen, setScreen, tab, setTab, subTab, setSubTab, breedTab, setBreedTab, drawer, setDrawer, selected, setSelected, isDesktop }) {
     const [expandedSub, setExpandedSub] = useState(null);
     const [seedState, setSeedState] = useState({ loading: false, error: null, fallback: false });
     const [chatTarget, setChatTarget] = useState(null); // { conversationId, otherName, listingLabel }
@@ -19197,7 +19236,7 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
     }))) : [];
     return (React.createElement(React.Fragment, null,
         React.createElement(CallManager, { me: me, pendingCallRequest: pendingCallRequest, onRequestConsumed: () => setPendingCallRequest(null) }),
-        screen !== "detail" && screen !== "chat" && screen !== "regionChat" && screen !== "reels" && screen !== "search" && screen !== "publicProfile" && screen !== "profileSub" && screen !== "farm" && screen !== "vet" && screen !== "myListings" && (React.createElement("div", { style: { background: COLORS.pine, padding: "14px 14px 10px", display: "flex", alignItems: "center", gap: 10 } },
+        !isDesktop && screen !== "detail" && screen !== "chat" && screen !== "regionChat" && screen !== "reels" && screen !== "search" && screen !== "publicProfile" && screen !== "profileSub" && screen !== "farm" && screen !== "vet" && screen !== "myListings" && (React.createElement("div", { style: { background: COLORS.pine, padding: "14px 14px 10px", display: "flex", alignItems: "center", gap: 10 } },
             React.createElement("button", { onClick: () => setDrawer(true), style: { background: "none", border: "none", cursor: "pointer" } },
                 React.createElement(IconMenu, { color: COLORS.white, size: 20 })),
             React.createElement("div", { style: { flex: 1 } }),
@@ -19327,7 +19366,7 @@ function AppShell({ me, setMe, requireAuth, listings, requests, offers, reviews,
                                     color: tab === mainKey && subTab === sub && breedTab === breed ? COLORS.white : "#8A8776",
                                 } }, breed)))))));
                     })))))))),
-        screen !== "detail" && screen !== "chat" && screen !== "regionChat" && screen !== "search" && screen !== "publicProfile" && screen !== "profileSub" && screen !== "farm" && screen !== "vet" && screen !== "myListings" && (React.createElement("div", { style: screen === "reels" ? { display: "flex", position: "absolute", left: 0, right: 0, bottom: 0, background: "transparent", padding: "10px 0 14px", zIndex: 8 } : { display: "flex", borderTop: `1px solid ${COLORS.line}`, background: COLORS.white, padding: "10px 0 14px" } }, [["home", NavIconHome, "Ana Sayfa"], ["reels", NavIconFilm, "Aktif"], ["create", NavIconPlus, "İlan Ver"], ["chatHub", NavIconChat, "Sohbet"], ["profile", NavIconUser, "Profil"]].map(([s, Icon, l]) => {
+        !isDesktop && screen !== "detail" && screen !== "chat" && screen !== "regionChat" && screen !== "search" && screen !== "publicProfile" && screen !== "profileSub" && screen !== "farm" && screen !== "vet" && screen !== "myListings" && (React.createElement("div", { style: screen === "reels" ? { display: "flex", position: "absolute", left: 0, right: 0, bottom: 0, background: "transparent", padding: "10px 0 14px", zIndex: 8 } : { display: "flex", borderTop: `1px solid ${COLORS.line}`, background: COLORS.white, padding: "10px 0 14px" } }, [["home", NavIconHome, "Ana Sayfa"], ["reels", NavIconFilm, "Aktif"], ["create", NavIconPlus, "İlan Ver"], ["chatHub", NavIconChat, "Sohbet"], ["profile", NavIconUser, "Profil"]].map(([s, Icon, l]) => {
             const active = s === "chatHub" ? ["chatHub", "chat", "regionChat"].includes(screen) : screen === s;
             const onReels = screen === "reels";
             const iconColor = onReels ? (active ? COLORS.white : "rgba(255,255,255,0.6)") : (active ? COLORS.pineDeep : "#B7B4A6");
