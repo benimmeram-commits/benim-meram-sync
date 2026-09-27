@@ -21918,8 +21918,33 @@ function AdminPanel({ session, onLogout, listings, requests, offers, members, me
                 activeSection === "girislog" && React.createElement(GirisLoguPanel, { adminLoginLogs: adminLoginLogs }),
                 activeSection === "denetim" && React.createElement(DenetimPanel, { auditLog: auditLog })))));
 }
+// Beklenmedik bir script hatası oluşursa (örn. harita kütüphanesiyle ilgili
+// bir sorun), kullanıcıya çirkin/anlaşılmaz bir "script error" ya da bomboş
+// bir ekran göstermek yerine, dostane bir mesajla "Tekrar Dene" seçeneği
+// sunulur — uygulamanın tamamı çökmez.
+class AppErrorBoundary extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = { hasError: false };
+    }
+    static getDerivedStateFromError() {
+        return { hasError: true };
+    }
+    componentDidCatch(error, info) {
+        console.error("Uygulama hatası yakalandı:", error, info);
+    }
+    render() {
+        if (this.state.hasError) {
+            return (React.createElement("div", { style: { position: "fixed", inset: 0, background: "#FAF8F2", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, textAlign: "center", gap: 14 } },
+                React.createElement("div", { style: { fontFamily: "Fraunces", fontWeight: 600, fontSize: 18, color: "#1F2A1E" } }, "Bir şeyler ters gitti"),
+                React.createElement("div", { style: { fontFamily: "Inter", fontSize: 12.5, color: "#5A574C", maxWidth: 320 } }, "Bu ekranda beklenmeyen bir hata oluştu. Verileriniz güvende — sayfayı yenileyerek devam edebilirsiniz."),
+                React.createElement("button", { onClick: () => { this.setState({ hasError: false }); window.location.reload(); }, style: { background: "#1F2A1E", color: "#fff", border: "none", borderRadius: 10, padding: "10px 20px", fontFamily: "Inter", fontWeight: 600, fontSize: 13, cursor: "pointer" } }, "Sayfayı Yenile")));
+        }
+        return this.props.children;
+    }
+}
 const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(React.createElement(BenimMeram, null));
+root.render(React.createElement(AppErrorBoundary, null, React.createElement(BenimMeram, null)));
 
 function EmailChangeRequestCard({ me }) {
     const [open, setOpen] = useState(false);
@@ -22171,30 +22196,55 @@ function MapPicker({ lat, lng, onPick, interactive = true, zoom, height = 320 })
     const mapInstance = React.useRef(null);
     const markerRef = React.useRef(null);
     const [leafletReady] = useState(!!window.L);
+    const [mapError, setMapError] = useState(false);
     useEffect(() => {
         if (!window.L || !mapRef.current || mapInstance.current)
             return;
-        const startLat = lat || 39.0, startLng = lng || 35.0;
-        const defaultZoom = zoom || (lat ? 14 : 6);
-        const map = window.L.map(mapRef.current, { attributionControl: false, dragging: interactive, zoomControl: interactive, scrollWheelZoom: interactive }).setView([startLat, startLng], defaultZoom);
-        window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
-        if (lat && lng)
-            markerRef.current = window.L.marker([lat, lng]).addTo(map);
-        if (interactive) {
-            map.on("click", (e) => {
-                const { lat: clat, lng: clng } = e.latlng;
-                if (markerRef.current)
-                    markerRef.current.setLatLng([clat, clng]);
-                else
-                    markerRef.current = window.L.marker([clat, clng]).addTo(map);
-                onPick(clat, clng);
-            });
+        // Bazı durumlarda (örn. bu DOM düğümü önceki bir harita tarafından zaten
+        // kullanılmışsa) Leaflet "Map container is already initialized" hatası
+        // fırlatır ve tüm ekranı çökertebilirdi. Önce bunu temizler, olur da bir
+        // hata olursa da yakalayıp kullanıcıya "harita yüklenemedi" gösteririz —
+        // ham bir script hatasıyla karşılaşmaz.
+        try {
+            if (mapRef.current._leaflet_id) {
+                delete mapRef.current._leaflet_id;
+            }
+            const startLat = lat || 39.0, startLng = lng || 35.0;
+            const defaultZoom = zoom || (lat ? 14 : 6);
+            const map = window.L.map(mapRef.current, { attributionControl: false, dragging: interactive, zoomControl: interactive, scrollWheelZoom: interactive }).setView([startLat, startLng], defaultZoom);
+            window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
+            if (lat && lng)
+                markerRef.current = window.L.marker([lat, lng]).addTo(map);
+            if (interactive) {
+                map.on("click", (e) => {
+                    const { lat: clat, lng: clng } = e.latlng;
+                    if (markerRef.current)
+                        markerRef.current.setLatLng([clat, clng]);
+                    else
+                        markerRef.current = window.L.marker([clat, clng]).addTo(map);
+                    onPick(clat, clng);
+                });
+            }
+            mapInstance.current = map;
+            setTimeout(() => {
+                try { map.invalidateSize(); } catch { }
+            }, 150);
         }
-        mapInstance.current = map;
-        setTimeout(() => map.invalidateSize(), 150);
-        return () => { map.remove(); mapInstance.current = null; };
+        catch (e) {
+            console.warn("Harita başlatılamadı:", e);
+            setMapError(true);
+            return;
+        }
+        return () => {
+            try {
+                if (mapInstance.current)
+                    mapInstance.current.remove();
+            }
+            catch { }
+            mapInstance.current = null;
+        };
     }, []);
-    if (!leafletReady) {
+    if (!leafletReady || mapError) {
         return (React.createElement("div", { style: { background: COLORS.paper, border: `1px dashed ${COLORS.line}`, borderRadius: 12, padding: 16, minHeight: height, boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", fontFamily: "Inter", fontSize: 11.5, color: "#8A8776" } },
             "Harita y\u00FCklenemedi (internet ba\u011Flant\u0131s\u0131 gerekir)",
             interactive ? " — aşağıdan il/ilçenizi elle seçebilirsiniz." : "."));
