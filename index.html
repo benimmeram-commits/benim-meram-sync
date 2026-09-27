@@ -14,6 +14,23 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Benim Meram" />
+
+<!-- OG_TAGS_START -->
+<!-- Sosyal medya paylaşım önizlemesi (Open Graph / Twitter Card) — varsayılan
+     etiketler. Bir ilan paylaşıldığında (?ilan=<id>) sunucu bu bloğu
+     o ilana özel bilgilerle (fotoğraf, fiyat, ırk) DEĞİŞTİRİR; bu yüzden
+     buradakiler sadece uygulamanın ana sayfası paylaşıldığında kullanılır. -->
+<meta name="description" content="Benim Meram — büyükbaş ve küçükbaş hayvan alım satım platformu." />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Benim Meram" />
+<meta property="og:title" content="Benim Meram" />
+<meta property="og:description" content="Büyükbaş ve küçükbaş hayvan alım satım platformu." />
+<meta property="og:image" content="https://benim-meram-sync.onrender.com/icon-512.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Benim Meram" />
+<meta name="twitter:description" content="Büyükbaş ve küçükbaş hayvan alım satım platformu." />
+<meta name="twitter:image" content="https://benim-meram-sync.onrender.com/icon-512.png" />
+<!-- OG_TAGS_END -->
 <script>
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", function () {
@@ -17301,13 +17318,32 @@ exports.version = "19.2.5";
   // sunucuya geri yazılır — aksi halde "sadece bu cihazda" kalan bir
   // veri (ör. yeni oluşturulan bir ilan), sunucu düzeldiğinde sunucudaki
   // ESKİ veriyle üzerine yazılıp kullanıcıya "kayboldu" gibi görünür.
-  var dirtyKeys = {}; // "shared:key" veya "personal:key" -> true
+  // "dirtyKeys" listesi sayfa yenilendiğinde/kapatıldığında kaybolmasın diye
+  // localStorage'a da yazılır — böylece bağlantı kesikken kaydedilen küçük bir
+  // veri (örn. yeni bir ilan), kullanıcı uygulamayı kapatıp sonra tekrar açsa
+  // bile bir sonraki sunucu erişiminde otomatik olarak gönderilmeye çalışılır.
+  var DIRTY_KEYS_STORAGE = "bm_dirty_keys";
+  function loadDirtyKeysFromStorage() {
+    try {
+      var raw = localStorage.getItem(DIRTY_KEYS_STORAGE);
+      var arr = raw ? JSON.parse(raw) : [];
+      var obj = {};
+      arr.forEach(function (name) { obj[name] = true; });
+      return obj;
+    } catch (e) { return {}; }
+  }
+  function persistDirtyKeys() {
+    try { localStorage.setItem(DIRTY_KEYS_STORAGE, JSON.stringify(Object.keys(dirtyKeys))); }
+    catch (e) { /* önemli değil, en kötü ihtimalle yeniden denenmez */ }
+  }
+  var dirtyKeys = loadDirtyKeysFromStorage(); // "shared:key" veya "personal:key" -> true
   function dirtyName(key, shared) { return (shared ? "shared:" : "personal:") + key; }
   function resyncDirtyKeys() {
     var names = Object.keys(dirtyKeys);
     if (names.length === 0) return;
     names.forEach(function (name) {
       delete dirtyKeys[name];
+      persistDirtyKeys();
       var shared = name.indexOf("shared:") === 0;
       var key = name.slice(name.indexOf(":") + 1);
       localBackend.get(key, shared).then(function (local) {
@@ -17322,6 +17358,7 @@ exports.version = "19.2.5";
         }).catch(function (e) {
           console.warn("Gecikmiş senkronizasyon başarısız, tekrar denenecek:", name, e);
           dirtyKeys[name] = true; // tekrar denenmek üzere geri işaretle
+          persistDirtyKeys();
         });
       });
     });
@@ -17396,34 +17433,51 @@ exports.version = "19.2.5";
         });
     },
     set: function (key, value, shared) {
-      // Veri kaybını en aza indirmek için yerel yedeğe de yazılmaya çalışılır,
-      // ancak bu İSTEĞE BAĞLIDIR: localStorage kotası dolarsa (büyük fotoğraflı
-      // ilan listeleri gibi büyük verilerde olabilir) sessizce atlanır — asıl
-      // kayıt zaten aşağıdaki sunucu isteğiyle yapılıyor, yerel yedek sadece
-      // ekstra bir güvenlik önlemidir ve başarısız olması akışı durdurmamalı.
-      localBackend.set(key, value, shared).catch(function (e) {
-        console.warn("Yerel yedek yazılamadı (kota dolu olabilir), devam ediliyor:", key, e);
-      });
+      // ÖNEMLİ: önce yerel yedeğe yazmayı DENERİZ ve sonucunu bekleriz — bu bir
+      // "iyi olursa olsun" adımı değil, çünkü sunucu isteği başarısız olursa
+      // (bağlantı sorunu, zaman aşımı) verinin gerçekten bir yerde durup
+      // durmadığını bilmemiz gerekir. Özellikle büyük video dosyalarında
+      // localStorage kotası (tarayıcı başına genelde 5-10 MB) dolabilir; bu
+      // durumda yerel yazma da başarısız olur. Önceden bu iki başarısızlık
+      // sessizce yutulup "kaydedildi" gibi davranılıyordu — bu da bir video
+      // yüklendikten sonra uygulama kapatılıp tekrar açıldığında videonun
+      // sunucuda hiç bulunmaması ("yüklenmiyor" hatası) ile sonuçlanıyordu.
+      // Şimdi: sunucu VE yerel yedek ikisi de başarısız olursa, çağıran koda
+      // gerçek bir hata fırlatılır ki kullanıcı "kaydedilemedi" mesajını görsün,
+      // yanlışlıkla başarılı sanılmasın.
       var isLarge = value && value.length > 500000;
-      // Video/foto\u011Fraf i\u00E7eren b\u00FCy\u00FCk yükler i\u00E7in daha uzun bir s\u00FCre (35sn) tan\u0131n\u0131r —
-      // k\u00FC\u00E7\u00FCk bir metin g\u00FCncellemesinden \u00E7ok daha fazla veri ta\u015F\u0131yabilir.
+      // Video/fotoğraf içeren büyük yükler için daha uzun bir süre (60sn) tanınır —
+      // küçük bir metin güncellemesinden çok daha fazla veri taşıyabilir.
       var timeoutMs = isLarge ? 60000 : 20000;
-      var request = isLarge
-        ? xhrPostWithProgress(API_BASE_URL + "/kv/set", { key: key, shared: !!shared, owner: getDeviceId(), value: value }, timeoutMs)
-        : fetchWithTimeout(API_BASE_URL + "/kv/set", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ key: key, shared: !!shared, owner: getDeviceId(), value: value })
-          }, timeoutMs).then(function (r) { if (!r.ok) throw new Error("sunucu hatası: " + r.status); return r.json(); });
-      return request
-        .then(function () {
-          resyncDirtyKeys();
-          return { key: key, value: value, shared: !!shared };
-        })
+      return localBackend.set(key, value, shared)
+        .then(function () { return true; })
         .catch(function (e) {
-          console.warn("Senkronizasyon sunucusuna ulaşılamadı (veya zaman aşımına uğradı), bu cihazda yerel depolamaya geçiliyor:", e);
-          dirtyKeys[dirtyName(key, shared)] = true;
-          return { key: key, value: value, shared: !!shared };
+          console.warn("Yerel yedek yazılamadı (kota dolu olabilir):", key, e);
+          return false;
+        })
+        .then(function (localSaved) {
+          var request = isLarge
+            ? xhrPostWithProgress(API_BASE_URL + "/kv/set", { key: key, shared: !!shared, owner: getDeviceId(), value: value }, timeoutMs)
+            : fetchWithTimeout(API_BASE_URL + "/kv/set", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ key: key, shared: !!shared, owner: getDeviceId(), value: value })
+              }, timeoutMs).then(function (r) { if (!r.ok) throw new Error("sunucu hatası: " + r.status); return r.json(); });
+          return request
+            .then(function () {
+              resyncDirtyKeys();
+              return { key: key, value: value, shared: !!shared };
+            })
+            .catch(function (e) {
+              if (localSaved) {
+                console.warn("Sunucuya ulaşılamadı, bu cihazda yerel depolamaya geçildi (sonra otomatik senkronize edilecek):", e);
+                dirtyKeys[dirtyName(key, shared)] = true;
+                persistDirtyKeys();
+                return { key: key, value: value, shared: !!shared };
+              }
+              console.error("Kaydedilemedi: ne sunucuya ne de yerel depoya yazılabildi:", key, e);
+              throw new Error("Kaydedilemedi: sunucuya ulaşılamadı ve cihazda yer kalmadı. (" + (e && e.message || "bilinmeyen hata") + ")");
+            });
         });
     },
     delete: function (key, shared) {
@@ -19540,8 +19594,8 @@ function CreateScreen({ me, members, customSubcategories, refreshAll, onDone }) 
                     setMedia(prev => [...prev, { type: "video", ref: videoRef, dataUrl, name: file.name }]);
                     count++;
                 }
-                catch {
-                    setMediaError("Video işlenemedi: " + file.name);
+                catch (err) {
+                    setMediaError(`Video kaydedilemedi: ${file.name} (${err && err.message ? err.message : "bağlantı sorunu"}). Tekrar deneyin.`);
                 }
             }
             else {
@@ -20095,8 +20149,8 @@ function SellerListingRow({ listing, onOpen, refreshAll }) {
                     setMedia(prev => [...prev, { type: "video", ref: videoRef, dataUrl, name: file.name }]);
                     count++;
                 }
-                catch {
-                    setMediaError("Video işlenemedi: " + file.name);
+                catch (err) {
+                    setMediaError(`Video kaydedilemedi: ${file.name} (${err && err.message ? err.message : "bağlantı sorunu"}). Tekrar deneyin.`);
                 }
             }
             else {
@@ -22105,43 +22159,6 @@ function AccountTypeSwitch({ me, setMe }) {
     const [authorizedTc, setAuthorizedTc] = useState(me.authorizedTc || "");
     const [saving, setSaving] = useState(false);
     const [err, setErr] = useState("");
-    const switchNameParts = (me.name || "").trim().split(/\s+/).filter(Boolean);
-    const [nviAd, setNviAd] = useState(switchNameParts.length > 1 ? switchNameParts.slice(0, -1).join(" ") : switchNameParts[0] || "");
-    const [nviSoyad, setNviSoyad] = useState(switchNameParts.length > 1 ? switchNameParts[switchNameParts.length - 1] : "");
-    const [nviBirthYear, setNviBirthYear] = useState("");
-    const [nviStatus, setNviStatus] = useState("idle");
-    const [nviCheckedTc, setNviCheckedTc] = useState("");
-    const [nviErrorDetail, setNviErrorDetail] = useState("");
-    const verifyNvi = async () => {
-        if (!isValidTcFormat(authorizedTc) || nviBirthYear.trim().length !== 4 || !nviAd.trim() || !nviSoyad.trim())
-            return;
-        setNviStatus("checking");
-        setNviErrorDetail("");
-        try {
-            const res = await fetch("/api/nvi-verify", {
-                method: "POST", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ tcKimlikNo: authorizedTc, ad: nviAd.trim(), soyad: nviSoyad.trim(), dogumYili: nviBirthYear.trim() }),
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                setNviErrorDetail(data.detail || data.error || "");
-                throw new Error(data.error || "hata");
-            }
-            if (data.serviceUnavailable) {
-                setNviErrorDetail(data.detail || "");
-                setNviStatus("pending_review");
-            }
-            else {
-                setNviStatus(data.verified ? "verified" : "mismatch");
-            }
-            setNviCheckedTc(authorizedTc);
-        }
-        catch (e) {
-            if (!nviErrorDetail)
-                setNviErrorDetail(e.message || "");
-            setNviStatus("error");
-        }
-    };
     const applySwitch = async (newType, extra) => {
         setSaving(true);
         const updatedMe = { ...me, profileType: newType, documentStatus: newType === "kurumsal" ? "beklemede" : "onaylandi", ...extra };
@@ -22166,10 +22183,6 @@ function AccountTypeSwitch({ me, setMe }) {
             setErr("Tüm alanları eksiksiz doldurun.");
             return;
         }
-        if ((nviStatus !== "verified" && nviStatus !== "pending_review") || nviCheckedTc !== authorizedTc) {
-            setErr("Önce NVİ ile kimlik doğrulaması yapın.");
-            return;
-        }
         setErr("");
         setSaving(true);
         const membersAll = await loadShared("members", []);
@@ -22180,7 +22193,7 @@ function AccountTypeSwitch({ me, setMe }) {
             return;
         }
         setSaving(false);
-        applySwitch("kurumsal", { companyName: companyName.trim(), companyType, companyIl, companyIlce: companyIlce.trim(), taxOffice: taxOffice.trim(), authorizedTc, nviVerification: nviStatus === "verified" ? "onaylandi" : "beklemede" });
+        applySwitch("kurumsal", { companyName: companyName.trim(), companyType, companyIl, companyIlce: companyIlce.trim(), taxOffice: taxOffice.trim(), authorizedTc });
     };
     if (!open) {
         return (React.createElement("button", { onClick: () => setOpen(true), style: { width: "100%", background: "none", border: "none", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 0", cursor: "pointer" } },
@@ -22216,22 +22229,8 @@ function AccountTypeSwitch({ me, setMe }) {
                     React.createElement("select", { value: taxOffice, onChange: (e) => setTaxOffice(e.target.value), style: { ...inputStyle, marginTop: 3 } },
                         React.createElement("option", { value: "" }, "Se\u00E7in"),
                         (TURKEY_DISTRICTS[companyIl] || []).map(d => React.createElement("option", { key: d, value: `${d} Vergi Dairesi` }, d, " Vergi Dairesi")))),
-                React.createElement("div", { style: { background: COLORS.paper, borderRadius: 10, padding: 10 } },
-                    React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776", marginBottom: 8 } }, "NV\u0130 (T.C. Kimlik Do\u011Frulama) sisteminde kontrol edilecek bilgileri girin."),
-                    React.createElement("div", { style: { display: "flex", gap: 8 } },
-                        React.createElement("div", { style: { flex: 1 } },
-                            React.createElement(FormField, { label: "Ad", value: nviAd, onChange: (v) => { setNviAd(v); setNviStatus("idle"); }, placeholder: "Ad" })),
-                        React.createElement("div", { style: { flex: 1 } },
-                            React.createElement(FormField, { label: "Soyad", value: nviSoyad, onChange: (v) => { setNviSoyad(v); setNviStatus("idle"); }, placeholder: "Soyad" }))),
-                    React.createElement("div", { style: { marginTop: 8 } },
-                        React.createElement(FormField, { label: "Yetkilinin TC Kimlik No", value: authorizedTc, onChange: (v) => { setAuthorizedTc(v); setNviStatus("idle"); }, placeholder: "11 haneli TC Kimlik No" })),
-                    React.createElement("div", { style: { marginTop: 8 } },
-                        React.createElement(FormField, { label: "Do\u011Fum Y\u0131l\u0131", value: nviBirthYear, onChange: (v) => { setNviBirthYear(v); setNviStatus("idle"); }, placeholder: "\u00D6rn. 1985", type: "number" })),
-                    React.createElement("button", { onClick: verifyNvi, disabled: !isValidTcFormat(authorizedTc) || nviBirthYear.trim().length !== 4 || !nviAd.trim() || !nviSoyad.trim() || nviStatus === "checking", style: { ...btnGhost, width: "100%", justifyContent: "center", marginTop: 8, borderColor: COLORS.pineDeep, color: COLORS.pineDeep, opacity: (!isValidTcFormat(authorizedTc) || nviBirthYear.trim().length !== 4 || !nviAd.trim() || !nviSoyad.trim()) ? 0.5 : 1 } }, nviStatus === "checking" ? "NV\u0130 sorgulan\u0131yor..." : "\uD83D\uDEE1\uFE0F NV\u0130 ile Kimlik Do\u011Frula"),
-                    nviStatus === "verified" && React.createElement("div", { style: { marginTop: 8, fontFamily: "Inter", fontSize: 11.5, color: COLORS.pineDeep, fontWeight: 600 } }, "\u2713 NV\u0130 ile kimlik do\u011Fruland\u0131"),
-                    nviStatus === "mismatch" && React.createElement("div", { style: { marginTop: 8, fontFamily: "Inter", fontSize: 11.5, color: COLORS.red, fontWeight: 600 } }, "\u2715 Bilgiler NV\u0130 kay\u0131tlar\u0131yla e\u015Fle\u015Fmedi."),
-                    nviStatus === "pending_review" && React.createElement("div", { style: { marginTop: 8, fontFamily: "Inter", fontSize: 11, color: COLORS.ochre, fontWeight: 600 } }, "\u23F3 NV\u0130 servisine \u015Fu anda ula\u015F\u0131lam\u0131yor. Devam edebilirsiniz, bilgileriniz y\u00F6netici taraf\u0131ndan manuel incelenecek."),
-                    nviStatus === "error" && React.createElement("div", { style: { marginTop: 8, fontFamily: "Inter", fontSize: 11, color: COLORS.ochre, fontWeight: 600 } }, "\u26A0 NV\u0130 servisine ula\u015F\u0131lamad\u0131, birazdan tekrar deneyin."))),
+                React.createElement(FormField, { label: "Yetkilinin TC Kimlik No", value: authorizedTc, onChange: setAuthorizedTc, placeholder: "11 haneli TC Kimlik No" }),
+                React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776" } }, "Bilgileriniz kaydedildikten sonra y\u00F6netici taraf\u0131ndan incelenip onaylan\u0131r.")),
             err && React.createElement("div", { style: { color: COLORS.red, fontFamily: "Inter", fontSize: 11, marginTop: 6 } }, err),
             React.createElement("button", { onClick: submitKurumsal, disabled: saving, style: { ...btnPrimary, marginTop: 10 } }, saving ? "Kaydediliyor..." : "Kurumsal Hesaba Geç"))),
         React.createElement("button", { onClick: () => setOpen(false), style: { background: "none", border: "none", color: "#8A8776", fontFamily: "Inter", fontSize: 11, cursor: "pointer", padding: 0, marginTop: 8 } }, "Kapat \u2191")));
@@ -25199,51 +25198,6 @@ function ProfileWizardStep({ accountType, profileStep, setProfileStep, name, set
     const keys = STEP_DEFS[accountType];
     const key = keys[profileStep];
     const total = keys.length;
-    const [nviBirthYear, setNviBirthYear] = useState("");
-    const [nviStatus, setNviStatus] = useState("idle"); // idle | checking | verified | mismatch | error
-    const [nviCheckedTc, setNviCheckedTc] = useState("");
-    const [nviErrorDetail, setNviErrorDetail] = useState("");
-    const nameParts = name.trim().split(/\s+/).filter(Boolean);
-    const [nviAd, setNviAd] = useState("");
-    const [nviSoyad, setNviSoyad] = useState("");
-    const nviAutoFilled = React.useRef(false);
-    useEffect(() => {
-        if (key === "authorizedTc" && !nviAutoFilled.current && nameParts.length > 0) {
-            nviAutoFilled.current = true;
-            setNviAd(nameParts.length > 1 ? nameParts.slice(0, -1).join(" ") : nameParts[0]);
-            setNviSoyad(nameParts.length > 1 ? nameParts[nameParts.length - 1] : "");
-        }
-    }, [key]);
-    const verifyNvi = async () => {
-        if (!isValidTcFormat(authorizedTc) || nviBirthYear.trim().length !== 4 || !nviAd.trim() || !nviSoyad.trim())
-            return;
-        setNviStatus("checking");
-        setNviErrorDetail("");
-        try {
-            const res = await fetch("/api/nvi-verify", {
-                method: "POST", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ tcKimlikNo: authorizedTc, ad: nviAd.trim(), soyad: nviSoyad.trim(), dogumYili: nviBirthYear.trim() }),
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                setNviErrorDetail(data.detail || data.error || "");
-                throw new Error(data.error || "hata");
-            }
-            if (data.serviceUnavailable) {
-                setNviErrorDetail(data.detail || "");
-                setNviStatus("pending_review");
-            }
-            else {
-                setNviStatus(data.verified ? "verified" : "mismatch");
-            }
-            setNviCheckedTc(authorizedTc);
-        }
-        catch (e) {
-            if (!nviErrorDetail)
-                setNviErrorDetail(e.message || "");
-            setNviStatus("error");
-        }
-    };
     const isValid = () => {
         switch (key) {
             case "name": return name.trim().length > 0;
@@ -25253,7 +25207,7 @@ function ProfileWizardStep({ accountType, profileStep, setProfileStep, name, set
             case "companyType": return !!companyType;
             case "companyLocation": return companyIl.trim().length > 0 && companyIlce.trim().length > 0;
             case "taxOffice": return taxOffice.trim().length > 0;
-            case "authorizedTc": return isValidTcFormat(authorizedTc) && (nviStatus === "verified" || nviStatus === "pending_review") && nviCheckedTc === authorizedTc;
+            case "authorizedTc": return isValidTcFormat(authorizedTc);
             case "clinicName": return clinicName.trim().length > 0;
             case "licenseNo": return licenseNo.trim().length > 0;
             case "vetLocation": return vetIl.trim().length > 0 && vetIlce.trim().length > 0;
@@ -25337,25 +25291,8 @@ function ProfileWizardStep({ accountType, profileStep, setProfileStep, name, set
                             " Vergi Dairesi")))));
             case "authorizedTc":
                 return (React.createElement("div", null,
-                    React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776", marginBottom: 10 } },
-                        "NV\u0130 (T.C. Kimlik Do\u011Frulama) sisteminde kontrol edilecek bilgileri girin."),
-                    React.createElement("div", { style: { display: "flex", gap: 8 } },
-                        React.createElement("div", { style: { flex: 1 } },
-                            React.createElement(FormField, { label: "Ad", value: nviAd, onChange: (v) => { setNviAd(v); setNviStatus("idle"); }, placeholder: "Ad" })),
-                        React.createElement("div", { style: { flex: 1 } },
-                            React.createElement(FormField, { label: "Soyad", value: nviSoyad, onChange: (v) => { setNviSoyad(v); setNviStatus("idle"); }, placeholder: "Soyad" }))),
-                    React.createElement("div", { style: { marginTop: 10 } },
-                        React.createElement(FormField, { label: "TC Kimlik Numaras\u0131", value: authorizedTc, onChange: (v) => { setAuthorizedTc(v); setNviStatus("idle"); }, placeholder: "11 haneli TC Kimlik No" })),
-                    React.createElement("div", { style: { marginTop: 10 } },
-                        React.createElement(FormField, { label: "Do\u011Fum Y\u0131l\u0131", value: nviBirthYear, onChange: (v) => { setNviBirthYear(v); setNviStatus("idle"); }, placeholder: "\u00D6rn. 1985", type: "number" })),
-                    React.createElement("button", { onClick: verifyNvi, disabled: !isValidTcFormat(authorizedTc) || nviBirthYear.trim().length !== 4 || !nviAd.trim() || !nviSoyad.trim() || nviStatus === "checking", style: { ...btnGhost, width: "100%", justifyContent: "center", marginTop: 10, borderColor: COLORS.pineDeep, color: COLORS.pineDeep, opacity: (!isValidTcFormat(authorizedTc) || nviBirthYear.trim().length !== 4 || !nviAd.trim() || !nviSoyad.trim()) ? 0.5 : 1 } }, nviStatus === "checking" ? "NV\u0130 sorgulan\u0131yor..." : "\uD83D\uDEE1\uFE0F NV\u0130 ile Kimlik Do\u011Frula"),
-                    nviStatus === "verified" && React.createElement("div", { style: { marginTop: 8, display: "flex", alignItems: "center", gap: 5, fontFamily: "Inter", fontSize: 11.5, color: COLORS.pineDeep, fontWeight: 600 } }, "\u2713 NV\u0130 ile kimlik do\u011Fruland\u0131"),
-                    nviStatus === "mismatch" && React.createElement("div", { style: { marginTop: 8, fontFamily: "Inter", fontSize: 11.5, color: COLORS.red, fontWeight: 600 } }, "\u2715 Bilgiler NV\u0130 kay\u0131tlar\u0131yla e\u015Fle\u015Fmedi \u2014 ad, soyad, TC ve do\u011Fum y\u0131l\u0131n\u0131 kontrol edin."),
-                    nviStatus === "pending_review" && React.createElement("div", { style: { marginTop: 8, fontFamily: "Inter", fontSize: 11, color: COLORS.ochre, fontWeight: 600 } }, "\u23F3 NV\u0130 servisine \u015Fu anda ula\u015F\u0131lam\u0131yor. Devam edebilirsiniz, bilgileriniz y\u00F6netici taraf\u0131ndan manuel incelenecek."),
-                    nviStatus === "error" && React.createElement("div", { style: { marginTop: 8 } },
-                        React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11.5, color: COLORS.ochre, fontWeight: 600 } }, "\u26A0 NV\u0130 servisine ula\u015F\u0131lamad\u0131, birazdan tekrar deneyin."),
-                        nviErrorDetail && React.createElement("div", { style: { fontFamily: "IBM Plex Mono", fontSize: 9.5, color: "#8A8776", marginTop: 3, wordBreak: "break-all" } }, nviErrorDetail)),
-                    React.createElement("div", { style: { fontFamily: "Inter", fontSize: 9.5, color: "#8A8776", marginTop: 8 } }, "T.C. Nüfus ve Vatandaşlık \u0130şleri Genel Müdürlü\u011Fü'nün resmi, ücretsiz do\u011Frulama servisi (KPSPublic) kullan\u0131l\u0131r. Sadece bilgilerin do\u011Fru olup olmad\u0131\u011F\u0131 kontrol edilir; adres veya ba\u015Fka ki\u015Fisel veri al\u0131nmaz/saklanmaz.")));
+                    React.createElement(FormField, { label: "Yetkilinin TC Kimlik Numaras\u0131", value: authorizedTc, onChange: setAuthorizedTc, placeholder: "11 haneli TC Kimlik No" }),
+                    React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776", marginTop: 8 } }, "Kayd\u0131n\u0131z tamamland\u0131ktan sonra y\u00F6netici taraf\u0131ndan incelenip onaylan\u0131r.")));
             case "clinicName":
                 return React.createElement(FormField, { label: "Klinik / \u0130\u015Fletme Ad\u0131", value: clinicName, onChange: setClinicName, placeholder: "\u00D6rn. Ye\u015Filova Veteriner Klini\u011Fi" });
             case "licenseNo":
@@ -25575,8 +25512,8 @@ function MyListingCard({ listing, onOpen, refreshAll }) {
                     setMedia(prev => [...prev, { type: "video", ref: videoRef, dataUrl, name: file.name }]);
                     count++;
                 }
-                catch {
-                    setMediaError("Video işlenemedi: " + file.name);
+                catch (err) {
+                    setMediaError(`Video kaydedilemedi: ${file.name} (${err && err.message ? err.message : "bağlantı sorunu"}). Tekrar deneyin.`);
                 }
             }
             else {

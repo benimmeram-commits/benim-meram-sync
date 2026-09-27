@@ -321,6 +321,86 @@ async function resetRegionChatsIfNewDay() {
 resetRegionChatsIfNewDay().catch((e) => console.error("Günlük sıfırlama hatası:", e));
 setInterval(() => resetRegionChatsIfNewDay().catch((e) => console.error("Günlük sıfırlama hatası:", e)), 30 * 60 * 1000);
 
+// ---------------------------------------------------------------------
+// Sosyal medya paylaşım önizlemesi (Open Graph): bir ilan WhatsApp,
+// Instagram, Facebook vb. yerlerde paylaşıldığında zengin bir önizleme
+// kartı (fotoğraf + başlık + fiyat) çıkması için, bu platformların
+// "crawler"ları sayfayı JavaScript ÇALIŞTIRMADAN okur — React uygulaması
+// hiç devreye girmeden önce, HTML içinde hazır <meta property="og:..">
+// etiketleri bulmaları gerekir. Bu yüzden ?ilan=<id> ile gelen istekte,
+// index.html sunucu tarafında ilgili ilanın bilgileriyle değiştirilip
+// öyle gönderilir.
+// ---------------------------------------------------------------------
+function escapeHtmlAttr(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+// Bir ilanın kapak fotoğrafını gerçek bir resim olarak (base64 değil) sunar —
+// og:image için gerçek bir HTTP(S) URL gerekir, sosyal medya crawler'ları
+// data: URI'leri okuyamaz.
+app.get("/media/listing-image/:id", async (req, res) => {
+  try {
+    const listings = await getSharedJSON("listings", []);
+    const item = listings.find((l) => l.id === req.params.id);
+    const img = item && Array.isArray(item.mediaUrls)
+      ? item.mediaUrls.find((m) => m.type === "image" && typeof m.dataUrl === "string")
+      : null;
+    if (!img) return res.status(404).end();
+    const match = /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/.exec(img.dataUrl);
+    if (!match) return res.status(404).end();
+    const buf = Buffer.from(match[2], "base64");
+    res.set("Content-Type", match[1]);
+    res.set("Cache-Control", "public, max-age=86400");
+    res.send(buf);
+  } catch (e) {
+    console.error("İlan fotoğrafı sunulamadı:", e);
+    res.status(500).end();
+  }
+});
+
+app.get("/", async (req, res, next) => {
+  const ilanId = req.query.ilan;
+  if (!ilanId) return next(); // normal ana sayfa isteği — statik dosya olarak devam
+  try {
+    const listings = await getSharedJSON("listings", []);
+    const item = listings.find((l) => l.id === ilanId && l.status !== "kaldirildi");
+    if (!item) return next();
+    let html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
+    const origin = `${req.protocol}://${req.get("host")}`;
+    const title = `${item.breed || ""} ${item.subCategory || ""}`.trim() || "İlan";
+    const priceText = item.price ? `${Number(item.price).toLocaleString("tr-TR")} ₺` : "";
+    const desc = [priceText, item.animalIl].filter(Boolean).join(" · ") + (priceText || item.animalIl ? " — " : "") + "Benim Meram'da incele.";
+    const hasImage = Array.isArray(item.mediaUrls) && item.mediaUrls.some((m) => m.type === "image" && m.dataUrl);
+    const imageUrl = hasImage ? `${origin}/media/listing-image/${item.id}` : `${origin}/icon-512.png`;
+    const pageUrl = `${origin}/?ilan=${item.id}`;
+    const pageTitle = `${title} — Benim Meram`;
+    const ogBlock = `<!-- OG_TAGS_START -->
+<meta name="description" content="${escapeHtmlAttr(desc)}" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Benim Meram" />
+<meta property="og:title" content="${escapeHtmlAttr(pageTitle)}" />
+<meta property="og:description" content="${escapeHtmlAttr(desc)}" />
+<meta property="og:image" content="${escapeHtmlAttr(imageUrl)}" />
+<meta property="og:url" content="${escapeHtmlAttr(pageUrl)}" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="${escapeHtmlAttr(pageTitle)}" />
+<meta name="twitter:description" content="${escapeHtmlAttr(desc)}" />
+<meta name="twitter:image" content="${escapeHtmlAttr(imageUrl)}" />
+<!-- OG_TAGS_END -->`;
+    html = html.replace(/<!-- OG_TAGS_START -->[\s\S]*?<!-- OG_TAGS_END -->/, ogBlock);
+    html = html.replace("<title>Benim Meram</title>", `<title>${escapeHtmlAttr(pageTitle)}</title>`);
+    res.set("Content-Type", "text/html; charset=utf-8");
+    res.send(html);
+  } catch (e) {
+    console.error("İlan önizlemesi oluşturulamadı:", e);
+    next();
+  }
+});
+
 // Uygulamanın arayüzünü (index.html) doğrudan bu sunucudan servis eder.
 app.use(express.static(__dirname));
 
