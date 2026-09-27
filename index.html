@@ -17662,6 +17662,90 @@ function waitForSharedSync(key, maxWaitMs) {
         check();
     });
 }
+// ---------- ANLIK TELEFON BİLDİRİMLERİ (Web Push) ----------
+// Favorilenen bir ilanın fiyatı düştüğünde veya bir nakliyeci konumunu
+// bildirdiğinde, uygulama kapalıyken de kullanıcının telefonuna bildirim
+// düşmesi için tarayıcının Push API'si kullanılır. Aynı cihaz kimliği
+// (bm_device_id), normal senkronizasyonda kullanılanla AYNIDIR — böylece
+// hangi aboneliğin hangi cihaza ait olduğu her zaman tutarlı kalır.
+function getPushDeviceId() {
+    try {
+        let id = localStorage.getItem("bm_device_id");
+        if (!id) {
+            id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now() + "-" + Math.random().toString(36).slice(2));
+            localStorage.setItem("bm_device_id", id);
+        }
+        return id;
+    }
+    catch {
+        return "bilinmeyen-cihaz";
+    }
+}
+function urlBase64ToUint8Array(base64String) {
+    const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+    const rawData = atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; i++)
+        outputArray[i] = rawData.charCodeAt(i);
+    return outputArray;
+}
+// me verilirse ve tarayıcı destekliyorsa bildirim aboneliği oluşturur/yeniler
+// ve sunucuya kaydeder. İzin durumu "default" ise tarayıcının kendi izin
+// penceresini açar (bu yüzden sadece kullanıcı bir düğmeye bastığında ya da
+// izin zaten "granted" iken çağrılmalı — "denied" durumunda sessizce çıkar).
+async function subscribeToPush(me) {
+    try {
+        if (!me || !("serviceWorker" in navigator) || !("PushManager" in window) || typeof Notification === "undefined")
+            return false;
+        if (Notification.permission === "denied")
+            return false;
+        if (Notification.permission === "default") {
+            const perm = await Notification.requestPermission();
+            if (perm !== "granted")
+                return false;
+        }
+        const reg = await navigator.serviceWorker.ready;
+        let sub = await reg.pushManager.getSubscription();
+        if (!sub) {
+            const keyRes = await fetch("/push/public-key");
+            if (!keyRes.ok)
+                return false;
+            const { publicKey } = await keyRes.json();
+            if (!publicKey)
+                return false;
+            sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) });
+        }
+        await fetch("/push/subscribe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ owner: getPushDeviceId(), memberName: me.name, subscription: sub.toJSON ? sub.toJSON() : sub }),
+        });
+        return true;
+    }
+    catch (e) {
+        console.warn("Bildirim aboneliği başarısız:", e);
+        return false;
+    }
+}
+async function unsubscribeFromPush() {
+    try {
+        if (!("serviceWorker" in navigator))
+            return;
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.getSubscription();
+        if (sub)
+            await sub.unsubscribe();
+        await fetch("/push/unsubscribe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ owner: getPushDeviceId() }),
+        });
+    }
+    catch (e) {
+        console.warn("Bildirim aboneliği kaldırılamadı:", e);
+    }
+}
 async function shareListingLink(item, onCopied) {
     const url = `${window.location.origin}${window.location.pathname}?ilan=${item.id}`;
     const text = `${item.breed} ${item.subCategory} — ${TL(item.price)} — Benim Meram'da incele:`;
@@ -18911,6 +18995,13 @@ function BenimMeram() {
             setAdminSession(savedAdminSession);
             setEmployeeSession(savedEmployeeSession);
             setLoading(false);
+            // Kullanıcı daha önce bildirim izni vermişse (bildirim tercihleri
+            // ekranından), her uygulama açılışında sessizce (izin sormadan)
+            // aboneliği tazeler — böylece telefon değiştiğinde veya izin zaten
+            // verilmişken tekrar tekrar sormaya gerek kalmaz.
+            if (savedMe && typeof Notification !== "undefined" && Notification.permission === "granted") {
+                subscribeToPush(savedMe).catch(() => { });
+            }
         })();
     }, [refreshAll]);
     if (loading) {
@@ -20515,19 +20606,47 @@ function BireyselBilgilerCard({ me, myMember }) {
                 React.createElement("span", { style: { fontWeight: 600 } }, me.city ? `${me.city}${me.ilce ? "/" + me.ilce : ""}` : "belirtilmemiş")))));
 }
 function NotificationPrefsCard({ me, setMe }) {
-    const [prefs, setPrefs] = useState(me.notifPrefs || { yeniTeklif: true, fiyatDususu: true, mesaj: true });
+    const [prefs, setPrefs] = useState(me.notifPrefs || { yeniTeklif: true, teklifDurumu: true, fiyatDususu: true, mesaj: true, nakliyeKonum: true, randevu: true, belgeOnay: true });
     const [saving, setSaving] = useState(false);
+    const [pushStatus, setPushStatus] = useState(typeof Notification !== "undefined" ? Notification.permission : "unsupported");
+    const [pushBusy, setPushBusy] = useState(false);
     const toggle = (k) => setPrefs(p => ({ ...p, [k]: !p[k] }));
     const save = async () => {
         setSaving(true);
         const updatedMe = { ...me, notifPrefs: prefs };
         await savePersonal("me", updatedMe);
+        // Sunucunun fiyat düşüşü / nakliye konum bildirimlerini gönderirken bu
+        // tercihleri okuyabilmesi için, paylaşılan üye kaydına da yazılır.
+        const membersAll = await loadShared("members", []);
+        const idx = membersAll.findIndex(m => m.name === me.name && m.joinedAt === me.joinedAt);
+        if (idx > -1) {
+            membersAll[idx] = { ...membersAll[idx], notifPrefs: prefs };
+            await saveShared("members", membersAll);
+        }
         setMe(updatedMe);
         setSaving(false);
     };
+    const enablePush = async () => {
+        setPushBusy(true);
+        const ok = await subscribeToPush(me);
+        setPushStatus(typeof Notification !== "undefined" ? Notification.permission : "unsupported");
+        setPushBusy(false);
+        if (!ok && Notification.permission === "denied") {
+            alert("Bildirimlere izin verilmedi. Telefonunuzun/tarayıcınızın ayarlarından bu site için bildirim izni açmanız gerekir.");
+        }
+    };
+    const disablePush = async () => {
+        setPushBusy(true);
+        await unsubscribeFromPush();
+        setPushBusy(false);
+    };
     return (React.createElement("div", { style: { background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 14, marginBottom: 14 } },
         React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 700, fontSize: 12.5, color: COLORS.ink, marginBottom: 10 } }, "Bildirim Tercihleri"),
-        [["yeniTeklif", "Yeni teklif geldiğinde"], ["fiyatDususu", "Favorilediğim ilanda fiyat düşünce"], ["mesaj", "Yeni mesaj geldiğinde"]].map(([k, l]) => (React.createElement("label", { key: k, style: { display: "flex", alignItems: "center", gap: 8, fontFamily: "Inter", fontSize: 12, color: "#5A574C", marginBottom: 6, cursor: "pointer" } },
+        React.createElement("div", { style: { background: COLORS.paper, borderRadius: 10, padding: 10, marginBottom: 12 } },
+            React.createElement("div", { style: { fontFamily: "Inter", fontWeight: 600, fontSize: 11.5, color: COLORS.ink, marginBottom: 4 } }, "Telefonuma Anlık Bildirim"),
+            React.createElement("div", { style: { fontFamily: "Inter", fontSize: 10.5, color: "#8A8776", marginBottom: 8 } }, "Uygulama kapalıyken de (favori ilan fiyatı düştüğünde, nakliyeci konum bildirdiğinde) telefonunuza bildirim gelsin."),
+            pushStatus === "granted" ? (React.createElement("button", { onClick: disablePush, disabled: pushBusy, style: { ...btnGhost, borderColor: COLORS.line, color: COLORS.red || "#B3413A", padding: "7px 12px" } }, pushBusy ? "..." : "✓ Açık — Kapat")) : pushStatus === "denied" ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#B3413A" } }, "Bildirimler engellenmiş — tarayıcı/telefon ayarlarından bu site için izin vermeniz gerekir.")) : pushStatus === "unsupported" ? (React.createElement("div", { style: { fontFamily: "Inter", fontSize: 11, color: "#8A8776" } }, "Bu cihaz/tarayıcı anlık bildirimleri desteklemiyor.")) : (React.createElement("button", { onClick: enablePush, disabled: pushBusy, style: { ...btnPrimary, padding: "7px 14px" } }, pushBusy ? "Açılıyor..." : "Bildirimleri Aç"))),
+        [["yeniTeklif", "İlanıma yeni teklif geldiğinde"], ["teklifDurumu", "Teklifim kabul/red edildiğinde"], ["fiyatDususu", "Favorilediğim ilanda fiyat düşünce"], ["mesaj", "Yeni mesaj geldiğinde"], ["nakliyeKonum", "Nakliyeci konum bildirince"], ["randevu", "Randevu teklif edildiğinde/güncellenince"], ["belgeOnay", "Belge/doğrulama onaylanınca veya reddedilince"]].map(([k, l]) => (React.createElement("label", { key: k, style: { display: "flex", alignItems: "center", gap: 8, fontFamily: "Inter", fontSize: 12, color: "#5A574C", marginBottom: 6, cursor: "pointer" } },
             React.createElement("input", { type: "checkbox", checked: prefs[k], onChange: () => toggle(k) }),
             " ",
             l))),

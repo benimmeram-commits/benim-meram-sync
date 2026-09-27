@@ -6,7 +6,7 @@
 // önbelleğe alınır.
 
 const CACHE_NAME = "benim-meram-shell-v1";
-const SHELL_FILES = ["/", "/index.html", "/manifest.json", "/icons/icon-192.png", "/icons/icon-512.png"];
+const SHELL_FILES = ["/", "/index.html", "/manifest.json", "/icon-192.png", "/icon-512.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -22,6 +22,42 @@ self.addEventListener("activate", (event) => {
     )
   );
   self.clients.claim();
+});
+
+// Anlık bildirimler (Web Push): sunucu bir "push" olayı gönderdiğinde
+// (favori ilanın fiyatı düştü, nakliyeci konum bildirdi vb.) uygulama
+// kapalı/arka planda olsa bile telefonun bildirim çekmecesinde gösterilir.
+self.addEventListener("push", (event) => {
+  let data = { title: "Benim Meram", body: "Yeni bir bildiriminiz var.", url: "/" };
+  try {
+    if (event.data) data = Object.assign(data, event.data.json());
+  } catch (e) { /* düz metinse varsayılan kullanılır */ }
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: "/icon-192.png",
+      badge: "/icon-192.png",
+      data: { url: data.url || "/" },
+    })
+  );
+});
+
+// Bildirime dokunulduğunda uygulamayı (açıksa) öne getirir, değilse yeni
+// sekmede ilgili sayfayı (örn. ?ilan=<id>) açar.
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl = (event.notification.data && event.notification.data.url) || "/";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientsArr) => {
+      for (const client of clientsArr) {
+        if ("focus" in client) {
+          client.navigate(targetUrl);
+          return client.focus();
+        }
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
+    })
+  );
 });
 
 self.addEventListener("fetch", (event) => {

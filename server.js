@@ -32,6 +32,40 @@ const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 const USE_UPSTASH = !!(UPSTASH_URL && UPSTASH_TOKEN);
 
 // ---------------------------------------------------------------------
+// Anlık telefon bildirimleri (Web Push): favorilenen bir ilanın fiyatı
+// düştüğünde veya bir nakliyeci konum bildirdiğinde, uygulama kapalı olsa
+// bile kullanıcının telefonuna bildirim gitmesini sağlar.
+//
+// KALICILIK UYARISI: Bildirim anahtarları (VAPID) her yeniden başlatmada
+// AYNI kalmalıdır — değişirse önceden kaydedilmiş tüm abonelikler geçersiz
+// olur. Kalıcı olması için Render panelinde bu servisin "Environment"
+// sekmesine şu iki değişkeni ekleyin (aşağıdaki loglardan kopyalayabilirsiniz):
+//   VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY
+// Eklenmezse sunucu her açılışta GEÇİCİ anahtarlar üretir (test için
+// yeterlidir ama her "yeniden başlatma"da mevcut abonelikler bozulur).
+// ---------------------------------------------------------------------
+let webpush = null;
+try {
+  webpush = require("web-push");
+} catch (e) {
+  console.warn("UYARI: 'web-push' paketi bulunamadı — anlık bildirimler devre dışı. (package.json güncellenip yeniden deploy edilmesi gerekebilir.)");
+}
+let VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || "";
+let VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || "";
+if (webpush) {
+  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+    const generated = webpush.generateVAPIDKeys();
+    VAPID_PUBLIC_KEY = generated.publicKey;
+    VAPID_PRIVATE_KEY = generated.privateKey;
+    console.warn("UYARI: VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY tanımlı değil — geçici anahtarlar üretildi.");
+    console.warn("Kalıcı olması için Render > Environment sekmesine şu değerleri ekleyin:");
+    console.warn("VAPID_PUBLIC_KEY=" + VAPID_PUBLIC_KEY);
+    console.warn("VAPID_PRIVATE_KEY=" + VAPID_PRIVATE_KEY);
+  }
+  webpush.setVapidDetails("mailto:benimmeram@gmail.com", VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+}
+
+// ---------------------------------------------------------------------
 // Depolama katmanı: iki uyumlu backend — Upstash Redis (kalıcı) veya
 // yerel dosya (data.json, kalıcı olmayabilir). rawGet/rawSet, çağıran
 // koda göre hangisinin kullanıldığını fark ettirmez.
@@ -402,6 +436,15 @@ app.get("/", async (req, res, next) => {
 });
 
 // Uygulamanın arayüzünü (index.html) doğrudan bu sunucudan servis eder.
+// Sunucu kodu ve veri dosyası dışarıdan indirilemesin diye (express.static
+// aksi halde bu klasördeki HER dosyayı, server.js dahil, herkese açık
+// sunar) bu isimler engellenir.
+app.use((req, res, next) => {
+  if (/^\/(server\.js|package(-lock)?\.json|data\.json|\.env)$/i.test(req.path)) {
+    return res.status(404).end();
+  }
+  next();
+});
 app.use(express.static(__dirname));
 
 app.get("/health", (req, res) => res.json({ ok: true, storage: USE_UPSTASH ? "upstash" : "local-file" }));
@@ -419,14 +462,215 @@ app.post("/kv/get", async (req, res) => {
   }
 });
 
+// ---------------------------------------------------------------------
+// Push abonelik uçları ve bildirim gönderme yardımcıları.
+// ---------------------------------------------------------------------
+app.get("/push/public-key", (req, res) => {
+  if (!webpush || !VAPID_PUBLIC_KEY) return res.status(503).json({ error: "bildirimler yapılandırılmamış" });
+  res.json({ publicKey: VAPID_PUBLIC_KEY });
+});
+
+app.post("/push/subscribe", async (req, res) => {
+  try {
+    const { owner, memberName, subscription } = req.body || {};
+    if (!owner || !subscription) return res.status(400).json({ error: "eksik veri" });
+    const all = await getSharedJSON("pushSubscriptions", []);
+    const filtered = all.filter((s) => s.owner !== owner);
+    filtered.push({ owner, memberName: memberName || null, subscription, updatedAt: Date.now() });
+    await setSharedJSON("pushSubscriptions", filtered);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error("Push aboneliği kaydedilemedi:", e);
+    res.status(500).json({ error: "sunucu hatası" });
+  }
+});
+
+app.post("/push/unsubscribe", async (req, res) => {
+  try {
+    const { owner } = req.body || {};
+    if (!owner) return res.status(400).json({ error: "owner gerekli" });
+    const all = await getSharedJSON("pushSubscriptions", []);
+    await setSharedJSON("pushSubscriptions", all.filter((s) => s.owner !== owner));
+    res.json({ ok: true });
+  } catch (e) {
+    console.error("Push aboneliği kaldırılamadı:", e);
+    res.status(500).json({ error: "sunucu hatası" });
+  }
+});
+
+// Belirli bir üyeye (isme) kayıtlı tüm cihazlarına bildirim gönderir.
+// Artık geçerli olmayan (404/410) abonelikler otomatik temizlenir.
+async function sendPushToMember(memberName, payload) {
+  if (!webpush || !memberName) return;
+  const all = await getSharedJSON("pushSubscriptions", []);
+  const targets = all.filter((s) => s.memberName === memberName);
+  if (targets.length === 0) return;
+  let changed = false;
+  for (const t of targets) {
+    try {
+      await webpush.sendNotification(t.subscription, JSON.stringify(payload));
+    } catch (e) {
+      if (e && (e.statusCode === 404 || e.statusCode === 410)) {
+        const idx = all.indexOf(t);
+        if (idx > -1) { all.splice(idx, 1); changed = true; }
+      } else {
+        console.error("Push gönderilemedi:", memberName, e && e.message);
+      }
+    }
+  }
+  if (changed) await setSharedJSON("pushSubscriptions", all);
+}
+
+function memberAllowsNotif(members, name, prefKey) {
+  const m = members.find((mm) => mm.name === name);
+  if (!m || !m.notifPrefs) return true; // tercih ayarlanmamışsa varsayılan: açık
+  return m.notifPrefs[prefKey] !== false;
+}
+
+// "listings" verisi güncellendiğinde eski/yeni fiyatları karşılaştırır;
+// düşen fiyatlar için o ilanı favorileyen kullanıcılara bildirim gönderir.
+async function notifyPriceDrops(oldArr, newArr) {
+  if (!Array.isArray(oldArr) || !Array.isArray(newArr)) return;
+  const oldById = new Map(oldArr.map((l) => [l.id, l]));
+  const drops = newArr.filter((l) => {
+    const old = oldById.get(l.id);
+    return old && Number(l.price) < Number(old.price) && l.status !== "kaldirildi";
+  });
+  if (drops.length === 0) return;
+  const [favLog, members] = await Promise.all([
+    getSharedJSON("favoritesLog", []),
+    getSharedJSON("members", []),
+  ]);
+  for (const listing of drops) {
+    const old = oldById.get(listing.id);
+    const fans = favLog.filter((f) => f.listingId === listing.id).map((f) => f.userName);
+    const uniqueFans = [...new Set(fans)].filter((n) => n && n !== listing.sellerName && memberAllowsNotif(members, n, "fiyatDususu"));
+    if (uniqueFans.length === 0) continue;
+    const title = "Favori ilanın fiyatı düştü";
+    const body = `${listing.breed || ""} ${listing.subCategory || ""} — ${Number(old.price).toLocaleString("tr-TR")} ₺ → ${Number(listing.price).toLocaleString("tr-TR")} ₺`;
+    await Promise.all(uniqueFans.map((name) => sendPushToMember(name, { title, body, url: `/?ilan=${listing.id}` })));
+  }
+}
+
+// "messages" verisine YENİ eklenen mesajları bulur ve 1:1 sohbetin diğer
+// tarafına, mesaj tipine göre uygun bildirimi gönderir. Bölge sohbetleri
+// (herkese açık, çok kalabalık) bu bildirimlerin dışındadır — aksi halde
+// her mesajda bölgedeki herkese bildirim gitmesi çok rahatsız edici olurdu.
+async function notifyNewMessages(oldArr, newArr) {
+  if (!Array.isArray(oldArr) || !Array.isArray(newArr)) return;
+  const oldIds = new Set(oldArr.map((m) => m && m.id));
+  const added = newArr.filter((m) => m && !oldIds.has(m.id));
+  if (added.length === 0) return;
+  const members = await getSharedJSON("members", []);
+  for (const m of added) {
+    if (!m.conversationId || m.conversationId.startsWith("bolge-sohbet:")) continue;
+    const parts = m.conversationId.split("::");
+    if (parts.length !== 3) continue;
+    const [, nameA, nameB] = parts;
+    const recipient = m.sender === nameA ? nameB : m.sender === nameB ? nameA : null;
+    if (!recipient) continue;
+    if (m.type === "location") {
+      if (!memberAllowsNotif(members, recipient, "nakliyeKonum")) continue;
+      await sendPushToMember(recipient, { title: "Nakliyeci konum bildirdi", body: m.text || "Hayvanınızın güncel konumu paylaşıldı.", url: "/" });
+    } else if (m.type === "appointment") {
+      if (!memberAllowsNotif(members, recipient, "randevu")) continue;
+      await sendPushToMember(recipient, { title: "Randevu güncellendi", body: `${m.sender} bir randevu teklif etti veya güncelledi.`, url: "/" });
+    } else if (m.type === undefined && m.text) {
+      if (!memberAllowsNotif(members, recipient, "mesaj")) continue;
+      const preview = String(m.text).length > 80 ? String(m.text).slice(0, 77) + "..." : m.text;
+      await sendPushToMember(recipient, { title: `${m.sender}`, body: preview, url: "/" });
+    }
+  }
+}
+
+// "offers" (teklifler) verisindeki değişiklikleri karşılaştırır:
+// (1) YENİ bir teklif eklendiyse ilanın sahibine (satıcıya) bildirim gider.
+// (2) Var olan bir teklifin durumu değiştiyse (kabul/red/karşı teklif)
+// teklifi verene (alıcıya) bildirim gider.
+async function notifyOfferChanges(oldArr, newArr) {
+  if (!Array.isArray(oldArr) || !Array.isArray(newArr)) return;
+  const oldById = new Map(oldArr.map((o) => [o.id, o]));
+  const members = await getSharedJSON("members", []);
+  for (const offer of newArr) {
+    const old = oldById.get(offer.id);
+    if (!old) {
+      // Yeni teklif
+      if (offer.sellerName && memberAllowsNotif(members, offer.sellerName, "yeniTeklif")) {
+        await sendPushToMember(offer.sellerName, {
+          title: "Yeni teklif geldi",
+          body: `${offer.buyerName || "Bir kullanıcı"} ${Number(offer.amount).toLocaleString("tr-TR")} ₺ teklif etti.`,
+          url: `/?ilan=${offer.listingId}`,
+        });
+      }
+    } else if (old.status !== offer.status && offer.buyerName && memberAllowsNotif(members, offer.buyerName, "teklifDurumu")) {
+      const statusText = offer.status === "kabul" ? "kabul edildi ✓" : offer.status === "red" ? "reddedildi" : offer.status === "karsi_teklif" ? `karşı teklif geldi: ${Number(offer.counterAmount || 0).toLocaleString("tr-TR")} ₺` : offer.status;
+      await sendPushToMember(offer.buyerName, {
+        title: "Teklifiniz güncellendi",
+        body: `Teklifiniz ${statusText}`,
+        url: `/?ilan=${offer.listingId}`,
+      });
+    }
+  }
+}
+
+// "members" verisindeki belge/doğrulama onay durumu değişikliklerini
+// (beklemede -> onaylandı/reddedildi) yakalar ve ilgili kullanıcıya bildirim
+// gönderir. newArr'ın kendisi zaten güncel tercihleri taşıdığı için ayrıca
+// members çekmeye gerek yoktur.
+async function notifyMemberStatusChanges(oldArr, newArr) {
+  if (!Array.isArray(oldArr) || !Array.isArray(newArr)) return;
+  const oldById = new Map(oldArr.map((m) => [`${m.name}::${m.joinedAt}`, m]));
+  for (const member of newArr) {
+    const old = oldById.get(`${member.name}::${member.joinedAt}`);
+    if (!old) continue;
+    if (!memberAllowsNotif(newArr, member.name, "belgeOnay")) continue;
+    if (old.documentStatus !== member.documentStatus && (member.documentStatus === "onaylandi" || member.documentStatus === "reddedildi")) {
+      await sendPushToMember(member.name, {
+        title: member.documentStatus === "onaylandi" ? "Belgeniz onaylandı ✓" : "Belgeniz reddedildi",
+        body: member.documentStatus === "onaylandi" ? "Artık ilan verebilirsiniz." : "Lütfen belgelerinizi kontrol edip tekrar başvurun.",
+        url: "/",
+      });
+    }
+    if (old.nakliyeVerification !== member.nakliyeVerification && (member.nakliyeVerification === "onaylandi" || member.nakliyeVerification === "reddedildi")) {
+      await sendPushToMember(member.name, {
+        title: member.nakliyeVerification === "onaylandi" ? "Nakliyeci doğrulamanız onaylandı ✓" : "Nakliyeci doğrulamanız reddedildi",
+        body: member.nakliyeVerification === "onaylandi" ? "Doğrulanmış nakliyeci rozetiniz aktif." : "Lütfen belgelerinizi kontrol edip tekrar başvurun.",
+        url: "/",
+      });
+    }
+  }
+}
+
 // { key, shared, owner, value } -> { ok: true }
 app.post("/kv/set", async (req, res) => {
   try {
     const { key, shared, owner, value } = req.body || {};
     if (!key) return res.status(400).json({ error: "key gerekli" });
     if (!shared && !owner) return res.status(400).json({ error: "personal veri için owner gerekli" });
+
+    // Bildirim tetikleyicileri için, veri yazılmadan ÖNCE eski hali okunur
+    // (neyin değiştiğini anlamak için). Bu, kayıt isteğinin süresini uzatmaz —
+    // asıl bildirim gönderimi yanıt döndürüldükten SONRA arka planda yapılır.
+    let notifyAfterWrite = null;
+    if (shared && webpush && (key === "listings" || key === "messages" || key === "offers" || key === "members")) {
+      try {
+        const oldRaw = await rawGet(flatten(key, shared, owner));
+        const oldArr = oldRaw ? JSON.parse(oldRaw) : [];
+        const newArr = value ? JSON.parse(value) : [];
+        if (key === "listings") notifyAfterWrite = () => notifyPriceDrops(oldArr, newArr);
+        else if (key === "messages") notifyAfterWrite = () => notifyNewMessages(oldArr, newArr);
+        else if (key === "offers") notifyAfterWrite = () => notifyOfferChanges(oldArr, newArr);
+        else if (key === "members") notifyAfterWrite = () => notifyMemberStatusChanges(oldArr, newArr);
+      } catch (e) {
+        console.warn("Bildirim için fark hesaplanamadı:", e && e.message);
+      }
+    }
+
     await rawSet(flatten(key, shared, owner), value);
     res.json({ ok: true });
+    if (notifyAfterWrite) {
+      notifyAfterWrite().catch((e) => console.error("Bildirim gönderilemedi:", e));
+    }
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: "sunucu hatası" });
