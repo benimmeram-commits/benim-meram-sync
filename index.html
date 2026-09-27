@@ -17421,7 +17421,7 @@ exports.version = "19.2.5";
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key: key, shared: !!shared, owner: getDeviceId() })
-      }, 20000)
+      }, 35000)
         .then(function (r) { if (!r.ok) throw new Error("sunucu hatası: " + r.status); return r.json(); })
         .then(function (data) {
           resyncDirtyKeys(); // sunucuya ulaşabildik — bekleyen yerel değişiklikler varsa gönder
@@ -17446,9 +17446,16 @@ exports.version = "19.2.5";
       // gerçek bir hata fırlatılır ki kullanıcı "kaydedilemedi" mesajını görsün,
       // yanlışlıkla başarılı sanılmasın.
       var isLarge = value && value.length > 500000;
-      // Video/fotoğraf içeren büyük yükler için daha uzun bir süre (60sn) tanınır —
+      // Video/fotoğraf içeren büyük yükler için daha uzun bir süre tanınır —
       // küçük bir metin güncellemesinden çok daha fazla veri taşıyabilir.
-      var timeoutMs = isLarge ? 60000 : 20000;
+      // NOT: Render'ın ücretsiz planında sunucu bir süre kullanılmazsa "uyur" ve
+      // ilk istekte tekrar ayağa kalkması 30-50 saniye sürebilir. Zaman aşımı
+      // süresi bundan KISA olursa, sunucu aslında birazdan yanıt verecek olsa
+      // bile istek "başarısız" sayılıp veri sadece bu cihazda kalır — bu da bir
+      // ilan oluşturulup HEMEN paylaşıldığında sunucuda henüz bulunmamasına ve
+      // paylaşım önizlemesinin (WhatsApp/Instagram) boş/genel çıkmasına yol açar.
+      // Bu yüzden süre, olası bir "soğuk başlangıcı" tolere edecek kadar uzun tutulur.
+      var timeoutMs = isLarge ? 90000 : 45000;
       return localBackend.set(key, value, shared)
         .then(function () { return true; })
         .catch(function (e) {
@@ -17487,15 +17494,24 @@ exports.version = "19.2.5";
     list: function () { return Promise.resolve({ keys: [] }); }
   };
 
+  // Uygulama a\u00E7\u0131l\u0131r a\u00E7\u0131lmaz sunucuyu "uyand\u0131rmak" i\u00E7in hemen bir istek g\u00F6nderilir.
+  // Render'\u0131n \u00FCcretsiz plan\u0131nda sunucu bir s\u00FCre bo\u015Fta kal\u0131rsa uykuya ge\u00E7er ve ilk
+  // iste\u011Fe yan\u0131t vermesi 30-50 saniye s\u00FCrebilir. Kullan\u0131c\u0131 bir ilan formunu doldurup
+  // g\u00F6nderene kadar genelde bu kadar zaman ge\u00E7er \u2014 bu erken "uyand\u0131rma" iste\u011Fi
+  // sayesinde kullan\u0131c\u0131 kaydet tu\u015Funa bast\u0131\u011F\u0131nda sunucu zaten ayakta olur.
+  fetch(API_BASE_URL + "/health").catch(function () { /* \u00F6nemli de\u011Fil, as\u0131l istek zaten yeniden dener */ });
+
   // Ba\u011Flant\u0131 kesikken yaz\u0131lan verilerin sunucuya ula\u015Fmas\u0131 i\u00E7in, sayfa a\u00E7\u0131k kald\u0131\u011F\u0131
   // s\u00FCrece d\u00FCzenli aral\u0131klarla da sunucu durumu yoklan\u0131r (kullan\u0131c\u0131 yeni bir
-  // get/set \u00E7a\u011Fr\u0131s\u0131 yapmasa bile).
+  // get/set \u00E7a\u011Fr\u0131s\u0131 yapmasa bile). S\u0131k aral\u0131kla kontrol edilir ki bir ilan
+  // sunucuya ula\u015Famad\u0131ktan hemen sonra payla\u015F\u0131lsa bile, senkronizasyon m\u00FCmk\u00FCn olan
+  // en k\u0131sa s\u00FCrede tamamlans\u0131n.
   setInterval(function () {
     if (Object.keys(dirtyKeys).length === 0) return;
     fetch(API_BASE_URL + "/health").then(function (r) {
       if (r.ok) resyncDirtyKeys();
     }).catch(function () { /* h\u00E2l\u00E2 ula\u015F\u0131lam\u0131yor, sonraki denemede tekrar bak\u0131l\u0131r */ });
-  }, 20000);
+  }, 6000);
 
   // Bu sürüm her zaman sunucu (remote) depolamayı kullanır — aynı adresten servis edildiği için.
   window.storage = remoteBackend;
@@ -17614,9 +17630,48 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 
 // yardımcı fonksiyon — cihazda paylaşım menüsü varsa (navigator.share) onu
 // açar, yoksa bağlantıyı panoya kopyalar. Bağlantı, uygulama açıldığında
 // ilgili ilanı otomatik açan ?ilan=<id> parametresini taşır.
+// İlan çok az önce oluşturulmuşsa, "listings" verisi sunucuya henüz
+// ulaşmamış olabilir (bkz. index.html'deki "dirtyKeys" mekanizması — sunucuya
+// yazma isteği zaman aşımına uğrarsa veri geçici olarak sadece bu cihazda
+// kalır). Böyle bir anda paylaşılan bağlantı, WhatsApp/Instagram gibi
+// mecralarda önizleme oluşturmak için sunucuya gittiğinde ilanı bulamaz ve
+// önizleme boş veya genel (uygulamanın varsayılan logosu) çıkar. Bu yüzden
+// paylaşmadan önce, en fazla kısa bir süre, senkronizasyonun bitmesini bekleriz.
+function waitForSharedSync(key, maxWaitMs) {
+    return new Promise((resolve) => {
+        const dirtyName = `shared:${key}`;
+        const start = Date.now();
+        const check = () => {
+            let dirty = [];
+            try {
+                dirty = JSON.parse(localStorage.getItem("bm_dirty_keys") || "[]");
+            }
+            catch {
+                dirty = [];
+            }
+            if (dirty.indexOf(dirtyName) === -1) {
+                resolve(true);
+                return;
+            }
+            if (Date.now() - start >= maxWaitMs) {
+                resolve(false);
+                return;
+            }
+            setTimeout(check, 400);
+        };
+        check();
+    });
+}
 async function shareListingLink(item, onCopied) {
     const url = `${window.location.origin}${window.location.pathname}?ilan=${item.id}`;
     const text = `${item.breed} ${item.subCategory} — ${TL(item.price)} — Benim Meram'da incele:`;
+    const justCreated = item.createdAt && (Date.now() - item.createdAt) < 5 * 60 * 1000;
+    if (justCreated) {
+        const synced = await waitForSharedSync("listings", 4500);
+        if (!synced) {
+            onCopied && onCopied("İlan sunucuya kaydediliyor — önizleme birkaç saniye sonra tam çıkar");
+        }
+    }
     try {
         if (navigator.share) {
             await navigator.share({ title: "Benim Meram", text, url });
